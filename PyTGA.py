@@ -549,7 +549,7 @@ class tga_exp:
             print(filename)
             file = self.load_single_file(filename)[0]
             # FILE CORRECTION
-            if self.correct_ash_mg:
+            if self.correct_ash_mg is not None:
                 file['m_mg'] = file['m_mg'] - np.min(file['m_mg']
                                                      ) + self.correct_ash_mg
             if file['m_mg'].iloc[-1] < 0:
@@ -559,7 +559,7 @@ class tga_exp:
                 file['m_mg'] = file['m_mg'] - np.min(file['m_mg'])
 
             file['m_p'] = file['m_mg']/np.max(file['m_mg'])*100
-            if self.correct_ash_fr:
+            if self.correct_ash_fr is not None:
                 file['m_p'] = file['m_p'] - np.min(file['m_p']
                                                    ) + self.correct_ash_fr
                 file['m_p'] = file['m_p']/np.max(file['m_p'])*100
@@ -1213,8 +1213,8 @@ def plot_oxid_props(exps, fig_name="OxidProp",
         ax[0].set_xticklabels(df_ave.index, rotation=xlab_rot, ha='right',
                               rotation_mode='anchor')
     FigSave(fig_name, out_path_OP, fig, ax, axt, fig_par, tight_layout=True,
-            legend=None,
-            yLab='T [' + exps[0].T_symbol + ']', ytLab='S (comb. index)',
+            legend=None, ytLab='S (combustion index) [-]',
+            yLab='T [' + exps[0].T_symbol + ']',
             yLim=yLim, ytLim=ytLim, yTicks=yTicks, ytTicks=ytTicks, grid=grid)
 
 
