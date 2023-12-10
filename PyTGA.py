@@ -475,11 +475,13 @@ def FigSave(fig_name, out_path, fig, lst_ax, lst_axt, fig_par,
 
 class tga_exp:
 
-    def __init__(self, name, filenames, folder, label=None, t_moist=38,
+    def __init__(self, name, filenames, folder, load_skiprows=0,
+                 label=None, t_moist=38,
                  t_VM=147, Tlims_dtg_C=[120, 800], T_unit='Celsius',
                  correct_ash_mg=None, correct_ash_fr=None,
                  T_intial_C=40, resolution_T_dtg=5, dtg_basis='temperature',
-                 dtg_w_SavFil=101, plot_font='Dejavu Sans'):
+                 dtg_w_SavFil=101, oxid_Tb_thresh=1, plot_font='Dejavu Sans',
+                 ):
         self.name = name
         self.filenames = filenames
         if not label:
@@ -491,6 +493,7 @@ class tga_exp:
         self.processed_data = {}  # Dictionary to store processed data
         self.folder = folder
         self.in_path, self.out_path = PathsCreate(folder)
+        self.load_skiprows = load_skiprows
         self.column_name_mapping = \
             {'Time': 't_min', 'Temperature': 'T_C', 'Weight': 'm_p',
              'Weight.1': 'm_mg', 'Heat Flow': 'heatflow_mW',
@@ -511,6 +514,7 @@ class tga_exp:
         self.resolution_T_dtg = resolution_T_dtg
         self.dtg_basis = dtg_basis
         self.dtg_w_SavFil = dtg_w_SavFil
+        self.oxid_Tb_thresh = oxid_Tb_thresh
 
         self.data_loaded = False  # Flag to track if data is loaded
         self.proximate_computed = False
@@ -524,9 +528,9 @@ class tga_exp:
         path = plib.Path(self.in_path, filename + '.txt')
         if not path.is_file():
             path = plib.Path(self.in_path, filename + '.csv')
-        file = pd.read_csv(path, sep='\t')
+        file = pd.read_csv(path, sep='\t', skiprows=self.load_skiprows)
         if file.shape[1] < 3:
-            file = pd.read_csv(path, sep=',')
+            file = pd.read_csv(path, sep=',', skiprows=self.load_skiprows)
 
         file = file.rename(columns={col: self.column_name_mapping.get(col, col)
                                     for col in file.columns})
@@ -708,7 +712,7 @@ class tga_exp:
         self.dtg_computed = True
         return self.dtg_db_stk
 
-    def oxidation_properties(self, Tb_thresh=1):
+    def oxidation_properties(self):
         if not self.data_loaded:
             self.load_replicate_files()
         if not self.proximate_computed:
@@ -733,8 +737,9 @@ class tga_exp:
             self.Tp_stk[f] = self.T_dtg[self.Tp_idx_stk[f]]
             # Tb reaches < 1 wt%/min at end of curve
             try:
-                self.Tb_idx_stk[f] = int(np.flatnonzero(self.dtg_db_stk[:, f]
-                                                       < -Tb_thresh)[-1])
+                self.Tb_idx_stk[f] = \
+                    int(np.flatnonzero(self.dtg_db_stk[:, f] < -
+                                       self.oxid_Tb_thresh)[-1])
             except IndexError:  # the curve nevers goes above 1%
                 self.Tb_idx_stk[f] = 0
             self.Tb_stk[f] = self.T_dtg[self.Tb_idx_stk[f]]
@@ -1098,7 +1103,7 @@ def plt_cscds(exps, fig_name='Fig', paper_col=.78, hgt_mltp=1.25,
             xLim=xLim, yLim=yLim_cscd, svg=svg, pdf=pdf)
 
 
-def print_reports(exps, filename='Rep'):
+def print_reports(exps, filename='Rep', to_excel=True):
     out_path_REPs = plib.Path(exps[0].out_path, 'DTGs')
     out_path_REPs.mkdir(parents=True, exist_ok=True)
     reports = pd.DataFrame(columns=list(exps[0].report))
@@ -1106,22 +1111,23 @@ def print_reports(exps, filename='Rep'):
         reports.loc[exp.label + '_ave'] = exp.report.loc['average', :]
     for i, exp in enumerate(exps):
         reports.loc[exp.label + '_std'] = exp.report.loc['std', :]
-    reports.to_excel(plib.Path(out_path_REPs, filename + '.xlsx'))
+    if to_excel:
+        reports.to_excel(plib.Path(out_path_REPs, filename + '.xlsx'))
     return reports
 
 
 def plt_solid_dists(exps, fig_name="Dist",
-                  TG_lab='TG [wt%]', DTG_lab='DTG [wt%/min]',
-                  hgt_mltp=1.25, paper_col=.78, labels=None,
-                  xLim=None, yLim=[[0, 1000], [0, 100]], yTicks=None, lttrs=False,
-                  print_dfs=True, grid=False,):
+                    TG_lab='TG [wt%]', DTG_lab='DTG [wt%/min]',
+                    hgt_mltp=1.25, paper_col=.78, labels=None,
+                    xLim=None, yLim=[[0, 1000], [0, 100]], yTicks=None, lttrs=False,
+                    print_dfs=True, grid=False,):
     """
     produces tg and dtg plots of each replicate in a sample. Quality of plots
     is supposed to allow checking for errors.
 
     """
-    plib.Path(exps[0].out_path, 'SolidDist').mkdir(parents=True, exist_ok=True)
     out_path_MS = plib.Path(exps[0].out_path, 'SolidDist')
+    out_path_MS.mkdir(parents=True, exist_ok=True)
     if not labels:  # try with labels and use name if no label is given
         labels = [exp.label if exp.label else exp.name for exp in exps]
     fig, ax, axt, fig_par = FigCreate(rows=2, cols=1, plot_type=0,
@@ -1152,14 +1158,133 @@ def plt_solid_dists(exps, fig_name="Dist",
             yLab=['T [' + exps[0].T_symbol + ']', TG_lab+'(db)'],
             annotate_lttrs=lttrs, grid=grid)
 
-# Main script
+
+def plot_oxid_props(exps, fig_name="OxidProp",
+                    smpl_labs=None, xlab_rot=0,
+                    paper_col=.8, hgt_mltp=1.5, grid=False,
+                    bboxtoanchor=True, x_anchor=1.1, y_anchor=1.02,
+                    legend_loc='best',
+                    yLim=None, ytLim=None, yTicks=None, ytTicks=None):
+    out_path_OP = plib.Path(exps[0].out_path, 'OxidProps')
+    out_path_OP.mkdir(parents=True, exist_ok=True)
+    vars_bar = ['T$_i$', 'T$_p$', 'T$_b$']
+    vars_scat = ['S (combustibility index)']
+    if smpl_labs:
+        labels = smpl_labs
+    else:
+        labels = [exp.label for exp in exps]
+    df_ave = pd.DataFrame(columns=vars_bar, index=labels)
+    df_std = pd.DataFrame(columns=vars_bar, index=labels)
+    df_ave['T$_i$'] = [exp.Ti for exp in exps]
+    df_ave['T$_p$'] = [exp.Tp for exp in exps]
+    df_ave['T$_b$'] = [exp.Tb for exp in exps]
+    df_std['T$_i$'] = [exp.Ti_std for exp in exps]
+    df_std['T$_p$'] = [exp.Tp_std for exp in exps]
+    df_std['T$_b$'] = [exp.Tb_std for exp in exps]
+
+    S_combs = [exp.S for exp in exps]
+    S_combs_std = [exp.S_std for exp in exps]
+    fig, ax, axt, fig_par = FigCreate(1, 1, 1, paper_col=paper_col,
+                                      hgt_mltp=hgt_mltp)
+    df_ave.plot(kind='bar', ax=ax[0], yerr=df_std, capsize=2, width=.85,
+                ecolor='k', edgecolor='black', rot=xlab_rot)
+    bars = ax[0].patches
+    patterns = [None, '//', '...']  # set hatch patterns in the correct order
+    hatches = []  # list for hatches in the order of the bars
+    for h in patterns:  # loop over patterns to create bar-ordered hatches
+        for i in range(int(len(bars) / len(patterns))):
+            hatches.append(h)
+    # loop over bars and hatches to set hatches in correct order
+    for bar, hatch in zip(bars, hatches):
+        bar.set_hatch(hatch)
+    axt[0].errorbar(x=df_ave.index, y=S_combs, yerr=S_combs_std,
+                    linestyle='None', marker=mrkrs[0], ecolor='k', capsize=2,
+                    markeredgecolor='k', color=clrs[3], markersize=10,
+                    label='S')
+    hnd_ax, lab_ax = ax[0].get_legend_handles_labels()
+    hnd_axt, lab_axt = axt[0].get_legend_handles_labels()
+    if bboxtoanchor:  # legend goes outside of plot area
+        ax[0].legend(hnd_ax + hnd_axt, lab_ax + lab_axt,
+                     loc='upper left', bbox_to_anchor=(x_anchor, y_anchor))
+    else:  # legend is inside of plot area
+        ax[0].legend(hnd_ax + hnd_axt, lab_ax + lab_axt,
+                     loc=legend_loc)
+    if xlab_rot != 0:
+        ax[0].set_xticklabels(df_ave.index, rotation=xlab_rot, ha='right',
+                              rotation_mode='anchor')
+    FigSave(fig_name, out_path_OP, fig, ax, axt, fig_par, tight_layout=True,
+            legend=None,
+            yLab='T [' + exps[0].T_symbol + ']', ytLab='S (comb. index)',
+            yLim=yLim, ytLim=ytLim, yTicks=yTicks, ytTicks=ytTicks, grid=grid)
+
+
+def plot_proximates(exps, fig_name="Prox",
+                    smpl_labs=None, xlab_rot=0,
+                    paper_col=.8, hgt_mltp=1.5, grid=False,
+                    bboxtoanchor=True, x_anchor=1.13, y_anchor=1.02,
+                    legend_loc='best',
+                    yLim=[0, 100], ytLim=[0, 1], yTicks=None, ytTicks=None):
+    out_path_OP = plib.Path(exps[0].out_path, 'Proximates')
+    out_path_OP.mkdir(parents=True, exist_ok=True)
+    vars_bar = ['Moisture (stb)', 'VM (db)', 'FC (db)', 'Ash (db)']
+    vars_scat = ['Mean TG dev.']
+    if smpl_labs:
+        labels = smpl_labs
+    else:
+        labels = [exp.label for exp in exps]
+    df_ave = pd.DataFrame(columns=vars_bar, index=labels)
+    df_std = pd.DataFrame(columns=vars_bar, index=labels)
+    df_ave['Moisture (stb)'] = [exp.moist_ar for exp in exps]
+    df_ave['VM (db)'] = [exp.vm_db for exp in exps]
+    df_ave['FC (db)'] = [exp.fc_db for exp in exps]
+    df_ave['Ash (db)'] = [exp.ash_db for exp in exps]
+    df_std['Moisture (stb)'] = [exp.moist_ar_std for exp in exps]
+    df_std['VM (db)'] = [exp.vm_db_std for exp in exps]
+    df_std['FC (db)'] = [exp.fc_db_std for exp in exps]
+    df_std['Ash (db)'] = [exp.ash_db_std for exp in exps]
+
+    S_combs = [exp.AveTGstd_p for exp in exps]
+    fig, ax, axt, fig_par = FigCreate(1, 1, 1, paper_col=paper_col,
+                                      hgt_mltp=hgt_mltp)
+    df_ave.plot(kind='bar', ax=ax[0], yerr=df_std, capsize=2, width=.85,
+                ecolor='k', edgecolor='black', rot=xlab_rot)
+    bars = ax[0].patches
+    patterns = [None, '//', '...', '--']  # set hatch patterns in correct order
+    hatches = []  # list for hatches in the order of the bars
+    for h in patterns:  # loop over patterns to create bar-ordered hatches
+        for i in range(int(len(bars) / len(patterns))):
+            hatches.append(h)
+    # loop over bars and hatches to set hatches in correct order
+    for bar, hatch in zip(bars, hatches):
+        bar.set_hatch(hatch)
+    axt[0].errorbar(x=df_ave.index, y=S_combs, linestyle='None',
+                    marker=mrkrs[0], color=clrs[4], markersize=10,
+                    markeredgecolor='k', label='Mean TG dev.')
+    hnd_ax, lab_ax = ax[0].get_legend_handles_labels()
+    hnd_axt, lab_axt = axt[0].get_legend_handles_labels()
+    if bboxtoanchor:  # legend goes outside of plot area
+        ax[0].legend(hnd_ax + hnd_axt, lab_ax + lab_axt,
+                     loc='upper left', bbox_to_anchor=(x_anchor, y_anchor))
+    else:  # legend is inside of plot area
+        ax[0].legend(hnd_ax + hnd_axt, lab_ax + lab_axt,
+                     loc=legend_loc)
+    if xlab_rot != 0:
+        ax[0].set_xticklabels(df_ave.index, rotation=xlab_rot, ha='right',
+                              rotation_mode='anchor')
+    FigSave(fig_name, out_path_OP, fig, ax, axt, fig_par, tight_layout=True,
+            legend=None,
+            yLab='mass fraction [wt%]', ytLab='Mean TG deviation [%]',
+            yLim=yLim, ytLim=ytLim, yTicks=yTicks, ytTicks=ytTicks, grid=grid)
+
+
+
 if __name__ == "__main__":
     folder = '_test'
     CLS = tga_exp(folder=folder, name='CLS',
                   filenames=['CLSOx5_1', 'CLSOx5_2', 'CLSOx5_3'],
                   t_moist=38, t_VM=147, T_unit='Celsius')
-    e = CLS.report()
 
+    CLS.report()
     CLS.plt_sample_tg()
     CLS.plt_sample_dtg()
     MIS = tga_exp(folder=folder, name='MIS',
@@ -1181,12 +1306,12 @@ if __name__ == "__main__":
     e = SDb.report()
     SDb.report_solid_dist()
     SDb.plt_solid_dist()
-    # SD.plt_sample_tg()
-    # SD.plt_sample_dtg()
-#%%
 
-plt_tgs([CLS, MIS, SDa, SDb])
-plt_dtgs([CLS, MIS, SDa, SDb])
-plt_cscds([CLS, MIS, SDa, SDb])
-rep = print_reports([CLS, MIS, SDa, SDb])
-plt_solid_dists([SDa, SDb])
+    plt_tgs([CLS, MIS, SDa, SDb])
+    plt_dtgs([CLS, MIS, SDa, SDb])
+    plt_cscds([CLS, MIS, SDa, SDb])
+    rep = print_reports([CLS, MIS, SDa, SDb])
+    plt_solid_dists([SDa, SDb])
+
+    plot_oxid_props([CLS, MIS, SDa, SDb])
+    plot_proximates([CLS, MIS, SDa, SDb], ytLim=None)
