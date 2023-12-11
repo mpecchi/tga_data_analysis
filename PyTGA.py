@@ -671,23 +671,23 @@ class tga_exp:
             self.load_replicate_files()
         if not self.proximate_computed:
             self.proximate_analysis()
-        len_dtg_db = int((self.Tlims_dtg[1] - self.Tlims_dtg[0]
+        self.len_dtg_db = int((self.Tlims_dtg[1] - self.Tlims_dtg[0]
                           )*self.resolution_T_dtg)
         self.T_dtg = np.linspace(self.Tlims_dtg[0], self.Tlims_dtg[1],
-                                 len_dtg_db)
-        self.time_dtg_stk = np.ones((len_dtg_db, self.n_repl))
-        self.mp_db_dtg_stk = np.ones((len_dtg_db, self.n_repl))
-        self.dtg_db_stk = np.ones((len_dtg_db, self.n_repl))
+                                 self.len_dtg_db)
+        self.time_dtg_stk = np.ones((self.len_dtg_db, self.n_repl))
+        self.mp_db_dtg_stk = np.ones((self.len_dtg_db, self.n_repl))
+        self.dtg_db_stk = np.ones((self.len_dtg_db, self.n_repl))
         for f, file in enumerate(self.files):
             idxs_dtg = [np.argmax(self.T_stk[:, f] > self.Tlims_dtg[0]),
                         np.argmax(self.T_stk[:, f] > self.Tlims_dtg[1])]
             # T_dtg is taken fixed
             self.T_dtg = np.linspace(self.Tlims_dtg[0], self.Tlims_dtg[1],
-                                     len_dtg_db)
+                                     self.len_dtg_db)
             # time start from 0 and consideres a fixed heating rate
             self.time_dtg_stk[:, f] = \
                 np.linspace(0, self.time_stk[idxs_dtg[1], f]
-                            - self.time_stk[idxs_dtg[0], f], len_dtg_db)
+                            - self.time_stk[idxs_dtg[0], f], self.len_dtg_db)
 
             self.mp_db_dtg_stk[:, f] = \
                 np.interp(self.T_dtg, self.T_stk[idxs_dtg[0]: idxs_dtg[1], f],
@@ -811,7 +811,121 @@ class tga_exp:
         self.dmp_dist_std = np.std(self.dmp_dist_stk, axis=1)
         self.loc_dist = np.average(self.loc_dist_stk, axis=1)
         self.loc_dist_std = np.std(self.loc_dist_stk, axis=1)
-        self.solid_dist_computed =True
+        self.solid_dist_computed = True
+
+    def _prepare_deconvolution_model(self, centers, sigmas, amplitudes, c_mins,
+                                     c_maxs, s_mins, s_maxs, a_mins, a_maxs):
+        model = LinearModel(prefix="bkg_")
+        params = model.make_params(intercept=0, slope=0, vary=False)
+
+        for i in range(len(centers)):
+            prefix = f'peak{i}_'
+            peak_model = GaussianModel(prefix=prefix)
+            pars = peak_model.make_params()
+            pars[prefix + 'center'].set(value=centers[i], min=c_mins[i],
+                                        max=c_maxs[i])
+            pars[prefix + 'sigma'].set(value=sigmas[i], min=s_mins[i],
+                                       max=s_maxs[i])
+            pars[prefix + 'amplitude'].set(value=amplitudes[i], min=a_mins[i],
+                                           max=a_maxs[i])
+            model += peak_model
+            params.update(pars)
+
+        return model, params
+
+    def deconvolute_dtg(self, centers, sigmas=None, amplitudes=None, c_mins=None,
+                        c_maxs=None, s_mins=None, s_maxs=None, a_mins=None,
+                        a_maxs=None, TLim=None):
+        self.dcv_best_fit_stk = np.zeros((self.len_dtg_db, self.n_repl))
+        self.dcv_r2_stk = np.zeros(self.n_repl)
+        n_peaks = len(centers)
+        self.dcv_peaks_stk = np.zeros((self.len_dtg_db, self.n_repl, n_peaks))
+        if sigmas is None: sigmas = [1] * n_peaks
+        if amplitudes is None: amplitudes = [10] * n_peaks
+        if c_mins is None: c_mins = [None] * n_peaks
+        if c_maxs is None: c_maxs = [None] * n_peaks
+        if s_mins is None: s_mins = [None] * n_peaks
+        if s_maxs is None: s_maxs = [None] * n_peaks
+        if a_mins is None: a_mins = [0] * n_peaks
+        if a_maxs is None: a_maxs = [None] * n_peaks
+
+        # Initialize storage for peak parameters of each replicate
+        all_peak_params = {f'peak{i}_': {'center': [], 'sigma': [],
+                                         'amplitude': []} for i in range(n_peaks)}
+
+        for f in range(self.n_repl):
+            y = np.abs(self.dtg_db_stk[:, f])
+            model, params = \
+                self._prepare_deconvolution_model(centers, sigmas, amplitudes,
+                                                  c_mins, c_maxs, s_mins,
+                                                  s_maxs, a_mins, a_maxs)
+            result = model.fit(y, params=params, x=self.T_dtg)
+            self.dcv_best_fit_stk[:, f] = -result.best_fit
+            self.dcv_r2_stk[f] = 1 - result.residual.var() / np.var(y)
+            components = result.eval_components(x=self.T_dtg)
+            for p in range(n_peaks):
+                prefix = f'peak{p}_'
+                if prefix in components:
+                    # Negate the peak data to match the sign of DTG
+                    self.dcv_peaks_stk[:, f, p] = -components[prefix]
+
+        self.dcv_best_fit = np.mean(self.dcv_best_fit_stk, axis=1)
+        self.dcv_best_fit_std = np.std(self.dcv_best_fit_stk, axis=1)
+        self.dcv_r2 = np.mean(self.dcv_r2_stk)
+        self.dcv_r2_std = np.std(self.dcv_r2_stk)
+        self.dcv_peaks = np.mean(self.dcv_peaks_stk, axis=1)
+        self.dcv_peaks_std = np.std(self.dcv_peaks_stk, axis=1)
+
+        # Plotting the averaged DTG curve and peaks
+        self.plt_deconvolution()
+
+    def plt_deconvolution(self, fig_name='Deconv',
+                           xLim=None, yLim=None, grid=False, DTG_lab=None,
+                           pdf=False, svg=False, legend='best'):
+        out_path_dcv = plib.Path(self.out_path, 'Deconvolution')
+        out_path_dcv.mkdir(parents=True, exist_ok=True)
+        if DTG_lab is None:
+            if self.dtg_basis == 'temperature':
+                DTG_lab = 'DTG [wt%/' + self.T_symbol + ']'
+            elif self.dtg_basis == 'time':
+                DTG_lab='DTG [wt%/min]'
+        fig_name = self.name
+        fig, ax, axt, fig_par = FigCreate(rows=1, cols=1, plot_type=0,
+                                          paper_col=0.78, hgt_mltp=1.25,
+                                          )
+        # Plot DTG data
+        ax[0].plot(self.T_dtg, self.dtg_db, color='black', label='DTG')
+        ax[0].fill_between(self.T_dtg, self.dtg_db - self.dtg_db_std,
+                           self.dtg_db + self.dtg_db_std, color='black',
+                           alpha=0.3)
+
+        # Plot best fit and individual peaks
+        ax[0].plot(self.T_dtg, self.dcv_best_fit, label='best fit', color='red',
+                   linestyle='--')
+        ax[0].fill_between(self.T_dtg,
+                           self.dcv_best_fit - self.dcv_best_fit_std,
+                           self.dcv_best_fit + self.dcv_best_fit_std,
+                           color='red', alpha=0.3)
+        clrs_p = clrsp = clrs[:3] + clrs[5:]  # avoid using red
+        p = 0
+        for peak, peak_std in zip(self.dcv_peaks.T, self.dcv_peaks_std.T):
+
+            ax[0].plot(self.T_dtg, peak, label='peak ' + str(int(p+1)),
+                       color=clrs_p[p], linestyle=lnstls[p])
+            ax[0].fill_between(self.T_dtg,
+                               peak - peak_std,
+                               peak + peak_std,
+                               color=clrs_p[p], alpha=0.3)
+            p += 1
+        ax[0].annotate(f"r$^2$={self.dcv_r2:.2f}", xycoords='axes fraction',
+                       xy=(0.85, 0.96), size='x-small')
+
+        # Save figure using FigSave
+        FigSave(fig_name + '_dcv', out_path_dcv, fig, ax, axt, fig_par,
+                xLab='T ['+self.T_symbol+']', yLab=DTG_lab,
+                xLim=xLim, yLim=yLim, legend=legend,
+                pdf=pdf, svg=svg)  # Set additional parameters as needed
+
 
     def report_solid_dist(self):
         if not self.data_loaded:
@@ -1002,7 +1116,7 @@ class tga_exp:
                 )
 
 def plt_tgs(exps, fig_name='Fig', paper_col=.78, hgt_mltp=1.25,
-            xLim=None, yLim_tg=[0, 100], yTicks_tg=None, grid=False,
+            xLim=None, yLim=[0, 100], yTicks=None, grid=False,
             TG_lab='TG [wt%]', lttrs=False, pdf=False, svg=False):
     out_path_TGs = plib.Path(exps[0].out_path, 'TGs')
     out_path_TGs.mkdir(parents=True, exist_ok=True)
@@ -1016,14 +1130,14 @@ def plt_tgs(exps, fig_name='Fig', paper_col=.78, hgt_mltp=1.25,
                            exp.mp_db + exp.mp_db_std, color=clrs[i],
                            alpha=.3)
     FigSave(fig_name + '_tg', out_path_TGs, fig, ax, axt, fig_par,
-            xLim=xLim, yLim=yLim_tg,
-            yTicks=yTicks_tg,
+            xLim=xLim, yLim=yLim,
+            yTicks=yTicks,
             xLab='T [' + exps[0].T_symbol + ']', legend='upper right',
             yLab=TG_lab, annotate_lttrs=lttrs, grid=grid, pdf=pdf, svg=svg)
 
 
 def plt_dtgs(exps, fig_name='Fig', paper_col=.78, hgt_mltp=1.25,
-             xLim=None, yLim_dtg=None, yTicks_dtg=None, grid=False,
+             xLim=None, yLim=None, yTicks=None, grid=False,
              DTG_lab=None, lttrs=False, plt_gc=False, gc_Tlim=300,
              pdf=False, svg=False):
 
@@ -1042,13 +1156,13 @@ def plt_dtgs(exps, fig_name='Fig', paper_col=.78, hgt_mltp=1.25,
                            exp.dtg_db + exp.dtg_db_std, color=clrs[i],
                            alpha=.3)
     if plt_gc:
-        ax[0].vlines(gc_Tlim, ymin=yLim_dtg[0], ymax=yLim_dtg[1],
+        ax[0].vlines(gc_Tlim, ymin=yLim[0], ymax=yLim[1],
                      linestyle=lnstls[1], color=clrs[7],
                      label='T$_{max GC-MS}$')
     ax[0].legend(loc='lower right')
     FigSave(fig_name + '_dtg', out_path_DTGs, fig, ax, axt, fig_par,
-            xLim=xLim, yLim=yLim_dtg,
-            yTicks=yTicks_dtg,
+            xLim=xLim, yLim=yLim,
+            yTicks=yTicks,
             yLab=DTG_lab, xLab='T [' + exps[0].T_symbol + ']',
             pdf=pdf, svg=svg, annotate_lttrs=lttrs, grid=grid)
 
@@ -1453,7 +1567,9 @@ if __name__ == "__main__":
                   filenames=['CLSOx5_1', 'CLSOx5_2', 'CLSOx5_3'],
                   t_moist=38, t_VM=147, T_unit='Celsius')
 
-    CLSOx5.report()
+    a = CLSOx5.report()
+    #%%
+    b = CLSOx5.deconvolute_dtg([310, 450, 500],)
     CLSOx5.plt_sample_tg()
     CLSOx5.plt_sample_dtg()
     CLSOx10 = tga_exp(folder=folder, name='CLSOx10', load_skiprows=8,
@@ -1470,7 +1586,7 @@ if __name__ == "__main__":
                   filenames=['MIS_1', 'MIS_2', 'MIS_3'],
                   t_moist=38, t_VM=147, T_unit='Celsius')
     e = MIS.report()
-
+    b = MIS.deconvolute_dtg([210, 300, 400],)
     MIS.plt_sample_tg()
     MIS.plt_sample_dtg()
     SDa = tga_exp(folder=folder, name='SDa',
