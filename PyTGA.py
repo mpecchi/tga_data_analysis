@@ -1277,16 +1277,195 @@ def plot_proximates(exps, fig_name="Prox",
             yLim=yLim, ytLim=ytLim, yTicks=yTicks, ytTicks=ytTicks, grid=grid)
 
 
+def compute_KAS(exps, ramps, alpha=np.arange(0.05, .9, 0.05)):
+    R_gas = 8.314462618
+    n_ramps = len(ramps)  # number of ramp used for feedstock
+    n_alpha = len(alpha)  # number of alpha investigated
+    v_a = np.zeros(n_alpha, dtype=int)
+    Ea = np.zeros(n_alpha)
+    Ea_std = np.zeros(n_alpha)
+    v_fit = []
+    v_res_fit = np.zeros(n_alpha)
+    r_sqrd_fit = np.zeros(n_alpha)
+    ymatr = np.zeros((n_alpha, n_ramps))
+    xmatr = np.zeros((n_alpha, n_ramps))
+    for e, exp in enumerate(exps):
+        # build the two matrixes
+        if exp.T_unit == 'Kelvin':
+            TK = exp.T_dtg
+        elif exp.T_unit == 'Celsius':
+            TK = exp.T_dtg + 273.15
+        mp_db_dtg = exp.mp_db_dtg
+        mdaf = ((mp_db_dtg - np.min(mp_db_dtg))
+                / (np.max(mp_db_dtg) - np.min(mp_db_dtg)))
+        a = 1 - mdaf
+        for i in range(n_alpha):
+            v_a[i] = np.argmax(a > alpha[i])
+        xmatr[:, e] = 1/TK[v_a]*1000
+        for i in range(n_alpha):
+            # BETA IS IN MINUTE HERE
+            ymatr[i, e] = np.log(ramps[e]/TK[v_a[i]]**2)
+
+    for i in range(n_alpha):
+        p, cov = np.polyfit(xmatr[i, :], ymatr[i, :], 1, cov=True)
+        v_fit.append(np.poly1d(p))
+        v_res_fit = ymatr[i, :] - v_fit[i](xmatr[i, :])
+        r_sqrd_fit[i] = (1 - (np.sum(v_res_fit**2)
+                              / np.sum((ymatr[i, :]
+                                        - np.mean(ymatr[i, :]))**2)))
+        Ea[i] = -v_fit[i][1] * R_gas
+        Ea_std[i] = np.sqrt(cov[0][0]) * R_gas
+    # the name is obtained supposing its Sample-Ox# with # = rate
+    if '-Ox' in exps[0].name:
+        name = exps[0].name.split('-Ox')[0]
+    else:
+        name = exps[0].name.split('Ox')[0]
+    kas = {'Ea': Ea, 'Ea_std': Ea_std, 'alpha': alpha, 'ramps': ramps,
+           'xmatr': xmatr, 'ymatr': ymatr, 'v_fit': v_fit, 'name': name}
+    for e, exp in enumerate(exps):
+        exp.kas = kas
+    return kas
+
+
+def plot_KAS_isolines(exps, kas_names=None, fig_name='KAsIso',
+                      paper_col=.78, hgt_mltp=1.25, xLim=None, yLim=None,
+                      annt_names=True, annotate_lttrs=False, leg_cols=1,
+                      bboxtoanchor=True, x_anchor=1.13, y_anchor=1.02,
+                      legend_loc='best'):
+    out_path_KASs = plib.Path(exps[0].out_path, 'KASs')
+    out_path_KASs.mkdir(parents=True, exist_ok=True)
+    kass = [exp.kas for exp in exps]
+    xmatrs = [kas['xmatr'] for kas in kass]
+    # for plots
+    if kas_names is None:
+        kas_names = [kas['name'] for kas in kass]
+
+    n_exp = len(kass)  # number of feedstocks
+    alphas = [kas['alpha'] for kas in kass]
+    if not all(np.array_equal(alphas[0], a) for a in alphas):
+        print('samples have been analyzed at different alphas')
+
+    else:
+        alpha = alphas[0]
+    n_alpha = len(alpha)
+
+    x = np.linspace(np.min([np.min(xmatr) for xmatr in xmatrs]),
+                    np.max([np.max(xmatr) for xmatr in xmatrs]), 100)
+    if n_exp <= 3:
+        fig, ax, axt, fig_par = FigCreate(rows=n_exp, cols=1, plot_type=0,
+                                          paper_col=paper_col,
+                                          hgt_mltp=hgt_mltp)
+    else:
+        fig, ax, axt, fig_par = FigCreate(rows=n_exp//2, cols=2,
+                                          plot_type=0, paper_col=paper_col*1.5,
+                                          hgt_mltp=hgt_mltp)
+    for k, kas in enumerate(kass):
+        ymaxiso = np.max(kas['ymatr'])
+        yminiso = np.min(kas['ymatr'])
+        if n_exp > 1:
+            annotate_lttrs_iso = True
+        else:
+            annotate_lttrs_iso = False
+        for i in range(n_alpha):
+            lab = r'$\alpha$=' + str(np.round(alpha[i], 2))
+
+
+            xmin = np.argwhere(kas['v_fit'][i](x) < ymaxiso)[0][0]
+            try:
+                xmax = np.argwhere(kas['v_fit'][i](x) < yminiso)[0][0]
+            except IndexError:
+                xmax = 0
+            newx = x[xmin: xmax]
+            ax[k].plot(newx, kas['v_fit'][i](newx),
+                       color=clrs[i], linestyle=lnstls[i])
+            ax[k].plot(kas['xmatr'][i, :], kas['ymatr'][i, :], color=clrs[i],
+                        linestyle='None', marker=mrkrs[i])
+            ax[k].plot([], [], color=clrs[i], linestyle=lnstls[i],
+                        marker=mrkrs[i], label=lab)
+            hnd_ax, lab_ax = ax[k].get_legend_handles_labels()
+        if annt_names:
+            ax[k].annotate(kas_names[k], xycoords="axes fraction",
+                            xy=(0, 0), rotation=0, size="small",
+                            xytext=(0.05, 0.93),)
+    if bboxtoanchor:  # legend goes outside of plot area
+        ax[0].legend(ncol=leg_cols, loc='upper left',
+                     bbox_to_anchor=(x_anchor, y_anchor))
+    else:  # legend is inside of plot area
+        ax[0].legend(ncol=leg_cols,
+                     loc=legend_loc)
+    FigSave(fig_name + '_iso', out_path_KASs, fig, ax, axt, fig_par,
+            xLim=xLim, yLim=yLim, xLab='1000/T [1/K]', legend=None,
+            annotate_lttrs=annotate_lttrs, yLab=r'ln($\beta$/T$^{2}$)',
+            tight_layout=False)
+
+
+def plot_KAS_Ea(exps, kas_names=None, fig_name='KASEa',
+                paper_col=.78, hgt_mltp=1.25, xLim=[.1, .8], yLim=[0, 300],
+                yTicks=None, annt_names=True, annotate_lttrs=False, leg_cols=1,
+                bboxtoanchor=True, x_anchor=1.13, y_anchor=1.02,
+                grid=False, plot_type='scatter',
+                legend_loc='best'):
+    out_path_KASs = plib.Path(exps[0].out_path, 'KASs')
+    out_path_KASs.mkdir(parents=True, exist_ok=True)
+    kass = [exp.kas for exp in exps]
+    if kas_names is None:
+        kas_names = [kas['name'] for kas in kass]
+    alphas = [kas['alpha'] for kas in kass]
+    if not all(np.array_equal(alphas[0], a) for a in alphas):
+        print('samples have been analyzed at different alphas')
+
+    else:
+        alpha = alphas[0]
+    # plot activation energy
+    fig, ax, axt, fig_par = FigCreate(rows=1, cols=1, plot_type=0,
+                                      paper_col=paper_col, hgt_mltp=hgt_mltp)
+    for k, kas in enumerate(kass):
+        if plot_type == 'scatter':
+            ax[0].errorbar(alpha, kas['Ea'], kas['Ea_std'], color='k',
+                           linestyle='None', capsize=3, ecolor=clrs[k])
+            ax[0].plot(alpha, kas['Ea'], color=clrs[k],
+                       linestyle='None', marker=mrkrs[k],
+                       label=kas_names[k])
+        elif plot_type == 'line':
+            ax[0].plot(alpha, kas['Ea'],
+                       linestyle=lnstls[k], label=kas_names[k])
+            ax[0].fill_between(alpha, kas['Ea'] - kas['Ea_std'],
+                               kas['Ea'] + kas['Ea_std'], color=clrs[k],
+                               alpha=.3)
+    if len(exps) == 1:
+        legend_loc = False
+    else:
+        if bboxtoanchor:  # legend goes outside of plot area
+            ax[0].legend(ncol=leg_cols, loc='upper left',
+                         bbox_to_anchor=(x_anchor, y_anchor))
+        else:  # legend is inside of plot area
+            ax[0].legend(ncol=leg_cols,
+                         loc=legend_loc)
+    FigSave(fig_name + '_Ea', out_path_KASs, fig, ax, axt, fig_par,
+            xLim=xLim, yLim=yLim,
+            legend=legend_loc, yTicks=yTicks, xLab=r'$\alpha$ [-]',
+            yLab=r'$E_{a}$ [kJ/mol]', grid=grid)
+
 
 if __name__ == "__main__":
     folder = '_test'
-    CLS = tga_exp(folder=folder, name='CLS',
+    CLSOx5 = tga_exp(folder=folder, name='CLSOx5',
                   filenames=['CLSOx5_1', 'CLSOx5_2', 'CLSOx5_3'],
                   t_moist=38, t_VM=147, T_unit='Celsius')
 
-    CLS.report()
-    CLS.plt_sample_tg()
-    CLS.plt_sample_dtg()
+    CLSOx5.report()
+    CLSOx5.plt_sample_tg()
+    CLSOx5.plt_sample_dtg()
+    CLSOx10 = tga_exp(folder=folder, name='CLSOx10', load_skiprows=8,
+                  filenames=['CLSOx10_2', 'CLSOx10_3'],
+                  t_moist=38, t_VM=147, T_unit='Celsius')
+
+    CLSOx10.report()
+    CLSOx50 = tga_exp(folder=folder, name='CLSOx50', load_skiprows=8,
+                  filenames=['CLSOx50_4', 'CLSOx50_5'],
+                  t_moist=38, t_VM=147, T_unit='Celsius')
+
+    CLSOx50.report()
     MIS = tga_exp(folder=folder, name='MIS',
                   filenames=['MIS_1', 'MIS_2', 'MIS_3'],
                   t_moist=38, t_VM=147, T_unit='Celsius')
@@ -1307,11 +1486,15 @@ if __name__ == "__main__":
     SDb.report_solid_dist()
     SDb.plt_solid_dist()
 
-    plt_tgs([CLS, MIS, SDa, SDb])
-    plt_dtgs([CLS, MIS, SDa, SDb])
-    plt_cscds([CLS, MIS, SDa, SDb])
-    rep = print_reports([CLS, MIS, SDa, SDb])
+    plt_tgs([CLSOx5, MIS, SDa, SDb])
+    plt_dtgs([CLSOx5, MIS, SDa, SDb])
+    plt_cscds([CLSOx5, MIS, SDa, SDb])
+    rep = print_reports([CLSOx5, MIS, SDa, SDb])
     plt_solid_dists([SDa, SDb])
 
-    plot_oxid_props([CLS, MIS, SDa, SDb])
-    plot_proximates([CLS, MIS, SDa, SDb], ytLim=None)
+    plot_oxid_props([CLSOx5, MIS, SDa, SDb])
+    plot_proximates([CLSOx5, MIS, SDa, SDb], ytLim=None)
+    g = compute_KAS([CLSOx5, CLSOx10, CLSOx50], [5, 10, 50])
+    plot_KAS_isolines([CLSOx5], bboxtoanchor=True)
+    plot_KAS_Ea([CLSOx5], bboxtoanchor=True)
+
