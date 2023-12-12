@@ -515,12 +515,11 @@ class tga_exp:
         self.dtg_basis = dtg_basis
         self.dtg_w_SavFil = dtg_w_SavFil
         self.oxid_Tb_thresh = oxid_Tb_thresh
-
         self.data_loaded = False  # Flag to track if data is loaded
         self.proximate_computed = False
-        self.dtg_computed = False
-        self.oxidation_properties_computed = False
-        self.solid_dist_computed = False
+        self.oxidation_computed = False
+        self.soliddist_computed = False
+        self.deconv_computed = False
         # plotting parameters
         self.plot_font = plot_font
 
@@ -541,7 +540,7 @@ class tga_exp:
         self.data_loaded = True  # Flag to track if data is loaded
         return self.files
 
-    def load_replicate_files(self):
+    def load_files(self):
         print('\n' + self.name)
         # import files and makes sure that replicates have the same size
         files, len_files,  = [], []
@@ -552,12 +551,14 @@ class tga_exp:
             if self.correct_ash_mg is not None:
                 file['m_mg'] = file['m_mg'] - np.min(file['m_mg']
                                                      ) + self.correct_ash_mg
-            if file['m_mg'].iloc[-1] < 0:
-                print('neg. mass correction: Max [mg]',
-                      np.round(np.max(file['m_mg']), 3), '; Min [mg]',
-                      np.round(np.min(file['m_mg']), 3))
-                file['m_mg'] = file['m_mg'] - np.min(file['m_mg'])
-
+            try:
+                if file['m_mg'].iloc[-1] < 0:
+                    print('neg. mass correction: Max [mg]',
+                          np.round(np.max(file['m_mg']), 3), '; Min [mg]',
+                          np.round(np.min(file['m_mg']), 3))
+                    file['m_mg'] = file['m_mg'] - np.min(file['m_mg'])
+            except KeyError:
+                file['m_mg'] = file['m_p']
             file['m_p'] = file['m_mg']/np.max(file['m_mg'])*100
             if self.correct_ash_fr is not None:
                 file['m_p'] = file['m_p'] - np.min(file['m_p']
@@ -575,7 +576,7 @@ class tga_exp:
 
     def proximate_analysis(self):
         if not self.data_loaded:
-            self.load_replicate_files()
+            self.load_files()
 
         self.T_stk = np.zeros((self.len_sample, self.n_repl))
         self.time_stk = np.zeros((self.len_sample, self.n_repl))
@@ -663,14 +664,6 @@ class tga_exp:
         self.fc_daf = np.average(self.fc_daf_stk)
         self.fc_daf_std = np.std(self.fc_daf_stk)
 
-        self.proximate_computed = True
-        return
-
-    def dtg_analysis(self):
-        if not self.data_loaded:
-            self.load_replicate_files()
-        if not self.proximate_computed:
-            self.proximate_analysis()
         self.len_dtg_db = int((self.Tlims_dtg[1] - self.Tlims_dtg[0]
                           )*self.resolution_T_dtg)
         self.T_dtg = np.linspace(self.Tlims_dtg[0], self.Tlims_dtg[1],
@@ -709,16 +702,11 @@ class tga_exp:
         self.AveTGstd_p_std = np.nan
         print("Average TG [%] St. Dev. for replicates: " +
               str(round(np.average(self.mp_db_dtg_std), 2)) + " %")
-        self.dtg_computed = True
-        return self.dtg_db_stk
+        self.proximate_computed = True
 
-    def oxidation_properties(self):
-        if not self.data_loaded:
-            self.load_replicate_files()
+    def oxidation_analysis(self):
         if not self.proximate_computed:
             self.proximate_analysis()
-        if not self.dtg_computed:
-            self.dtg_analysis()
         self.Ti_idx_stk = np.zeros(self.n_repl, dtype=int)
         self.Ti_stk = np.zeros(self.n_repl)
         self.Tp_idx_stk = np.zeros(self.n_repl, dtype=int)
@@ -763,28 +751,15 @@ class tga_exp:
         self.dwdT_mean_std = np.std(self.dwdT_mean_stk)
         self.S = np.average(self.S_stk)
         self.S_std = np.std(self.S_stk)
-        self.oxidation_properties_computed = True
+        self.oxidation_computed = True
 
-    def solid_dist(self, steps=[40, 70, 100, 130, 160, 190],
-                      print_dfs=True):
-        """
-        produces tg and dtg plots of each replicate in a sample. Quality of plots
-        is supposed to allow checking for errors.
-
-        """
-        if not self.data_loaded:
-            self.load_replicate_files()
+    def soliddist_analysis(self, steps_min=[40, 70, 100, 130, 160, 190]):
         if not self.proximate_computed:
             self.proximate_analysis()
-        if not self.dtg_computed:
-            self.dtg_analysis()
-        plib.Path(self.out_path, 'SolidDist').mkdir(parents=True,
-                                                       exist_ok=True)
-        out_path_MS = plib.Path(self.out_path, 'SolidDist')
-        self.dist_steps = steps + ['end']
-        len_dist_step = len(self.dist_steps)
+        self.dist_steps_min = steps_min + ['end']
+        len_dist_step = len(self.dist_steps_min)
 
-        self.idxs_dist_steps_stk = np.ones((len_dist_step, self.n_repl))
+        self.idxs_dist_steps_min_stk = np.ones((len_dist_step, self.n_repl))
         self.T_dist_stk = np.ones((len_dist_step, self.n_repl))
         self.time_dist_stk = np.ones((len_dist_step, self.n_repl))
         self.dmp_dist_stk = np.ones((len_dist_step, self.n_repl))
@@ -792,16 +767,17 @@ class tga_exp:
 
         for f, file in enumerate(self.files):
             idxs = []
-            for step in steps:
-                idxs.append(np.argmax(self.time > step))
-            self.idxs_dist_steps_stk[:, f] = idxs.append(len(self.time)-1)
+            for step in steps_min:
+                idxs.append(np.argmax(self.time_stk[:, f] > step))
+            self.idxs_dist_steps_min_stk[:, f] = idxs.append(len(self.time)-1)
             self.T_dist_stk[:, f] = self.T_stk[idxs, f]
             self.time_dist_stk[:, f] = self.time_stk[idxs, f]
 
-            self.dmp_dist_stk[:, f] = -np.diff(self.mp_db[idxs], prepend=100)
+            self.dmp_dist_stk[:, f] = -np.diff(self.mp_db_stk[idxs, f],
+                                               prepend=100)
 
             self.loc_dist_stk[:, f] = \
-                np.convolve(np.insert(self.mp_db[idxs], 0, 100),
+                np.convolve(np.insert(self.mp_db_stk[idxs, f], 0, 100),
                             [.5, .5], mode='valid')
         self.T_dist = np.average(self.T_dist_stk, axis=1)
         self.T_dist_std = np.std(self.T_dist_stk, axis=1)
@@ -811,7 +787,7 @@ class tga_exp:
         self.dmp_dist_std = np.std(self.dmp_dist_stk, axis=1)
         self.loc_dist = np.average(self.loc_dist_stk, axis=1)
         self.loc_dist_std = np.std(self.loc_dist_stk, axis=1)
-        self.solid_dist_computed = True
+        self.soliddist_computed = True
 
     def _prepare_deconvolution_model(self, centers, sigmas, amplitudes, c_mins,
                                      c_maxs, s_mins, s_maxs, a_mins, a_maxs):
@@ -833,25 +809,31 @@ class tga_exp:
 
         return model, params
 
-    def deconvolute_dtg(self, centers, sigmas=None, amplitudes=None, c_mins=None,
-                        c_maxs=None, s_mins=None, s_maxs=None, a_mins=None,
-                        a_maxs=None, TLim=None):
+    def deconv_analysis(self, centers, sigmas=None, amplitudes=None,
+                        c_mins=None, c_maxs=None, s_mins=None, s_maxs=None,
+                        a_mins=None, a_maxs=None, TLim=None):
+        if not self.proximate_computed:
+            self.proximate_analysis()
         self.dcv_best_fit_stk = np.zeros((self.len_dtg_db, self.n_repl))
         self.dcv_r2_stk = np.zeros(self.n_repl)
         n_peaks = len(centers)
         self.dcv_peaks_stk = np.zeros((self.len_dtg_db, self.n_repl, n_peaks))
-        if sigmas is None: sigmas = [1] * n_peaks
-        if amplitudes is None: amplitudes = [10] * n_peaks
-        if c_mins is None: c_mins = [None] * n_peaks
-        if c_maxs is None: c_maxs = [None] * n_peaks
-        if s_mins is None: s_mins = [None] * n_peaks
-        if s_maxs is None: s_maxs = [None] * n_peaks
-        if a_mins is None: a_mins = [0] * n_peaks
-        if a_maxs is None: a_maxs = [None] * n_peaks
-
-        # Initialize storage for peak parameters of each replicate
-        all_peak_params = {f'peak{i}_': {'center': [], 'sigma': [],
-                                         'amplitude': []} for i in range(n_peaks)}
+        if sigmas is None:
+            sigmas = [1] * n_peaks
+        if amplitudes is None:
+            amplitudes = [10] * n_peaks
+        if c_mins is None:
+            c_mins = [None] * n_peaks
+        if c_maxs is None:
+            c_maxs = [None] * n_peaks
+        if s_mins is None:
+            s_mins = [None] * n_peaks
+        if s_maxs is None:
+            s_maxs = [None] * n_peaks
+        if a_mins is None:
+            a_mins = [0] * n_peaks
+        if a_maxs is None:
+            a_maxs = [None] * n_peaks
 
         for f in range(self.n_repl):
             y = np.abs(self.dtg_db_stk[:, f])
@@ -875,13 +857,198 @@ class tga_exp:
         self.dcv_r2_std = np.std(self.dcv_r2_stk)
         self.dcv_peaks = np.mean(self.dcv_peaks_stk, axis=1)
         self.dcv_peaks_std = np.std(self.dcv_peaks_stk, axis=1)
+        self.deconv_computed = True
+        # # Plotting the averaged DTG curve and peaks
+        self.deconv_plot()
 
-        # Plotting the averaged DTG curve and peaks
-        self.plt_deconvolution()
+    # section with methods to print reports
+    def proximate_report(self):
+        if not self.proximate_computed:
+            self.proximate_analysis()
 
-    def plt_deconvolution(self, fig_name='Deconv',
-                           xLim=None, yLim=None, grid=False, DTG_lab=None,
-                           pdf=False, svg=False, legend='best'):
+        out_path_rep = plib.Path(self.out_path, 'SingleReports')
+        out_path_rep.mkdir(parents=True, exist_ok=True)
+
+        columns = ['moist_ar_p', 'ash_ar_p', 'ash_db_p', 'vm_db_p', 'fc_db_p',
+                   'vm_daf_p', 'fc_daf_p', 'AveTGstd_p']
+        rep = pd.DataFrame(index=self.filenames, columns=columns)
+
+        for f, filename in enumerate(self.filenames):
+            rep.loc[filename] = [self.moist_ar_stk[f], self.ash_ar_stk[f],
+                                 self.ash_db_stk[f], self.vm_db_stk[f],
+                                 self.fc_db_stk[f], self.vm_daf_stk[f],
+                                 self.fc_daf_stk[f], np.nan]
+
+        rep.loc['ave'] = [self.moist_ar, self.ash_ar, self.ash_db,
+                          self.vm_db, self.fc_db, self.vm_daf, self.fc_daf,
+                          self.AveTGstd_p]
+        rep.loc['std'] = [self.moist_ar_std, self.ash_ar_std, self.ash_db_std,
+                          self.vm_db_std, self.fc_db_std, self.vm_daf_std,
+                          self.fc_daf_std, self.AveTGstd_p_std]
+        self.proximate = rep
+        rep.to_excel(plib.Path(out_path_rep, self.name + '_prox.xlsx'))
+        return self.proximate
+
+    def oxidation_report(self):
+        if not self.oxidation_computed:
+            self.oxidation_analysis()
+        out_path_rep = plib.Path(self.out_path, 'SingleReports')
+        out_path_rep.mkdir(parents=True, exist_ok=True)
+        if self.T_unit == 'Celsius':
+            TiTpTb = ['Ti_C', 'Tp_C', 'Tb_C']
+        elif self.T_unit == 'Kelvin':
+            TiTpTb = ['Ti_K', 'Tp_K', 'Tb_K']
+        columns = TiTpTb + ['idx_dwdT_max_p_min', 'dwdT_mean_p_min', 'S_comb']
+        rep = pd.DataFrame(index=self.filenames, columns=columns)
+
+        for f, filename in enumerate(self.filenames):
+            rep.loc[filename] = [self.Ti_stk[f], self.Tp_stk[f],
+                                 self.Tb_stk[f], self.dwdT_max_stk[f],
+                                 self.dwdT_mean_stk[f], self.S_stk[f]]
+
+        rep.loc['ave'] = [self.Ti, self.Tp, self.Tb, self.dwdT_max,
+                          self.dwdT_mean, self.S]
+
+        rep.loc['std'] = [self.Ti_std, self.Tp_std, self.Tb_std,
+                          self.dwdT_max_std, self.dwdT_mean_std, self.S_std]
+        self.oxidation = rep
+        rep.to_excel(plib.Path(out_path_rep, self.name + '_oxid.xlsx'))
+        return self.oxidation
+
+    def soliddist_report(self):
+        if not self.soliddist_computed:
+            self.soliddist_analysis()
+        out_path_rep = plib.Path(self.out_path, 'SingleReports')
+        out_path_rep.mkdir(parents=True, exist_ok=True)
+        columns = ['T [' + self.T_symbol + '](' + str(s) + 'min)'
+                   for s in self.dist_steps_min
+                   ] + ['dmp (' + str(s) + 'min)' for s in self.dist_steps_min]
+        rep = pd.DataFrame(index=self.filenames, columns=columns)
+        for f, filename in enumerate(self.filenames):
+            rep.loc[filename] = np.concatenate([self.T_dist_stk[:, f],
+                                                self.dmp_dist_stk[:, f]]
+                                               ).tolist()
+        rep.loc['ave'] = np.concatenate([self.T_dist,
+                                         self.dmp_dist]).tolist()
+        rep.loc['std'] = np.concatenate([self.T_dist_std,
+                                         self.dmp_dist_std]).tolist()
+
+        self.soliddist = rep
+        rep.to_excel(plib.Path(out_path_rep, self.name + '_soliddist.xlsx'))
+        return self.soliddist
+
+    # methods to plot results for a single sample
+    def tg_plot(self, TG_lab='TG [wt%]', grid=False):
+        if not self.proximate_computed:
+            self.proximate_analysis()
+        out_path_ST = plib.Path(self.out_path, 'SingleSamples')
+        out_path_ST.mkdir(parents=True, exist_ok=True)
+        fig_name = self.name
+        fig, ax, axt, fig_par = FigCreate(rows=3, cols=1, plot_type=0,
+                                          paper_col=1, font=self.plot_font)
+        for f in range(self.n_repl):
+            ax[0].plot(self.time_stk[:, f], self.T_stk[:, f], color=clrs[f],
+                       linestyle=lnstls[f], label=self.filenames[f])
+            ax[1].plot(self.time_stk[:, f], self.mp_ar_stk[:, f], color=clrs[f],
+                       linestyle=lnstls[f])
+            ax[2].plot(self.time_stk[:, f], self.mp_db_stk[:, f], color=clrs[f],
+                       linestyle=lnstls[f])
+            ax[0].vlines(self.time_stk[self.idx_moist_stk[f], f],
+                         self.T_stk[self.idx_moist_stk[f], f] - 50,
+                         self.T_stk[self.idx_moist_stk[f], f] + 50,
+                         linestyle=lnstls[f], color=clrs[f])
+            ax[1].vlines(self.time_stk[self.idx_moist_stk[f], f],
+                          self.mp_ar_stk[self.idx_moist_stk[f], f] - 5,
+                          self.mp_ar_stk[self.idx_moist_stk[f], f] + 5,
+                          linestyle=lnstls[f], color=clrs[f])
+            if self.vm_db < 99:
+                ax[0].vlines(self.time_stk[self.idx_vm_stk[f], f],
+                             self.T_stk[self.idx_vm_stk[f], f] - 50,
+                             self.T_stk[self.idx_vm_stk[f], f] + 50,
+                             linestyle=lnstls[f], color=clrs[f])
+                ax[2].vlines(self.time_stk[self.idx_vm_stk[f], f],
+                             self.mp_db_stk[self.idx_vm_stk[f], f] - 5,
+                             self.mp_db_stk[self.idx_vm_stk[f], f] + 5,
+                             linestyle=lnstls[f], color=clrs[f])
+        ax[0].legend(loc='best')
+        FigSave(fig_name + '_TG', out_path_ST, fig, ax, axt, fig_par,
+                xLab='time [min]',
+                yLab=['T ['+self.T_symbol+']',
+                      TG_lab+'(stb)', TG_lab+'(db)'], grid=grid)
+
+    def dtg_plot(self, TG_lab='TG [wt%]', DTG_lab=None, grid=False):
+        if not self.proximate_computed:
+            self.proximate_analysis()
+        out_path_ST = plib.Path(self.out_path, 'SingleSamples')
+        out_path_ST.mkdir(parents=True, exist_ok=True)
+
+        if DTG_lab is None:
+            if self.dtg_basis == 'temperature':
+                DTG_lab = 'DTG [wt%/' + self.T_symbol + ']'
+            elif self.dtg_basis == 'time':
+                DTG_lab='DTG [wt%/min]'
+        fig_name = self.name
+
+        fig, ax, axt, fig_par = FigCreate(rows=3, cols=1, plot_type=0,
+                                          paper_col=1, font=self.plot_font)
+        for f in range(self.n_repl):
+            ax[0].plot(self.time_dtg, self.T_dtg, color=clrs[f],
+                       linestyle=lnstls[f], label=self.filenames[f])
+            ax[1].plot(self.time_dtg, self.mp_db_dtg_stk[:, f], color=clrs[f],
+                       linestyle=lnstls[f])
+            ax[2].plot(self.time_dtg, self.dtg_db_stk[:, f], color=clrs[f],
+                       linestyle=lnstls[f])
+            if self.oxidation_computed:
+                ax[2].vlines(self.time_dtg[self.Ti_idx_stk[f]],
+                             ymin=-1.5, ymax=0,
+                             linestyle=lnstls[f], color=clrs[f], label='Ti')
+                ax[2].vlines(self.time_dtg[self.Tp_idx_stk[f]],
+                             ymin=np.min(self.dtg_db_stk[:, f]),
+                             ymax=np.min(self.dtg_db_stk[:, f])/5,
+                             linestyle=lnstls[f], color=clrs[f], label='Tp')
+                ax[2].vlines(self.time_dtg[self.Tb_idx_stk[f]],
+                             ymin=-1.5, ymax=0,
+                             linestyle=lnstls[f], color=clrs[f], label='Tb')
+        ax[0].legend(loc='best')
+        FigSave(fig_name + '_DTGstk', out_path_ST, fig, ax, axt, fig_par,
+                xLab='time [min]',
+                yLab=['T ['+self.T_symbol+']', TG_lab + '(db)',
+                      DTG_lab + '(db)'], grid=grid)
+
+    def soliddist_plot(self, paper_col=1, hgt_mltp=1.25, TG_lab='TG [wt%]',
+                       grid=False):
+        # slightly different plotting behaviour (uses averages)
+        if not self.soliddist_computed:
+            self.soliddist_analysis()
+        out_path_ST = plib.Path(self.out_path, 'SingleSamples')
+        out_path_ST.mkdir(parents=True, exist_ok=True)
+        fig_name = self.name
+        fig, ax, axt, fig_par = FigCreate(rows=2, cols=1, plot_type=0,
+                                          paper_col=paper_col,
+                                          hgt_mltp=hgt_mltp)
+
+        ax[0].plot(self.time, self.T)
+        ax[0].fill_between(self.time, self.T - self.T_std, self.T + self.T_std,
+                           alpha=.3)
+        ax[1].plot(self.time, self.mp_db)
+        ax[1].fill_between(self.time, self.mp_db - self.mp_db_std,
+                           self.mp_db + self.mp_db_std,
+                           alpha=.3)
+        for tm, mp, dmp in zip(self.time_dist, self.loc_dist,
+                               self.dmp_dist):
+            ax[1].annotate(str(np.round(dmp, 0)) + '%',
+                           ha='center', va='top',
+                           xy=(tm - 10, mp+1), fontsize=9)
+        FigSave(fig_name + '_dist', out_path_ST, fig, ax, axt, fig_par,
+                xLab='time [min]',
+                yLab=['T ['+self.T_symbol+']', TG_lab+'(db)'],
+                grid=grid)
+
+    def deconv_plot(self, fig_name='Deconv',
+                    xLim=None, yLim=None, grid=False, DTG_lab=None,
+                    pdf=False, svg=False, legend='best'):
+        if not self.deconv_computed:
+            self.deconv_analysis()
         out_path_dcv = plib.Path(self.out_path, 'Deconvolution')
         out_path_dcv.mkdir(parents=True, exist_ok=True)
         if DTG_lab is None:
@@ -927,197 +1094,66 @@ class tga_exp:
                 pdf=pdf, svg=svg)  # Set additional parameters as needed
 
 
-    def report_solid_dist(self):
-        if not self.data_loaded:
-            self.load_replicate_files()
-        if not self.proximate_computed:
-            self.proximate_analysis()
-        if not self.dtg_computed:
-            self.dtg_analysis()
-        if not self.oxidation_properties_computed:
-            self.oxidation_properties()
-        if not self.solid_dist_computed:
-            self.solid_dist()
-        out_path_rep = plib.Path(self.out_path, 'SingleReports')
-        out_path_rep.mkdir(parents=True, exist_ok=True)
-        df = pd.DataFrame(index=self.dist_steps)
-        df['t_ave'] = self.T_dist
-        df['t_std'] = self.T_dist_std
-        df['time_ave'] = self.time_dist
-        df['time_std'] = self.time_dist_std
-        df['dmp_ave'] = self.dmp_dist
-        df['dmp_std'] = self.dmp_dist_std
-        df['loc_ave'] = self.loc_dist
-        df['loc_std'] = self.loc_dist_std
-        self.report_dist = df
-        df.to_excel(plib.Path(out_path_rep, self.name + '_SolidDist.xlsx'))
-        return self.report_dist
+# =============================================================================
+# # functions to print reports with ave and std of multiple samples
+# =============================================================================
+def proximate_multi_report(exps, filename='Rep'):
+    for exp in exps:
+        if not exp.proximate_computed:
+            exp.proximate_report()
+    out_path_reps = plib.Path(exps[0].out_path, 'MultiReports')
+    out_path_reps.mkdir(parents=True, exist_ok=True)
 
-    def report(self):
-        if not self.data_loaded:
-            self.load_replicate_files()
-        if not self.proximate_computed:
-            self.proximate_analysis()
-        if not self.dtg_computed:
-            self.dtg_analysis()
-        if not self.oxidation_properties_computed:
-            self.oxidation_properties()
-        out_path_rep = plib.Path(self.out_path, 'SingleReports')
-        out_path_rep.mkdir(parents=True, exist_ok=True)
-        if self.T_unit == 'Celsius':
-            TiTpTb = ['Ti_C', 'Tp_C', 'Tb_C']
-        elif self.T_unit == 'Kelvin':
-            TiTpTb = ['Ti_K', 'Tp_K', 'Tb_K']
-
-        columns = ['moist_ar_p', 'ash_ar_p', 'ash_db_p', 'vm_db_p', 'fc_db_p',
-                   'vm_daf_p', 'fc_daf_p'] + TiTpTb + \
-            ['idx_dwdT_max_p_min', 'dwdT_mean_p_min', 'S_comb', 'AveTGstd_p']
-        report = pd.DataFrame(index=self.filenames, columns=columns)
-
-        for f, filename in enumerate(self.filenames):
-            report.loc[filename] = [
-                self.moist_ar_stk[f], self.ash_ar_stk[f], self.ash_db_stk[f],
-                self.vm_db_stk[f], self.fc_db_stk[f], self.vm_daf_stk[f],
-                self.fc_daf_stk[f], self.Ti_stk[f], self.Tp_stk[f], self.Tb_stk[f],
-                self.dwdT_max_stk[f], self.dwdT_mean_stk[f], self.S_stk[f], np.nan
-            ]
-
-        report.loc['average'] = [
-            self.moist_ar, self.ash_ar, self.ash_db, self.vm_db, self.fc_db,
-            self.vm_daf, self.fc_daf, self.Ti, self.Tp, self.Tb, self.dwdT_max,
-            self.dwdT_mean, self.S, self.AveTGstd_p
-        ]
-
-        report.loc['std'] = [
-            self.moist_ar_std, self.ash_ar_std, self.ash_db_std, self.vm_db_std,
-            self.fc_db_std, self.vm_daf_std, self.fc_daf_std, self.Ti_std,
-            self.Tp_std, self.Tb_std, self.dwdT_max_std, self.dwdT_mean_std,
-            self.S_std, self.AveTGstd_p_std
-        ]
-
-        self.report = report
-
-        report.to_excel(plib.Path(out_path_rep, self.name + '_ProxOxid.xlsx'))
-        return report
-
-    def plt_sample_tg(self, TG_lab='TG [wt%]', grid=False):
-        """
-        produces tg and dtg plots of each replicate in a sample. Quality of plots
-        is supposed to allow checking for errors.
-
-        """
-        out_path_ST = plib.Path(self.out_path, 'SingleSamples')
-        out_path_ST.mkdir(parents=True, exist_ok=True)
-        fig_name = self.name
-        fig, ax, axt, fig_par = FigCreate(rows=3, cols=1, plot_type=0,
-                                          paper_col=1, font=self.plot_font)
-        for f in range(self.n_repl):
-            ax[0].plot(self.time_stk[:, f], self.T_stk[:, f], color=clrs[f],
-                       linestyle=lnstls[f], label=self.filenames[f])
-            ax[1].plot(self.time_stk[:, f], self.mp_ar_stk[:, f], color=clrs[f],
-                       linestyle=lnstls[f])
-            ax[2].plot(self.time_stk[:, f], self.mp_db_stk[:, f], color=clrs[f],
-                       linestyle=lnstls[f])
-            ax[0].vlines(self.time_stk[self.idx_moist_stk[f], f],
-                         self.T_stk[self.idx_moist_stk[f], f] - 50,
-                         self.T_stk[self.idx_moist_stk[f], f] + 50,
-                         linestyle=lnstls[f], color=clrs[f])
-            ax[1].vlines(self.time_stk[self.idx_moist_stk[f], f],
-                          self.mp_ar_stk[self.idx_moist_stk[f], f] - 5,
-                          self.mp_ar_stk[self.idx_moist_stk[f], f] + 5,
-                          linestyle=lnstls[f], color=clrs[f])
-            if self.vm_db < 99:
-                ax[0].vlines(self.time_stk[self.idx_vm_stk[f], f],
-                             self.T_stk[self.idx_vm_stk[f], f] - 50,
-                             self.T_stk[self.idx_vm_stk[f], f] + 50,
-                             linestyle=lnstls[f], color=clrs[f])
-                ax[2].vlines(self.time_stk[self.idx_vm_stk[f], f],
-                             self.mp_db_stk[self.idx_vm_stk[f], f] - 5,
-                             self.mp_db_stk[self.idx_vm_stk[f], f] + 5,
-                             linestyle=lnstls[f], color=clrs[f])
-        ax[0].legend(loc='best')
-        FigSave(fig_name + '_TG', out_path_ST, fig, ax, axt, fig_par,
-                xLab='time [min]',
-                yLab=['T ['+self.T_symbol+']',
-                      TG_lab+'(stb)', TG_lab+'(db)'], grid=grid)
+    rep = pd.DataFrame(columns=list(exps[0].proximate))
+    for exp in exps:
+        rep.loc[exp.label + '_ave'] = exp.proximate.loc['ave', :]
+    for exp in exps:
+        rep.loc[exp.label + '_std'] = exp.proximate.loc['std', :]
+    rep.to_excel(plib.Path(out_path_reps, filename + '_prox.xlsx'))
+    return rep
 
 
-    def plt_sample_dtg(self,
-                       TG_lab='TG [wt%]', DTG_lab=None, grid=False):
-        """
-        produces tg and dtg plots of each replicate in a sample. Quality of
-        plots is supposed to allow checking for errors.
+def oxidation_multi_report(exps, filename='Rep'):
+    for exp in exps:
+        if not exp.oxidation_computed:
+            exp.oxidation_report()
+    out_path_reps = plib.Path(exps[0].out_path, 'MultiReports')
+    out_path_reps.mkdir(parents=True, exist_ok=True)
 
-        """
-        if DTG_lab is None:
-            if self.dtg_basis == 'temperature':
-                DTG_lab = 'DTG [wt%/' + self.T_symbol + ']'
-            elif self.dtg_basis == 'time':
-                DTG_lab='DTG [wt%/min]'
-        out_path_ST = plib.Path(self.out_path, 'SingleSamples')
-        out_path_ST.mkdir(parents=True, exist_ok=True)
-        fig_name = self.name
+    rep = pd.DataFrame(columns=list(exps[0].oxidation))
+    for exp in exps:
+        rep.loc[exp.label + '_ave'] = exp.oxidation.loc['ave', :]
+    for exp in exps:
+        rep.loc[exp.label + '_std'] = exp.oxidation.loc['std', :]
+    rep.to_excel(plib.Path(out_path_reps, filename + '_oxid.xlsx'))
+    return rep
 
-        fig, ax, axt, fig_par = FigCreate(rows=3, cols=1, plot_type=0,
-                                          paper_col=1, font=self.plot_font)
-        for f in range(self.n_repl):
-            ax[0].plot(self.time_dtg, self.T_dtg, color=clrs[f],
-                       linestyle=lnstls[f], label=self.filenames[f])
-            ax[1].plot(self.time_dtg, self.mp_db_dtg_stk[:, f], color=clrs[f],
-                       linestyle=lnstls[f])
-            ax[2].plot(self.time_dtg, self.dtg_db_stk[:, f], color=clrs[f],
-                       linestyle=lnstls[f])
-            if self.oxidation_properties_computed:
-                ax[2].vlines(self.time_dtg[self.Ti_idx_stk[f]],
-                             ymin=-1.5, ymax=0,
-                             linestyle=lnstls[f], color=clrs[f], label='Ti')
-                ax[2].vlines(self.time_dtg[self.Tp_idx_stk[f]],
-                             ymin=np.min(self.dtg_db_stk[:, f]),
-                             ymax=np.min(self.dtg_db_stk[:, f])/5,
-                             linestyle=lnstls[f], color=clrs[f], label='Tp')
-                ax[2].vlines(self.time_dtg[self.Tb_idx_stk[f]],
-                             ymin=-1.5, ymax=0,
-                             linestyle=lnstls[f], color=clrs[f], label='Tb')
-        ax[0].legend(loc='best')
-        FigSave(fig_name + '_DTGstk', out_path_ST, fig, ax, axt, fig_par,
-                xLab='time [min]',
-                yLab=['T ['+self.T_symbol+']', TG_lab + '(db)',
-                      DTG_lab + '(db)'], grid=grid)
 
-    def plt_solid_dist(self, paper_col=1, hgt_mltp=1.25, TG_lab='TG [wt%]',
-                       grid=False):
+def soliddist_multi_report(exps, filename='Rep'):
+    for exp in exps:
+        if not exp.soliddist_computed:
+            exp.soliddist_report()
+    out_path_reps = plib.Path(exps[0].out_path, 'MultiReports')
+    out_path_reps.mkdir(parents=True, exist_ok=True)
 
-        out_path_ST = plib.Path(self.out_path, 'SingleSamples')
-        out_path_ST.mkdir(parents=True, exist_ok=True)
-        fig_name = self.name
-        fig, ax, axt, fig_par = FigCreate(rows=2, cols=1, plot_type=0,
-                                          paper_col=paper_col,
-                                          hgt_mltp=hgt_mltp)
+    rep = pd.DataFrame(columns=list(exps[0].soliddist))
+    for exp in exps:
+        rep.loc[exp.label + '_ave'] = exp.soliddist.loc['ave', :]
+    for exp in exps:
+        rep.loc[exp.label + '_std'] = exp.soliddist.loc['std', :]
+    rep.to_excel(plib.Path(out_path_reps, filename + '_soliddist.xlsx'))
+    return rep
 
-        ax[0].plot(self.time, self.T)
-        # ax[0].plot(self.time, np.diff(self.T, prepend=np.nan)*100, color=clrs[i],
-        #            linestyle=lnstls[i], label=labels[i])
-        ax[0].fill_between(self.time, self.T - self.T_std,
-                           self.T + self.T_std,
-                           alpha=.3)
-        ax[1].plot(self.time, self.mp_db)
-        ax[1].fill_between(self.time, self.mp_db - self.mp_db_std,
-                           self.mp_db + self.mp_db_std,
-                           alpha=.3)
-        for tm, mp, dmp in zip(self.time_dist, self.loc_dist,
-                               self.dmp_dist):
-            ax[1].annotate(str(np.round(dmp, 0)) + '%',
-                           ha='center', va='top',
-                           xy=(tm - 10, mp+1), fontsize=9)
-        FigSave(fig_name + '_dist', out_path_ST, fig, ax, axt, fig_par,
-                xLab='time [min]',
-                yLab=['T ['+self.T_symbol+']', TG_lab+'(db)'],
-                grid=grid
-                )
 
-def plt_tgs(exps, fig_name='Fig', paper_col=.78, hgt_mltp=1.25,
-            xLim=None, yLim=[0, 100], yTicks=None, grid=False,
-            TG_lab='TG [wt%]', lttrs=False, pdf=False, svg=False):
+# =============================================================================
+# # functions for plotting ave and std of multiple samples
+# =============================================================================
+def tg_multi_plot(exps, fig_name='Fig', paper_col=.78, hgt_mltp=1.25,
+             xLim=None, yLim=[0, 100], yTicks=None, grid=False,
+             TG_lab='TG [wt%]', lttrs=False, pdf=False, svg=False):
+    for exp in exps:
+        if not exp.proximate_computed:
+            exp.proximate_analysis()
     out_path_TGs = plib.Path(exps[0].out_path, 'TGs')
     out_path_TGs.mkdir(parents=True, exist_ok=True)
     fig, ax, axt, fig_par = FigCreate(rows=1, cols=1, plot_type=0,
@@ -1136,13 +1172,16 @@ def plt_tgs(exps, fig_name='Fig', paper_col=.78, hgt_mltp=1.25,
             yLab=TG_lab, annotate_lttrs=lttrs, grid=grid, pdf=pdf, svg=svg)
 
 
-def plt_dtgs(exps, fig_name='Fig', paper_col=.78, hgt_mltp=1.25,
-             xLim=None, yLim=None, yTicks=None, grid=False,
-             DTG_lab=None, lttrs=False, plt_gc=False, gc_Tlim=300,
-             pdf=False, svg=False):
-
+def dtg_multi_plot(exps, fig_name='Fig', paper_col=.78, hgt_mltp=1.25,
+              xLim=None, yLim=None, yTicks=None, grid=False,
+              DTG_lab=None, lttrs=False, plt_gc=False, gc_Tlim=300,
+              pdf=False, svg=False):
+    for exp in exps:
+        if not exp.proximate_computed:
+            exp.proximate_analysis()
     out_path_DTGs = plib.Path(exps[0].out_path, 'DTGs')
     out_path_DTGs.mkdir(parents=True, exist_ok=True)
+
     if not DTG_lab:
         DTG_lab = 'DTG [wt%/' + exps[0].T_symbol + ']'
 
@@ -1167,177 +1206,15 @@ def plt_dtgs(exps, fig_name='Fig', paper_col=.78, hgt_mltp=1.25,
             pdf=pdf, svg=svg, annotate_lttrs=lttrs, grid=grid)
 
 
-def plt_cscds(exps, fig_name='Fig', paper_col=.78, hgt_mltp=1.25,
-              xLim=None,clrs_cscd=False,  yLim0_cscd=-8,
-              shifts_cscd=np.asarray([0, 11, 5, 10, 10, 10, 11]),
-              peaks_cscd=None, peak_names=None, dh_names_cscd=0.1,
-              loc_names_cscd=130,
-              hgt_mltp_cscd=1.5, legend_cscd='lower right',
-              y_values_cscd=[-10, 0],
-              lttrs=False, DTG_lab=None, pdf=False, svg=False):
-    out_path_CSCDs = plib.Path(exps[0].out_path, 'DTGs')
-    out_path_CSCDs.mkdir(parents=True, exist_ok=True)
-    labels = [exp.label if exp.label else exp.name for exp in exps]
-    if not DTG_lab:
-        DTG_lab = 'DTG [wt%/' + exps[0].T_symbol + ']'
-    yLim_cscd = [yLim0_cscd, np.sum(shifts_cscd)]
-    dh = np.cumsum(shifts_cscd)
-    fig, ax, axt, fig_par = FigCreate(1, 1, paper_col=.78,
-                                      hgt_mltp=hgt_mltp_cscd)
-    for n, exp in enumerate(exps):
-        if clrs_cscd:
-            ax[0].plot(exp.T_dtg, exp.dtg_db + dh[n], color=clrs[n],
-                       linestyle=lnstls[0])
-            ax[0].fill_between(exp.T_fit, exp.dtg_db - exp.dtg_db_std
-                               + dh[n], exp.dtg_db + exp.dtg_db_std + dh[n],
-                               color=clrs[n], alpha=.3)
-        else:
-            ax[0].plot(exp.T_dtg, exp.dtg_db + dh[n], color='k',
-                       linestyle=lnstls[0])
-            ax[0].fill_between(exp.T_dtg, exp.dtg_db - exp.dtg_db_std
-                               + dh[n], exp.dtg_db + exp.dtg_db_std + dh[n],
-                               color='k', alpha=.3)
-        ax[0].annotate(labels[n], ha='left', va='bottom',
-                       xy=(loc_names_cscd,
-                           exp.dtg_db[np.argmax(exp.T_dtg>
-                                                 loc_names_cscd)] +
-                                      dh[n] + dh_names_cscd))
-    if peaks_cscd:
-        for p, peak in enumerate(peaks_cscd):
-            if peak:  # to allow to use same markers by skipping peaks
-                ax[0].plot(peak[0], peak[1], linestyle='None',
-                           marker=mrkrs[p], color='k', label=peak_names[p])
-    if y_values_cscd:
-        ax[0].set_yticks(y_values_cscd)
-    else:
-        ax[0].set_yticks([])
-    FigSave(fig_name + '_cscd', out_path_CSCDs, fig, ax, axt, fig_par,
-            legend=legend_cscd, annotate_lttrs=lttrs,
-            xLab='T [' + exps[0].T_symbol + ']', yLab=DTG_lab,
-            xLim=xLim, yLim=yLim_cscd, svg=svg, pdf=pdf)
-
-
-def print_reports(exps, filename='Rep', to_excel=True):
-    out_path_REPs = plib.Path(exps[0].out_path, 'DTGs')
-    out_path_REPs.mkdir(parents=True, exist_ok=True)
-    reports = pd.DataFrame(columns=list(exps[0].report))
-    for i, exp in enumerate(exps):
-        reports.loc[exp.label + '_ave'] = exp.report.loc['average', :]
-    for i, exp in enumerate(exps):
-        reports.loc[exp.label + '_std'] = exp.report.loc['std', :]
-    if to_excel:
-        reports.to_excel(plib.Path(out_path_REPs, filename + '.xlsx'))
-    return reports
-
-
-def plt_solid_dists(exps, fig_name="Dist",
-                    TG_lab='TG [wt%]', DTG_lab='DTG [wt%/min]',
-                    hgt_mltp=1.25, paper_col=.78, labels=None,
-                    xLim=None, yLim=[[0, 1000], [0, 100]], yTicks=None, lttrs=False,
-                    print_dfs=True, grid=False,):
-    """
-    produces tg and dtg plots of each replicate in a sample. Quality of plots
-    is supposed to allow checking for errors.
-
-    """
-    out_path_MS = plib.Path(exps[0].out_path, 'SolidDist')
-    out_path_MS.mkdir(parents=True, exist_ok=True)
-    if not labels:  # try with labels and use name if no label is given
-        labels = [exp.label if exp.label else exp.name for exp in exps]
-    fig, ax, axt, fig_par = FigCreate(rows=2, cols=1, plot_type=0,
-                                      paper_col=paper_col,
-                                      hgt_mltp=hgt_mltp)
-    for i, exp in enumerate(exps):
-
-
-        ax[0].plot(exp.time, exp.T, color=clrs[i],
-                   linestyle=lnstls[i], label=labels[i])
-        ax[0].fill_between(exp.time, exp.T - exp.T_std,
-                           exp.T + exp.T_std, color=clrs[i],
-                           alpha=.3)
-        ax[1].plot(exp.time, exp.mp_db, color=clrs[i],
-                   linestyle=lnstls[i], label=labels[i])
-        ax[1].fill_between(exp.time, exp.mp_db - exp.mp_db_std,
-                           exp.mp_db + exp.mp_db_std, color=clrs[i],
-                           alpha=.3)
-        for tm, mp, dmp in zip(exp.time_dist, exp.loc_dist,
-                               exp.dmp_dist):
-            ax[1].annotate(str(np.round(dmp, 0)) + '%',
-                           ha='center', va='top',
-                           xy=(tm - 10, mp+1), fontsize=9, color=clrs[i])
-        ax[0].legend(loc='upper left')
-        ax[1].legend(loc='center left')
-    FigSave(fig_name + 'dist_db', out_path_MS, fig, ax, axt, fig_par,
-            xLim=xLim, yLim=yLim, yTicks=yTicks, xLab='time [min]',
-            yLab=['T [' + exps[0].T_symbol + ']', TG_lab+'(db)'],
-            annotate_lttrs=lttrs, grid=grid)
-
-
-def plot_oxid_props(exps, fig_name="OxidProp",
-                    smpl_labs=None, xlab_rot=0,
-                    paper_col=.8, hgt_mltp=1.5, grid=False,
-                    bboxtoanchor=True, x_anchor=1.1, y_anchor=1.02,
-                    legend_loc='best',
-                    yLim=None, ytLim=None, yTicks=None, ytTicks=None):
-    out_path_OP = plib.Path(exps[0].out_path, 'OxidProps')
-    out_path_OP.mkdir(parents=True, exist_ok=True)
-    vars_bar = ['T$_i$', 'T$_p$', 'T$_b$']
-    vars_scat = ['S (combustibility index)']
-    if smpl_labs:
-        labels = smpl_labs
-    else:
-        labels = [exp.label for exp in exps]
-    df_ave = pd.DataFrame(columns=vars_bar, index=labels)
-    df_std = pd.DataFrame(columns=vars_bar, index=labels)
-    df_ave['T$_i$'] = [exp.Ti for exp in exps]
-    df_ave['T$_p$'] = [exp.Tp for exp in exps]
-    df_ave['T$_b$'] = [exp.Tb for exp in exps]
-    df_std['T$_i$'] = [exp.Ti_std for exp in exps]
-    df_std['T$_p$'] = [exp.Tp_std for exp in exps]
-    df_std['T$_b$'] = [exp.Tb_std for exp in exps]
-
-    S_combs = [exp.S for exp in exps]
-    S_combs_std = [exp.S_std for exp in exps]
-    fig, ax, axt, fig_par = FigCreate(1, 1, 1, paper_col=paper_col,
-                                      hgt_mltp=hgt_mltp)
-    df_ave.plot(kind='bar', ax=ax[0], yerr=df_std, capsize=2, width=.85,
-                ecolor='k', edgecolor='black', rot=xlab_rot)
-    bars = ax[0].patches
-    patterns = [None, '//', '...']  # set hatch patterns in the correct order
-    hatches = []  # list for hatches in the order of the bars
-    for h in patterns:  # loop over patterns to create bar-ordered hatches
-        for i in range(int(len(bars) / len(patterns))):
-            hatches.append(h)
-    # loop over bars and hatches to set hatches in correct order
-    for bar, hatch in zip(bars, hatches):
-        bar.set_hatch(hatch)
-    axt[0].errorbar(x=df_ave.index, y=S_combs, yerr=S_combs_std,
-                    linestyle='None', marker=mrkrs[0], ecolor='k', capsize=2,
-                    markeredgecolor='k', color=clrs[3], markersize=10,
-                    label='S')
-    hnd_ax, lab_ax = ax[0].get_legend_handles_labels()
-    hnd_axt, lab_axt = axt[0].get_legend_handles_labels()
-    if bboxtoanchor:  # legend goes outside of plot area
-        ax[0].legend(hnd_ax + hnd_axt, lab_ax + lab_axt,
-                     loc='upper left', bbox_to_anchor=(x_anchor, y_anchor))
-    else:  # legend is inside of plot area
-        ax[0].legend(hnd_ax + hnd_axt, lab_ax + lab_axt,
-                     loc=legend_loc)
-    if xlab_rot != 0:
-        ax[0].set_xticklabels(df_ave.index, rotation=xlab_rot, ha='right',
-                              rotation_mode='anchor')
-    FigSave(fig_name, out_path_OP, fig, ax, axt, fig_par, tight_layout=True,
-            legend=None, ytLab='S (combustion index) [-]',
-            yLab='T [' + exps[0].T_symbol + ']',
-            yLim=yLim, ytLim=ytLim, yTicks=yTicks, ytTicks=ytTicks, grid=grid)
-
-
-def plot_proximates(exps, fig_name="Prox",
-                    smpl_labs=None, xlab_rot=0,
-                    paper_col=.8, hgt_mltp=1.5, grid=False,
-                    bboxtoanchor=True, x_anchor=1.13, y_anchor=1.02,
-                    legend_loc='best',
-                    yLim=[0, 100], ytLim=[0, 1], yTicks=None, ytTicks=None):
+def proximate_multi_plot(exps, fig_name="Prox",
+                         smpl_labs=None, xlab_rot=0,
+                         paper_col=.8, hgt_mltp=1.5, grid=False,
+                         bboxtoanchor=True, x_anchor=1.13, y_anchor=1.02,
+                         legend_loc='best', yLim=[0, 100], ytLim=[0, 1],
+                         yTicks=None, ytTicks=None):
+    for exp in exps:
+        if not exp.proximate_computed:
+            exp.proximate_analysis()
     out_path_OP = plib.Path(exps[0].out_path, 'Proximates')
     out_path_OP.mkdir(parents=True, exist_ok=True)
     vars_bar = ['Moisture (stb)', 'VM (db)', 'FC (db)', 'Ash (db)']
@@ -1391,7 +1268,160 @@ def plot_proximates(exps, fig_name="Prox",
             yLim=yLim, ytLim=ytLim, yTicks=yTicks, ytTicks=ytTicks, grid=grid)
 
 
-def compute_KAS(exps, ramps, alpha=np.arange(0.05, .9, 0.05)):
+def oxidation_multi_plot(exps, fig_name="OxidProp",
+                    smpl_labs=None, xlab_rot=0,
+                    paper_col=.8, hgt_mltp=1.5, grid=False,
+                    bboxtoanchor=True, x_anchor=1.13, y_anchor=1.02,
+                    legend_loc='best',
+                    yLim=None, ytLim=None, yTicks=None, ytTicks=None):
+    for exp in exps:
+        if not exp.oxidation_computed:
+            exp.oxidation_analysis()
+    out_path_OP = plib.Path(exps[0].out_path, 'OxidProps')
+    out_path_OP.mkdir(parents=True, exist_ok=True)
+    vars_bar = ['T$_i$', 'T$_p$', 'T$_b$']
+    vars_scat = ['S (combustibility index)']
+    if smpl_labs:
+        labels = smpl_labs
+    else:
+        labels = [exp.label for exp in exps]
+    df_ave = pd.DataFrame(columns=vars_bar, index=labels)
+    df_std = pd.DataFrame(columns=vars_bar, index=labels)
+    df_ave['T$_i$'] = [exp.Ti for exp in exps]
+    df_ave['T$_p$'] = [exp.Tp for exp in exps]
+    df_ave['T$_b$'] = [exp.Tb for exp in exps]
+    df_std['T$_i$'] = [exp.Ti_std for exp in exps]
+    df_std['T$_p$'] = [exp.Tp_std for exp in exps]
+    df_std['T$_b$'] = [exp.Tb_std for exp in exps]
+
+    S_combs = [exp.S for exp in exps]
+    S_combs_std = [exp.S_std for exp in exps]
+    fig, ax, axt, fig_par = FigCreate(1, 1, 1, paper_col=paper_col,
+                                      hgt_mltp=hgt_mltp)
+    df_ave.plot(kind='bar', ax=ax[0], yerr=df_std, capsize=2, width=.85,
+                ecolor='k', edgecolor='black', rot=xlab_rot)
+    bars = ax[0].patches
+    patterns = [None, '//', '...']  # set hatch patterns in the correct order
+    hatches = []  # list for hatches in the order of the bars
+    for h in patterns:  # loop over patterns to create bar-ordered hatches
+        for i in range(int(len(bars) / len(patterns))):
+            hatches.append(h)
+    # loop over bars and hatches to set hatches in correct order
+    for bar, hatch in zip(bars, hatches):
+        bar.set_hatch(hatch)
+    axt[0].errorbar(x=df_ave.index, y=S_combs, yerr=S_combs_std,
+                    linestyle='None', marker=mrkrs[0], ecolor='k', capsize=2,
+                    markeredgecolor='k', color=clrs[3], markersize=10,
+                    label='S')
+    hnd_ax, lab_ax = ax[0].get_legend_handles_labels()
+    hnd_axt, lab_axt = axt[0].get_legend_handles_labels()
+    if bboxtoanchor:  # legend goes outside of plot area
+        ax[0].legend(hnd_ax + hnd_axt, lab_ax + lab_axt,
+                     loc='upper left', bbox_to_anchor=(x_anchor, y_anchor))
+    else:  # legend is inside of plot area
+        ax[0].legend(hnd_ax + hnd_axt, lab_ax + lab_axt,
+                     loc=legend_loc)
+    if xlab_rot != 0:
+        ax[0].set_xticklabels(df_ave.index, rotation=xlab_rot, ha='right',
+                              rotation_mode='anchor')
+    FigSave(fig_name, out_path_OP, fig, ax, axt, fig_par, tight_layout=True,
+            legend=None, ytLab='S (combustion index) [-]',
+            yLab='T [' + exps[0].T_symbol + ']',
+            yLim=yLim, ytLim=ytLim, yTicks=yTicks, ytTicks=ytTicks, grid=grid)
+
+
+def soliddist_multi_plot(exps, fig_name="Dist",
+                         TG_lab='TG [wt%]', DTG_lab='DTG [wt%/min]',
+                         hgt_mltp=1.25, paper_col=.78, labels=None, lttrs=False,
+                         xLim=None, yLim=[[0, 1000], [0, 100]], yTicks=None,
+                         print_dfs=True, grid=False):
+    for exp in exps:
+        if not exp.soliddist_computed:
+            exp.soliddist_analysis()
+    out_path_MS = plib.Path(exps[0].out_path, 'SolidDist')
+    out_path_MS.mkdir(parents=True, exist_ok=True)
+    if not labels:  # try with labels and use name if no label is given
+        labels = [exp.label if exp.label else exp.name for exp in exps]
+    fig, ax, axt, fig_par = FigCreate(rows=2, cols=1, plot_type=0,
+                                      paper_col=paper_col,
+                                      hgt_mltp=hgt_mltp)
+    for i, exp in enumerate(exps):
+        ax[0].plot(exp.time, exp.T, color=clrs[i],
+                   linestyle=lnstls[i], label=labels[i])
+        ax[0].fill_between(exp.time, exp.T - exp.T_std,
+                           exp.T + exp.T_std, color=clrs[i],
+                           alpha=.3)
+        ax[1].plot(exp.time, exp.mp_db, color=clrs[i],
+                   linestyle=lnstls[i], label=labels[i])
+        ax[1].fill_between(exp.time, exp.mp_db - exp.mp_db_std,
+                           exp.mp_db + exp.mp_db_std, color=clrs[i],
+                           alpha=.3)
+        for tm, mp, dmp in zip(exp.time_dist, exp.loc_dist,
+                               exp.dmp_dist):
+            ax[1].annotate(str(np.round(dmp, 0)) + '%',
+                           ha='center', va='top',
+                           xy=(tm - 10, mp+1), fontsize=9, color=clrs[i])
+        ax[0].legend(loc='upper left')
+        # ax[1].legend(loc='center left')
+    FigSave(fig_name + 'dist_db', out_path_MS, fig, ax, axt, fig_par,
+            xLim=xLim, yLim=yLim, yTicks=yTicks, xLab='time [min]',
+            yLab=['T [' + exps[0].T_symbol + ']', TG_lab+'(db)'],
+            annotate_lttrs=lttrs, grid=grid)
+
+
+def cscd_multi_plot(exps, fig_name='Fig', paper_col=.78, hgt_mltp=1.25,
+               xLim=None,clrs_cscd=False,  yLim0_cscd=-8,
+               shifts_cscd=np.asarray([0, 11, 5, 10, 10, 10, 11]),
+               peaks_cscd=None, peak_names=None, dh_names_cscd=0.1,
+               loc_names_cscd=130,
+               hgt_mltp_cscd=1.5, legend_cscd='lower right',
+               y_values_cscd=[-10, 0],
+               lttrs=False, DTG_lab=None, pdf=False, svg=False):
+    for exp in exps:
+        if not exp.proximate_computed:
+            exp.proximate_analysis()
+    out_path_CSCDs = plib.Path(exps[0].out_path, 'DTGs')
+    out_path_CSCDs.mkdir(parents=True, exist_ok=True)
+    labels = [exp.label if exp.label else exp.name for exp in exps]
+    if not DTG_lab:
+        DTG_lab = 'DTG [wt%/' + exps[0].T_symbol + ']'
+    yLim_cscd = [yLim0_cscd, np.sum(shifts_cscd)]
+    dh = np.cumsum(shifts_cscd)
+    fig, ax, axt, fig_par = FigCreate(1, 1, paper_col=.78,
+                                      hgt_mltp=hgt_mltp_cscd)
+    for n, exp in enumerate(exps):
+        if clrs_cscd:
+            ax[0].plot(exp.T_dtg, exp.dtg_db + dh[n], color=clrs[n],
+                       linestyle=lnstls[0])
+            ax[0].fill_between(exp.T_fit, exp.dtg_db - exp.dtg_db_std
+                               + dh[n], exp.dtg_db + exp.dtg_db_std + dh[n],
+                               color=clrs[n], alpha=.3)
+        else:
+            ax[0].plot(exp.T_dtg, exp.dtg_db + dh[n], color='k',
+                       linestyle=lnstls[0])
+            ax[0].fill_between(exp.T_dtg, exp.dtg_db - exp.dtg_db_std
+                               + dh[n], exp.dtg_db + exp.dtg_db_std + dh[n],
+                               color='k', alpha=.3)
+        ax[0].annotate(labels[n], ha='left', va='bottom',
+                       xy=(loc_names_cscd,
+                           exp.dtg_db[np.argmax(exp.T_dtg > loc_names_cscd)] +
+                           dh[n] + dh_names_cscd))
+    if peaks_cscd:
+        for p, peak in enumerate(peaks_cscd):
+            if peak:  # to allow to use same markers by skipping peaks
+                ax[0].plot(peak[0], peak[1], linestyle='None',
+                           marker=mrkrs[p], color='k', label=peak_names[p])
+    if y_values_cscd:
+        ax[0].set_yticks(y_values_cscd)
+    else:
+        ax[0].set_yticks([])
+    FigSave(fig_name + '_cscd', out_path_CSCDs, fig, ax, axt, fig_par,
+            legend=legend_cscd, annotate_lttrs=lttrs,
+            xLab='T [' + exps[0].T_symbol + ']', yLab=DTG_lab,
+            xLim=xLim, yLim=yLim_cscd, svg=svg, pdf=pdf)
+
+
+def KAS_analysis(exps, ramps, alpha=np.arange(0.05, .9, 0.05)):
     R_gas = 8.314462618
     n_ramps = len(ramps)  # number of ramp used for feedstock
     n_alpha = len(alpha)  # number of alpha investigated
@@ -1441,7 +1471,7 @@ def compute_KAS(exps, ramps, alpha=np.arange(0.05, .9, 0.05)):
     return kas
 
 
-def plot_KAS_isolines(exps, kas_names=None, fig_name='KAsIso',
+def KAS_plot_isolines(exps, kas_names=None, fig_name='KAsIso',
                       paper_col=.78, hgt_mltp=1.25, xLim=None, yLim=None,
                       annt_names=True, annotate_lttrs=False, leg_cols=1,
                       bboxtoanchor=True, x_anchor=1.13, y_anchor=1.02,
@@ -1465,25 +1495,21 @@ def plot_KAS_isolines(exps, kas_names=None, fig_name='KAsIso',
 
     x = np.linspace(np.min([np.min(xmatr) for xmatr in xmatrs]),
                     np.max([np.max(xmatr) for xmatr in xmatrs]), 100)
-    if n_exp <= 3:
-        fig, ax, axt, fig_par = FigCreate(rows=n_exp, cols=1, plot_type=0,
-                                          paper_col=paper_col,
-                                          hgt_mltp=hgt_mltp)
-    else:
-        fig, ax, axt, fig_par = FigCreate(rows=n_exp//2, cols=2,
-                                          plot_type=0, paper_col=paper_col*1.5,
-                                          hgt_mltp=hgt_mltp)
+    rows = n_exp
+    cols = 1
+    ax_for_legend = 0
+    if n_exp > 3:
+        rows = rows//2
+        cols += 1
+        paper_col *= 1.5
+        ax_for_legend += 1
+    fig, ax, axt, fig_par = FigCreate(rows=rows, cols=cols, plot_type=0,
+                                      paper_col=paper_col, hgt_mltp=hgt_mltp)
     for k, kas in enumerate(kass):
         ymaxiso = np.max(kas['ymatr'])
         yminiso = np.min(kas['ymatr'])
-        if n_exp > 1:
-            annotate_lttrs_iso = True
-        else:
-            annotate_lttrs_iso = False
         for i in range(n_alpha):
             lab = r'$\alpha$=' + str(np.round(alpha[i], 2))
-
-
             xmin = np.argwhere(kas['v_fit'][i](x) < ymaxiso)[0][0]
             try:
                 xmax = np.argwhere(kas['v_fit'][i](x) < yminiso)[0][0]
@@ -1493,30 +1519,30 @@ def plot_KAS_isolines(exps, kas_names=None, fig_name='KAsIso',
             ax[k].plot(newx, kas['v_fit'][i](newx),
                        color=clrs[i], linestyle=lnstls[i])
             ax[k].plot(kas['xmatr'][i, :], kas['ymatr'][i, :], color=clrs[i],
-                        linestyle='None', marker=mrkrs[i])
+                       linestyle='None', marker=mrkrs[i])
             ax[k].plot([], [], color=clrs[i], linestyle=lnstls[i],
-                        marker=mrkrs[i], label=lab)
+                       marker=mrkrs[i], label=lab)
             hnd_ax, lab_ax = ax[k].get_legend_handles_labels()
         if annt_names:
             ax[k].annotate(kas_names[k], xycoords="axes fraction",
-                            xy=(0, 0), rotation=0, size="small",
-                            xytext=(0.05, 0.93),)
+                           xy=(0, 0), rotation=0, size="small",
+                           xytext=(0.05, 0.93))
     if bboxtoanchor:  # legend goes outside of plot area
-        ax[0].legend(ncol=leg_cols, loc='upper left',
-                     bbox_to_anchor=(x_anchor, y_anchor))
+
+        ax[ax_for_legend].legend(ncol=leg_cols, loc='upper left',
+                                 bbox_to_anchor=(x_anchor, y_anchor))
     else:  # legend is inside of plot area
-        ax[0].legend(ncol=leg_cols,
-                     loc=legend_loc)
+        ax[0].legend(ncol=leg_cols, loc=legend_loc)
     FigSave(fig_name + '_iso', out_path_KASs, fig, ax, axt, fig_par,
             xLim=xLim, yLim=yLim, xLab='1000/T [1/K]', legend=None,
             annotate_lttrs=annotate_lttrs, yLab=r'ln($\beta$/T$^{2}$)',
             tight_layout=False)
 
 
-def plot_KAS_Ea(exps, kas_names=None, fig_name='KASEa',
+def KAS_plot_Ea(exps, kas_names=None, fig_name='KASEa',
                 paper_col=.78, hgt_mltp=1.25, xLim=[.1, .8], yLim=[0, 300],
                 yTicks=None, annt_names=True, annotate_lttrs=False, leg_cols=1,
-                bboxtoanchor=True, x_anchor=1.13, y_anchor=1.02,
+                bboxtoanchor=True, x_anchor=1.13, y_anchor=2.02,
                 grid=False, plot_type='scatter',
                 legend_loc='best'):
     out_path_KASs = plib.Path(exps[0].out_path, 'KASs')
@@ -1551,10 +1577,10 @@ def plot_KAS_Ea(exps, kas_names=None, fig_name='KASEa',
     else:
         if bboxtoanchor:  # legend goes outside of plot area
             ax[0].legend(ncol=leg_cols, loc='upper left',
-                         bbox_to_anchor=(x_anchor, y_anchor))
+                          bbox_to_anchor=(x_anchor, y_anchor))
         else:  # legend is inside of plot area
             ax[0].legend(ncol=leg_cols,
-                         loc=legend_loc)
+                          loc=legend_loc)
     FigSave(fig_name + '_Ea', out_path_KASs, fig, ax, axt, fig_par,
             xLim=xLim, yLim=yLim,
             legend=legend_loc, yTicks=yTicks, xLab=r'$\alpha$ [-]',
@@ -1563,54 +1589,50 @@ def plot_KAS_Ea(exps, kas_names=None, fig_name='KASEa',
 
 if __name__ == "__main__":
     folder = '_test'
-    CLSOx5 = tga_exp(folder=folder, name='CLSOx5',
-                  filenames=['CLSOx5_1', 'CLSOx5_2', 'CLSOx5_3'],
-                  t_moist=38, t_VM=147, T_unit='Celsius')
-
-    a = CLSOx5.report()
-    #%%
-    b = CLSOx5.deconvolute_dtg([310, 450, 500],)
-    CLSOx5.plt_sample_tg()
-    CLSOx5.plt_sample_dtg()
-    CLSOx10 = tga_exp(folder=folder, name='CLSOx10', load_skiprows=8,
-                  filenames=['CLSOx10_2', 'CLSOx10_3'],
-                  t_moist=38, t_VM=147, T_unit='Celsius')
-
-    CLSOx10.report()
-    CLSOx50 = tga_exp(folder=folder, name='CLSOx50', load_skiprows=8,
-                  filenames=['CLSOx50_4', 'CLSOx50_5'],
-                  t_moist=38, t_VM=147, T_unit='Celsius')
-
-    CLSOx50.report()
-    MIS = tga_exp(folder=folder, name='MIS',
+    P1 = tga_exp(folder=folder, name='P1',
                   filenames=['MIS_1', 'MIS_2', 'MIS_3'],
                   t_moist=38, t_VM=147, T_unit='Celsius')
-    e = MIS.report()
-    b = MIS.deconvolute_dtg([210, 300, 400],)
-    MIS.plt_sample_tg()
-    MIS.plt_sample_dtg()
-    SDa = tga_exp(folder=folder, name='SDa',
+    P2 = tga_exp(folder=folder, name='P2', load_skiprows=0,
+                  filenames=['DIG10_1', 'DIG10_2', 'DIG10_3'],
+                  t_moist=22, t_VM=98, T_unit='Celsius')
+    Ox5 = tga_exp(folder=folder, name='Ox5',
+                     filenames=['CLSOx5_1', 'CLSOx5_2', 'CLSOx5_3'],
+                     t_moist=38, t_VM=147, T_unit='Celsius')
+    Ox10 = tga_exp(folder=folder, name='Ox10', load_skiprows=8,
+                      filenames=['CLSOx10_2', 'CLSOx10_3'],
+                      t_moist=38, t_VM=147, T_unit='Celsius')
+    Ox50 = tga_exp(folder=folder, name='Ox50', load_skiprows=8,
+                      filenames=['CLSOx50_4', 'CLSOx50_5'],
+                      t_moist=38, t_VM=147, T_unit='Celsius')
+    SD1 = tga_exp(folder=folder, name='SDa',
                   filenames=['SDa_1', 'SDa_2', 'SDa_3'],
                   t_moist=38, t_VM=147, T_unit='Celsius')
-    e = SDa.report()
-    f = SDa.solid_dist()
-    SDa.plt_solid_dist()
-    SDb = tga_exp(folder=folder, name='SDb',
+    SD2 = tga_exp(folder=folder, name='SDb',
                   filenames=['SDb_1', 'SDb_2', 'SDb_3'],
                   t_moist=38, t_VM=147, T_unit='Celsius')
-    e = SDb.report()
-    SDb.report_solid_dist()
-    SDb.plt_solid_dist()
+    #%% si
+    a = P1.proximate_report()
+    b = P2.proximate_report()
+    c = Ox5.oxidation_report()
+    d = Ox10.oxidation_report()
+    e = Ox50.oxidation_report()
+    f = SD1.soliddist_report()
+    g = SD2.soliddist_report()
+    # %%
+    tg_multi_plot([P1, P2, Ox5, SD1])
+    dtg_multi_plot([P1, P2, Ox5, SD1])
+    h = proximate_multi_report([P1, P2])
+    proximate_multi_plot([P1, P2])
+    h = oxidation_multi_report([Ox5, Ox10, Ox50])
+    oxidation_multi_plot([Ox5, Ox10, Ox50], yLim=[250, 400])
+    h = soliddist_multi_report([SD1, SD2])
+    soliddist_multi_plot([SD1, SD2])
+    # %%
+    P1.deconv_analysis([280, 380])
+    Ox5.deconv_analysis([310, 450, 500])
+    #%%
+    KAS_analysis([Ox5, Ox10, Ox50], [5, 10, 50])
+    KAS_plot_isolines([Ox5], bboxtoanchor=True)
+    KAS_plot_Ea([Ox5], bboxtoanchor=True)
 
-    plt_tgs([CLSOx5, MIS, SDa, SDb])
-    plt_dtgs([CLSOx5, MIS, SDa, SDb])
-    plt_cscds([CLSOx5, MIS, SDa, SDb])
-    rep = print_reports([CLSOx5, MIS, SDa, SDb])
-    plt_solid_dists([SDa, SDb])
-
-    plot_oxid_props([CLSOx5, MIS, SDa, SDb])
-    plot_proximates([CLSOx5, MIS, SDa, SDb], ytLim=None)
-    g = compute_KAS([CLSOx5, CLSOx10, CLSOx50], [5, 10, 50])
-    plot_KAS_isolines([CLSOx5], bboxtoanchor=True)
-    plot_KAS_Ea([CLSOx5], bboxtoanchor=True)
 
