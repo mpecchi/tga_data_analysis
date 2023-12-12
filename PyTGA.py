@@ -1638,14 +1638,14 @@ if __name__ == "__main__":
     dtg_multi_plot([P1, P2, Ox5, SD1], filename='P1P2Ox5SD1')
     h = proximate_multi_report([P1, P2], filename='P1P2')
     proximate_multi_plot([P1, P2], filename='P1P2')
-    h = oxidation_multi_report([Ox5, Ox10, Ox50], filename='Ox5Ox10Ox50')
+    i = oxidation_multi_report([Ox5, Ox10, Ox50], filename='Ox5Ox10Ox50')
     oxidation_multi_plot([Ox5, Ox10, Ox50], yLim=[250, 400],
                          filename='Ox5Ox10Ox50')
-    h = soliddist_multi_report([SD1, SD2], filename='SD1SD2')
+    j = soliddist_multi_report([SD1, SD2], filename='SD1SD2')
     soliddist_multi_plot([SD1, SD2], filename='SD1SD2')
 
     #%%
-    KAS_analysis([Ox5, Ox10, Ox50], [5, 10, 50])
+    k = KAS_analysis([Ox5, Ox10, Ox50], [5, 10, 50])
     KAS_plot_isolines([Ox5], filename='Ox5Ox10Ox50')
     KAS_plot_Ea([Ox5], filename='Ox5Ox10Ox50')
 
