@@ -218,7 +218,7 @@ def FigCreate(rows=1, cols=1, plot_type=0, paper_col=1,
     return fig, lst_ax, lst_axt, fig_par
 
 
-def FigSave(fig_name, out_path, fig, lst_ax, lst_axt, fig_par,
+def FigSave(filename, out_path, fig, lst_ax, lst_axt, fig_par,
             xLab=None, yLab=None, ytLab=None,
             xLim=None, yLim=None, ytLim=None,
             xTicks=None, yTicks=None, ytTicks=None,
@@ -238,7 +238,7 @@ def FigSave(fig_name, out_path, fig, lst_ax, lst_axt, fig_par,
 
     Parameters
     ----------
-    fig_name : str
+    filename : str
         name of figure. It is the name of the png od pfd file to be saved
     out_path : pathlib.Path object. path to the output folder.
     fig : figure object. created in FigSave.
@@ -446,29 +446,29 @@ def FigSave(fig_name, out_path, fig, lst_ax, lst_axt, fig_par,
         fig.set_size_inches(set_size_inches)
     if tight_layout is False:  # if margins are given sets margins and save
         fig.subplots_adjust(*fig_adj_par[0:6])  # set margins
-        plt.savefig(plib.Path(out_path, fig_name + '.png'), dpi=300,
+        plt.savefig(plib.Path(out_path, filename + '.png'), dpi=300,
                     transparent=transparency)
         if pdf is not False:  # save also as pdf
-            plt.savefig(plib.Path(out_path, fig_name + '.pdf'))
+            plt.savefig(plib.Path(out_path, filename + '.pdf'))
         if svg is not False:  # save also as pdf
-            plt.savefig(plib.Path(out_path, fig_name + '.svg'))
+            plt.savefig(plib.Path(out_path, filename + '.svg'))
         if eps is not False:  # save also as pdf
-            plt.savefig(plib.Path(out_path, fig_name + '.eps'))
+            plt.savefig(plib.Path(out_path, filename + '.eps'))
     else:  # margins are not given, use a tight layout option and save
-        plt.savefig(plib.Path(out_path, fig_name + '.png'),
+        plt.savefig(plib.Path(out_path, filename + '.png'),
                     bbox_inches="tight", dpi=300, transparent=transparency)
         if pdf is not False:  # save also as pdf
-            plt.savefig(plib.Path(out_path, fig_name + '.pdf'),
+            plt.savefig(plib.Path(out_path, filename + '.pdf'),
                         bbox_inches="tight")
         if svg is not False:  # save also as pdf
-            plt.savefig(plib.Path(out_path, fig_name + '.svg'),
+            plt.savefig(plib.Path(out_path, filename + '.svg'),
                         bbox_inches="tight")
         if eps is not False:  # save also as pdf
-            plt.savefig(plib.Path(out_path, fig_name + '.eps'),
+            plt.savefig(plib.Path(out_path, filename + '.eps'),
                         bbox_inches="tight")
     # add the title after saving, so it's only visible in the console
     if title is True:
-        lst_ax[0].annotate(fig_name, xycoords='axes fraction', size='small',
+        lst_ax[0].annotate(filename, xycoords='axes fraction', size='small',
                             xy=(0, 0), xytext=(0.05, .95), clip_on=True)
     return
 
@@ -520,6 +520,7 @@ class tga_exp:
         self.oxidation_computed = False
         self.soliddist_computed = False
         self.deconv_computed = False
+        self.KAS_computed = False
         # plotting parameters
         self.plot_font = plot_font
 
@@ -866,8 +867,8 @@ class tga_exp:
         if not self.proximate_computed:
             self.proximate_analysis()
 
-        out_path_rep = plib.Path(self.out_path, 'SingleReports')
-        out_path_rep.mkdir(parents=True, exist_ok=True)
+        out_path = plib.Path(self.out_path, 'SingleSampleReports')
+        out_path.mkdir(parents=True, exist_ok=True)
 
         columns = ['moist_ar_p', 'ash_ar_p', 'ash_db_p', 'vm_db_p', 'fc_db_p',
                    'vm_daf_p', 'fc_daf_p', 'AveTGstd_p']
@@ -886,14 +887,14 @@ class tga_exp:
                           self.vm_db_std, self.fc_db_std, self.vm_daf_std,
                           self.fc_daf_std, self.AveTGstd_p_std]
         self.proximate = rep
-        rep.to_excel(plib.Path(out_path_rep, self.name + '_prox.xlsx'))
+        rep.to_excel(plib.Path(out_path, self.name + '_proximate.xlsx'))
         return self.proximate
 
     def oxidation_report(self):
         if not self.oxidation_computed:
             self.oxidation_analysis()
-        out_path_rep = plib.Path(self.out_path, 'SingleReports')
-        out_path_rep.mkdir(parents=True, exist_ok=True)
+        out_path = plib.Path(self.out_path, 'SingleSampleReports')
+        out_path.mkdir(parents=True, exist_ok=True)
         if self.T_unit == 'Celsius':
             TiTpTb = ['Ti_C', 'Tp_C', 'Tb_C']
         elif self.T_unit == 'Kelvin':
@@ -912,14 +913,14 @@ class tga_exp:
         rep.loc['std'] = [self.Ti_std, self.Tp_std, self.Tb_std,
                           self.dwdT_max_std, self.dwdT_mean_std, self.S_std]
         self.oxidation = rep
-        rep.to_excel(plib.Path(out_path_rep, self.name + '_oxid.xlsx'))
+        rep.to_excel(plib.Path(out_path, self.name + '_oxidation.xlsx'))
         return self.oxidation
 
     def soliddist_report(self):
         if not self.soliddist_computed:
             self.soliddist_analysis()
-        out_path_rep = plib.Path(self.out_path, 'SingleReports')
-        out_path_rep.mkdir(parents=True, exist_ok=True)
+        out_path = plib.Path(self.out_path, 'SingleSampleReports')
+        out_path.mkdir(parents=True, exist_ok=True)
         columns = ['T [' + self.T_symbol + '](' + str(s) + 'min)'
                    for s in self.dist_steps_min
                    ] + ['dmp (' + str(s) + 'min)' for s in self.dist_steps_min]
@@ -934,16 +935,16 @@ class tga_exp:
                                          self.dmp_dist_std]).tolist()
 
         self.soliddist = rep
-        rep.to_excel(plib.Path(out_path_rep, self.name + '_soliddist.xlsx'))
+        rep.to_excel(plib.Path(out_path, self.name + '_soliddist.xlsx'))
         return self.soliddist
 
     # methods to plot results for a single sample
     def tg_plot(self, TG_lab='TG [wt%]', grid=False):
         if not self.proximate_computed:
             self.proximate_analysis()
-        out_path_ST = plib.Path(self.out_path, 'SingleSamples')
-        out_path_ST.mkdir(parents=True, exist_ok=True)
-        fig_name = self.name
+        out_path = plib.Path(self.out_path, 'SingleSamplePlots')
+        out_path.mkdir(parents=True, exist_ok=True)
+        filename = self.name
         fig, ax, axt, fig_par = FigCreate(rows=3, cols=1, plot_type=0,
                                           paper_col=1, font=self.plot_font)
         for f in range(self.n_repl):
@@ -971,7 +972,7 @@ class tga_exp:
                              self.mp_db_stk[self.idx_vm_stk[f], f] + 5,
                              linestyle=lnstls[f], color=clrs[f])
         ax[0].legend(loc='best')
-        FigSave(fig_name + '_TG', out_path_ST, fig, ax, axt, fig_par,
+        FigSave(filename + '_tg', out_path, fig, ax, axt, fig_par,
                 xLab='time [min]',
                 yLab=['T ['+self.T_symbol+']',
                       TG_lab+'(stb)', TG_lab+'(db)'], grid=grid)
@@ -979,15 +980,15 @@ class tga_exp:
     def dtg_plot(self, TG_lab='TG [wt%]', DTG_lab=None, grid=False):
         if not self.proximate_computed:
             self.proximate_analysis()
-        out_path_ST = plib.Path(self.out_path, 'SingleSamples')
-        out_path_ST.mkdir(parents=True, exist_ok=True)
+        out_path = plib.Path(self.out_path, 'SingleSamplePlots')
+        out_path.mkdir(parents=True, exist_ok=True)
 
         if DTG_lab is None:
             if self.dtg_basis == 'temperature':
                 DTG_lab = 'DTG [wt%/' + self.T_symbol + ']'
             elif self.dtg_basis == 'time':
                 DTG_lab='DTG [wt%/min]'
-        fig_name = self.name
+        filename = self.name
 
         fig, ax, axt, fig_par = FigCreate(rows=3, cols=1, plot_type=0,
                                           paper_col=1, font=self.plot_font)
@@ -1010,7 +1011,7 @@ class tga_exp:
                              ymin=-1.5, ymax=0,
                              linestyle=lnstls[f], color=clrs[f], label='Tb')
         ax[0].legend(loc='best')
-        FigSave(fig_name + '_DTGstk', out_path_ST, fig, ax, axt, fig_par,
+        FigSave(filename + '_dtg', out_path, fig, ax, axt, fig_par,
                 xLab='time [min]',
                 yLab=['T ['+self.T_symbol+']', TG_lab + '(db)',
                       DTG_lab + '(db)'], grid=grid)
@@ -1020,9 +1021,9 @@ class tga_exp:
         # slightly different plotting behaviour (uses averages)
         if not self.soliddist_computed:
             self.soliddist_analysis()
-        out_path_ST = plib.Path(self.out_path, 'SingleSamples')
-        out_path_ST.mkdir(parents=True, exist_ok=True)
-        fig_name = self.name
+        out_path = plib.Path(self.out_path, 'SingleSamplePlots')
+        out_path.mkdir(parents=True, exist_ok=True)
+        filename = self.name
         fig, ax, axt, fig_par = FigCreate(rows=2, cols=1, plot_type=0,
                                           paper_col=paper_col,
                                           hgt_mltp=hgt_mltp)
@@ -1039,24 +1040,24 @@ class tga_exp:
             ax[1].annotate(str(np.round(dmp, 0)) + '%',
                            ha='center', va='top',
                            xy=(tm - 10, mp+1), fontsize=9)
-        FigSave(fig_name + '_dist', out_path_ST, fig, ax, axt, fig_par,
+        FigSave(filename + '_soliddist', out_path, fig, ax, axt, fig_par,
                 xLab='time [min]',
                 yLab=['T ['+self.T_symbol+']', TG_lab+'(db)'],
                 grid=grid)
 
-    def deconv_plot(self, fig_name='Deconv',
+    def deconv_plot(self, filename='Deconv',
                     xLim=None, yLim=None, grid=False, DTG_lab=None,
                     pdf=False, svg=False, legend='best'):
         if not self.deconv_computed:
             self.deconv_analysis()
-        out_path_dcv = plib.Path(self.out_path, 'Deconvolution')
+        out_path_dcv = plib.Path(self.out_path, 'SingleSampleDeconvs')
         out_path_dcv.mkdir(parents=True, exist_ok=True)
         if DTG_lab is None:
             if self.dtg_basis == 'temperature':
                 DTG_lab = 'DTG [wt%/' + self.T_symbol + ']'
             elif self.dtg_basis == 'time':
                 DTG_lab='DTG [wt%/min]'
-        fig_name = self.name
+        filename = self.name
         fig, ax, axt, fig_par = FigCreate(rows=1, cols=1, plot_type=0,
                                           paper_col=0.78, hgt_mltp=1.25,
                                           )
@@ -1088,7 +1089,7 @@ class tga_exp:
                        xy=(0.85, 0.96), size='x-small')
 
         # Save figure using FigSave
-        FigSave(fig_name + '_dcv', out_path_dcv, fig, ax, axt, fig_par,
+        FigSave(filename, out_path_dcv, fig, ax, axt, fig_par,
                 xLab='T ['+self.T_symbol+']', yLab=DTG_lab,
                 xLim=xLim, yLim=yLim, legend=legend,
                 pdf=pdf, svg=svg)  # Set additional parameters as needed
@@ -1101,15 +1102,15 @@ def proximate_multi_report(exps, filename='Rep'):
     for exp in exps:
         if not exp.proximate_computed:
             exp.proximate_report()
-    out_path_reps = plib.Path(exps[0].out_path, 'MultiReports')
-    out_path_reps.mkdir(parents=True, exist_ok=True)
+    out_path = plib.Path(exps[0].out_path, 'MultiSampleReports')
+    out_path.mkdir(parents=True, exist_ok=True)
 
     rep = pd.DataFrame(columns=list(exps[0].proximate))
     for exp in exps:
         rep.loc[exp.label + '_ave'] = exp.proximate.loc['ave', :]
     for exp in exps:
         rep.loc[exp.label + '_std'] = exp.proximate.loc['std', :]
-    rep.to_excel(plib.Path(out_path_reps, filename + '_prox.xlsx'))
+    rep.to_excel(plib.Path(out_path, filename + '_prox.xlsx'))
     return rep
 
 
@@ -1117,15 +1118,15 @@ def oxidation_multi_report(exps, filename='Rep'):
     for exp in exps:
         if not exp.oxidation_computed:
             exp.oxidation_report()
-    out_path_reps = plib.Path(exps[0].out_path, 'MultiReports')
-    out_path_reps.mkdir(parents=True, exist_ok=True)
+    out_path = plib.Path(exps[0].out_path, 'MultiSampleReports')
+    out_path.mkdir(parents=True, exist_ok=True)
 
     rep = pd.DataFrame(columns=list(exps[0].oxidation))
     for exp in exps:
         rep.loc[exp.label + '_ave'] = exp.oxidation.loc['ave', :]
     for exp in exps:
         rep.loc[exp.label + '_std'] = exp.oxidation.loc['std', :]
-    rep.to_excel(plib.Path(out_path_reps, filename + '_oxid.xlsx'))
+    rep.to_excel(plib.Path(out_path, filename + '_oxid.xlsx'))
     return rep
 
 
@@ -1133,28 +1134,28 @@ def soliddist_multi_report(exps, filename='Rep'):
     for exp in exps:
         if not exp.soliddist_computed:
             exp.soliddist_report()
-    out_path_reps = plib.Path(exps[0].out_path, 'MultiReports')
-    out_path_reps.mkdir(parents=True, exist_ok=True)
+    out_path = plib.Path(exps[0].out_path, 'MultiSampleReports')
+    out_path.mkdir(parents=True, exist_ok=True)
 
     rep = pd.DataFrame(columns=list(exps[0].soliddist))
     for exp in exps:
         rep.loc[exp.label + '_ave'] = exp.soliddist.loc['ave', :]
     for exp in exps:
         rep.loc[exp.label + '_std'] = exp.soliddist.loc['std', :]
-    rep.to_excel(plib.Path(out_path_reps, filename + '_soliddist.xlsx'))
+    rep.to_excel(plib.Path(out_path, filename + '_soliddist.xlsx'))
     return rep
 
 
 # =============================================================================
 # # functions for plotting ave and std of multiple samples
 # =============================================================================
-def tg_multi_plot(exps, fig_name='Fig', paper_col=.78, hgt_mltp=1.25,
-             xLim=None, yLim=[0, 100], yTicks=None, grid=False,
-             TG_lab='TG [wt%]', lttrs=False, pdf=False, svg=False):
+def tg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
+                  xLim=None, yLim=[0, 100], yTicks=None, grid=False,
+                  TG_lab='TG [wt%]', lttrs=False, pdf=False, svg=False):
     for exp in exps:
         if not exp.proximate_computed:
             exp.proximate_analysis()
-    out_path_TGs = plib.Path(exps[0].out_path, 'TGs')
+    out_path_TGs = plib.Path(exps[0].out_path, 'MultiSamplePlots')
     out_path_TGs.mkdir(parents=True, exist_ok=True)
     fig, ax, axt, fig_par = FigCreate(rows=1, cols=1, plot_type=0,
                                       paper_col=paper_col,
@@ -1165,22 +1166,22 @@ def tg_multi_plot(exps, fig_name='Fig', paper_col=.78, hgt_mltp=1.25,
         ax[0].fill_between(exp.T, exp.mp_db - exp.mp_db_std,
                            exp.mp_db + exp.mp_db_std, color=clrs[i],
                            alpha=.3)
-    FigSave(fig_name + '_tg', out_path_TGs, fig, ax, axt, fig_par,
+    FigSave(filename + '_tg', out_path_TGs, fig, ax, axt, fig_par,
             xLim=xLim, yLim=yLim,
             yTicks=yTicks,
             xLab='T [' + exps[0].T_symbol + ']', legend='upper right',
             yLab=TG_lab, annotate_lttrs=lttrs, grid=grid, pdf=pdf, svg=svg)
 
 
-def dtg_multi_plot(exps, fig_name='Fig', paper_col=.78, hgt_mltp=1.25,
-              xLim=None, yLim=None, yTicks=None, grid=False,
-              DTG_lab=None, lttrs=False, plt_gc=False, gc_Tlim=300,
-              pdf=False, svg=False):
+def dtg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
+                   xLim=None, yLim=None, yTicks=None, grid=False,
+                   DTG_lab=None, lttrs=False, plt_gc=False, gc_Tlim=300,
+                   pdf=False, svg=False):
     for exp in exps:
         if not exp.proximate_computed:
             exp.proximate_analysis()
-    out_path_DTGs = plib.Path(exps[0].out_path, 'DTGs')
-    out_path_DTGs.mkdir(parents=True, exist_ok=True)
+    out_path = plib.Path(exps[0].out_path, 'MultiSamplePlots')
+    out_path.mkdir(parents=True, exist_ok=True)
 
     if not DTG_lab:
         DTG_lab = 'DTG [wt%/' + exps[0].T_symbol + ']'
@@ -1199,14 +1200,14 @@ def dtg_multi_plot(exps, fig_name='Fig', paper_col=.78, hgt_mltp=1.25,
                      linestyle=lnstls[1], color=clrs[7],
                      label='T$_{max GC-MS}$')
     ax[0].legend(loc='lower right')
-    FigSave(fig_name + '_dtg', out_path_DTGs, fig, ax, axt, fig_par,
+    FigSave(filename + '_dtg', out_path, fig, ax, axt, fig_par,
             xLim=xLim, yLim=yLim,
             yTicks=yTicks,
             yLab=DTG_lab, xLab='T [' + exps[0].T_symbol + ']',
             pdf=pdf, svg=svg, annotate_lttrs=lttrs, grid=grid)
 
 
-def proximate_multi_plot(exps, fig_name="Prox",
+def proximate_multi_plot(exps, filename="Prox",
                          smpl_labs=None, xlab_rot=0,
                          paper_col=.8, hgt_mltp=1.5, grid=False,
                          bboxtoanchor=True, x_anchor=1.13, y_anchor=1.02,
@@ -1215,8 +1216,8 @@ def proximate_multi_plot(exps, fig_name="Prox",
     for exp in exps:
         if not exp.proximate_computed:
             exp.proximate_analysis()
-    out_path_OP = plib.Path(exps[0].out_path, 'Proximates')
-    out_path_OP.mkdir(parents=True, exist_ok=True)
+    out_path = plib.Path(exps[0].out_path, 'MultiSamplePlots')
+    out_path.mkdir(parents=True, exist_ok=True)
     vars_bar = ['Moisture (stb)', 'VM (db)', 'FC (db)', 'Ash (db)']
     vars_scat = ['Mean TG dev.']
     if smpl_labs:
@@ -1262,23 +1263,23 @@ def proximate_multi_plot(exps, fig_name="Prox",
     if xlab_rot != 0:
         ax[0].set_xticklabels(df_ave.index, rotation=xlab_rot, ha='right',
                               rotation_mode='anchor')
-    FigSave(fig_name, out_path_OP, fig, ax, axt, fig_par, tight_layout=True,
+    FigSave(filename + '_prox', out_path, fig, ax, axt, fig_par, tight_layout=True,
             legend=None,
             yLab='mass fraction [wt%]', ytLab='Mean TG deviation [%]',
             yLim=yLim, ytLim=ytLim, yTicks=yTicks, ytTicks=ytTicks, grid=grid)
 
 
-def oxidation_multi_plot(exps, fig_name="OxidProp",
-                    smpl_labs=None, xlab_rot=0,
-                    paper_col=.8, hgt_mltp=1.5, grid=False,
-                    bboxtoanchor=True, x_anchor=1.13, y_anchor=1.02,
-                    legend_loc='best',
-                    yLim=None, ytLim=None, yTicks=None, ytTicks=None):
+def oxidation_multi_plot(exps, filename="Oxidations",
+                         smpl_labs=None, xlab_rot=0,
+                         paper_col=.8, hgt_mltp=1.5, grid=False,
+                         bboxtoanchor=True, x_anchor=1.13, y_anchor=1.02,
+                         legend_loc='best',
+                         yLim=None, ytLim=None, yTicks=None, ytTicks=None):
     for exp in exps:
         if not exp.oxidation_computed:
             exp.oxidation_analysis()
-    out_path_OP = plib.Path(exps[0].out_path, 'OxidProps')
-    out_path_OP.mkdir(parents=True, exist_ok=True)
+    out_path = plib.Path(exps[0].out_path, 'MultiSamplePlots')
+    out_path.mkdir(parents=True, exist_ok=True)
     vars_bar = ['T$_i$', 'T$_p$', 'T$_b$']
     vars_scat = ['S (combustibility index)']
     if smpl_labs:
@@ -1324,13 +1325,14 @@ def oxidation_multi_plot(exps, fig_name="OxidProp",
     if xlab_rot != 0:
         ax[0].set_xticklabels(df_ave.index, rotation=xlab_rot, ha='right',
                               rotation_mode='anchor')
-    FigSave(fig_name, out_path_OP, fig, ax, axt, fig_par, tight_layout=True,
+    FigSave(filename + '_oxidation', out_path, fig, ax, axt, fig_par,
+            tight_layout=True,
             legend=None, ytLab='S (combustion index) [-]',
             yLab='T [' + exps[0].T_symbol + ']',
             yLim=yLim, ytLim=ytLim, yTicks=yTicks, ytTicks=ytTicks, grid=grid)
 
 
-def soliddist_multi_plot(exps, fig_name="Dist",
+def soliddist_multi_plot(exps, filename="Dist",
                          TG_lab='TG [wt%]', DTG_lab='DTG [wt%/min]',
                          hgt_mltp=1.25, paper_col=.78, labels=None, lttrs=False,
                          xLim=None, yLim=[[0, 1000], [0, 100]], yTicks=None,
@@ -1338,8 +1340,8 @@ def soliddist_multi_plot(exps, fig_name="Dist",
     for exp in exps:
         if not exp.soliddist_computed:
             exp.soliddist_analysis()
-    out_path_MS = plib.Path(exps[0].out_path, 'SolidDist')
-    out_path_MS.mkdir(parents=True, exist_ok=True)
+    out_path = plib.Path(exps[0].out_path, 'MultiSamplePlots')
+    out_path.mkdir(parents=True, exist_ok=True)
     if not labels:  # try with labels and use name if no label is given
         labels = [exp.label if exp.label else exp.name for exp in exps]
     fig, ax, axt, fig_par = FigCreate(rows=2, cols=1, plot_type=0,
@@ -1363,13 +1365,13 @@ def soliddist_multi_plot(exps, fig_name="Dist",
                            xy=(tm - 10, mp+1), fontsize=9, color=clrs[i])
         ax[0].legend(loc='upper left')
         # ax[1].legend(loc='center left')
-    FigSave(fig_name + 'dist_db', out_path_MS, fig, ax, axt, fig_par,
+    FigSave(filename + '_soliddist', out_path, fig, ax, axt, fig_par,
             xLim=xLim, yLim=yLim, yTicks=yTicks, xLab='time [min]',
             yLab=['T [' + exps[0].T_symbol + ']', TG_lab+'(db)'],
             annotate_lttrs=lttrs, grid=grid)
 
 
-def cscd_multi_plot(exps, fig_name='Fig', paper_col=.78, hgt_mltp=1.25,
+def cscd_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
                xLim=None,clrs_cscd=False,  yLim0_cscd=-8,
                shifts_cscd=np.asarray([0, 11, 5, 10, 10, 10, 11]),
                peaks_cscd=None, peak_names=None, dh_names_cscd=0.1,
@@ -1380,8 +1382,8 @@ def cscd_multi_plot(exps, fig_name='Fig', paper_col=.78, hgt_mltp=1.25,
     for exp in exps:
         if not exp.proximate_computed:
             exp.proximate_analysis()
-    out_path_CSCDs = plib.Path(exps[0].out_path, 'DTGs')
-    out_path_CSCDs.mkdir(parents=True, exist_ok=True)
+    out_path = plib.Path(exps[0].out_path, 'MultiSamplePlots')
+    out_path.mkdir(parents=True, exist_ok=True)
     labels = [exp.label if exp.label else exp.name for exp in exps]
     if not DTG_lab:
         DTG_lab = 'DTG [wt%/' + exps[0].T_symbol + ']'
@@ -1415,13 +1417,16 @@ def cscd_multi_plot(exps, fig_name='Fig', paper_col=.78, hgt_mltp=1.25,
         ax[0].set_yticks(y_values_cscd)
     else:
         ax[0].set_yticks([])
-    FigSave(fig_name + '_cscd', out_path_CSCDs, fig, ax, axt, fig_par,
+    FigSave(filename + '_cscd', out_path, fig, ax, axt, fig_par,
             legend=legend_cscd, annotate_lttrs=lttrs,
             xLab='T [' + exps[0].T_symbol + ']', yLab=DTG_lab,
             xLim=xLim, yLim=yLim_cscd, svg=svg, pdf=pdf)
 
 
 def KAS_analysis(exps, ramps, alpha=np.arange(0.05, .9, 0.05)):
+    for exp in exps:
+        if not exp.proximate_computed:
+            exp.proximate_analysis()
     R_gas = 8.314462618
     n_ramps = len(ramps)  # number of ramp used for feedstock
     n_alpha = len(alpha)  # number of alpha investigated
@@ -1468,16 +1473,20 @@ def KAS_analysis(exps, ramps, alpha=np.arange(0.05, .9, 0.05)):
            'xmatr': xmatr, 'ymatr': ymatr, 'v_fit': v_fit, 'name': name}
     for e, exp in enumerate(exps):
         exp.kas = kas
+        exp.KAS_computed = True
     return kas
 
 
-def KAS_plot_isolines(exps, kas_names=None, fig_name='KAsIso',
+def KAS_plot_isolines(exps, kas_names=None, filename='KAsIso',
                       paper_col=.78, hgt_mltp=1.25, xLim=None, yLim=None,
                       annt_names=True, annotate_lttrs=False, leg_cols=1,
                       bboxtoanchor=True, x_anchor=1.13, y_anchor=1.02,
                       legend_loc='best'):
-    out_path_KASs = plib.Path(exps[0].out_path, 'KASs')
-    out_path_KASs.mkdir(parents=True, exist_ok=True)
+    for exp in exps:
+        if not exp.KAS_computed:
+            exp.KAS_analysis()
+    out_path = plib.Path(exps[0].out_path, 'KAS')
+    out_path.mkdir(parents=True, exist_ok=True)
     kass = [exp.kas for exp in exps]
     xmatrs = [kas['xmatr'] for kas in kass]
     # for plots
@@ -1533,20 +1542,23 @@ def KAS_plot_isolines(exps, kas_names=None, fig_name='KAsIso',
                                  bbox_to_anchor=(x_anchor, y_anchor))
     else:  # legend is inside of plot area
         ax[0].legend(ncol=leg_cols, loc=legend_loc)
-    FigSave(fig_name + '_iso', out_path_KASs, fig, ax, axt, fig_par,
+    FigSave(filename + '_iso', out_path, fig, ax, axt, fig_par,
             xLim=xLim, yLim=yLim, xLab='1000/T [1/K]', legend=None,
             annotate_lttrs=annotate_lttrs, yLab=r'ln($\beta$/T$^{2}$)',
             tight_layout=False)
 
 
-def KAS_plot_Ea(exps, kas_names=None, fig_name='KASEa',
+def KAS_plot_Ea(exps, kas_names=None, filename='KASEa',
                 paper_col=.78, hgt_mltp=1.25, xLim=[.1, .8], yLim=[0, 300],
                 yTicks=None, annt_names=True, annotate_lttrs=False, leg_cols=1,
                 bboxtoanchor=True, x_anchor=1.13, y_anchor=2.02,
                 grid=False, plot_type='scatter',
                 legend_loc='best'):
-    out_path_KASs = plib.Path(exps[0].out_path, 'KASs')
-    out_path_KASs.mkdir(parents=True, exist_ok=True)
+    for exp in exps:
+        if not exp.KAS_computed:
+            exp.KAS_analysis()
+    out_path = plib.Path(exps[0].out_path, 'KAS')
+    out_path.mkdir(parents=True, exist_ok=True)
     kass = [exp.kas for exp in exps]
     if kas_names is None:
         kas_names = [kas['name'] for kas in kass]
@@ -1581,7 +1593,7 @@ def KAS_plot_Ea(exps, kas_names=None, fig_name='KASEa',
         else:  # legend is inside of plot area
             ax[0].legend(ncol=leg_cols,
                           loc=legend_loc)
-    FigSave(fig_name + '_Ea', out_path_KASs, fig, ax, axt, fig_par,
+    FigSave(filename + '_Ea', out_path, fig, ax, axt, fig_par,
             xLim=xLim, yLim=yLim,
             legend=legend_loc, yTicks=yTicks, xLab=r'$\alpha$ [-]',
             yLab=r'$E_{a}$ [kJ/mol]', grid=grid)
@@ -1619,20 +1631,22 @@ if __name__ == "__main__":
     f = SD1.soliddist_report()
     g = SD2.soliddist_report()
     # %%
-    tg_multi_plot([P1, P2, Ox5, SD1])
-    dtg_multi_plot([P1, P2, Ox5, SD1])
-    h = proximate_multi_report([P1, P2])
-    proximate_multi_plot([P1, P2])
-    h = oxidation_multi_report([Ox5, Ox10, Ox50])
-    oxidation_multi_plot([Ox5, Ox10, Ox50], yLim=[250, 400])
-    h = soliddist_multi_report([SD1, SD2])
-    soliddist_multi_plot([SD1, SD2])
-    # %%
     P1.deconv_analysis([280, 380])
     Ox5.deconv_analysis([310, 450, 500])
+    # %%
+    tg_multi_plot([P1, P2, Ox5, SD1], filename='P1P2Ox5SD1')
+    dtg_multi_plot([P1, P2, Ox5, SD1], filename='P1P2Ox5SD1')
+    h = proximate_multi_report([P1, P2], filename='P1P2')
+    proximate_multi_plot([P1, P2], filename='P1P2')
+    h = oxidation_multi_report([Ox5, Ox10, Ox50], filename='Ox5Ox10Ox50')
+    oxidation_multi_plot([Ox5, Ox10, Ox50], yLim=[250, 400],
+                         filename='Ox5Ox10Ox50')
+    h = soliddist_multi_report([SD1, SD2], filename='SD1SD2')
+    soliddist_multi_plot([SD1, SD2], filename='SD1SD2')
+
     #%%
     KAS_analysis([Ox5, Ox10, Ox50], [5, 10, 50])
-    KAS_plot_isolines([Ox5], bboxtoanchor=True)
-    KAS_plot_Ea([Ox5], bboxtoanchor=True)
+    KAS_plot_isolines([Ox5], filename='Ox5Ox10Ox50')
+    KAS_plot_Ea([Ox5], filename='Ox5Ox10Ox50')
 
 
