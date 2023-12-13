@@ -457,40 +457,6 @@ def fig_save(filename, out_path, fig, lst_ax, lst_axt, fig_par,
 
 class TGAExp:
     """
-    Class representing a TGA Experiment.
-
-    Attributes:
-        folder (str): The folder name for the experiment.
-        in_path (str): The input path for the experiment.
-        out_path (str): The output path for the experiment.
-        T_unit (str): The unit of temperature (Celsius or Kelvin).
-        T_symbol (str): The symbol for temperature unit.
-        plot_font (str): The font for plotting.
-        plot_grid (bool): Flag indicating whether to plot grid or not.
-        dtg_basis (str): The basis for computing DTG (temperature or time).
-        resolution_T_dtg (int): The resolution of temperature for DTG computation.
-        dtg_w_SavFil (int): The width parameter for Savitzky-Golay filter in DTG computation.
-
-    Methods:
-        __init__(self, name, filenames, load_skiprows=0, label=None, time_moist=38, time_vm=147, T_initial_C=40, Tlims_dtg_C=[120, 800], correct_ash_mg=None, correct_ash_fr=None, oxid_Tb_thresh=1):
-            Initializes a TGAExp object with the given parameters.
-        
-        load_single_file(self, filename):
-            Loads a single file for the experiment.
-        
-        load_files(self):
-            Loads all the files for the experiment.
-        
-        proximate_analysis(self):
-            Performs proximate analysis on the loaded files.
-    """
-    # Rest of the code...
-import pandas as pd
-import numpy as np
-import pathlib as plib
-
-class TGAExp:
-    """
     Represents a TGA (Thermogravimetric Analysis) Experiment.
 
     Attributes:
@@ -954,29 +920,6 @@ class TGAExp:
         Returns:
             None
         """
-        # Function implementation
-        ...
-    def deconv_analysis(self, centers, sigmas=None, amplitudes=None,
-                        c_mins=None, c_maxs=None, s_mins=None, s_maxs=None,
-                        a_mins=None, a_maxs=None, TLim=None):
-        """
-        Perform deconvolution analysis on the data.
-
-        Args:
-            centers (list): List of peak centers.
-            sigmas (list, optional): List of peak sigmas. Defaults to None.
-            amplitudes (list, optional): List of peak amplitudes. Defaults to None.
-            c_mins (list, optional): List of minimum values for peak centers. Defaults to None.
-            c_maxs (list, optional): List of maximum values for peak centers. Defaults to None.
-            s_mins (list, optional): List of minimum values for peak sigmas. Defaults to None.
-            s_maxs (list, optional): List of maximum values for peak sigmas. Defaults to None.
-            a_mins (list, optional): List of minimum values for peak amplitudes. Defaults to None.
-            a_maxs (list, optional): List of maximum values for peak amplitudes. Defaults to None.
-            TLim (tuple, optional): Tuple specifying the time range for analysis. Defaults to None.
-
-        Returns:
-            None
-        """
         if not self.proximate_computed:
             self.proximate_analysis()
         self.dcv_best_fit_stk = np.zeros((self.len_dtg_db, self.n_repl))
@@ -1287,7 +1230,7 @@ class TGAExp:
             """
             
             if not self.deconv_computed:
-                self.deconv_analysis()
+                raise Exception('Deconvolution analysis not computed')
             out_path_dcv = plib.Path(TGAExp.out_path, 'SingleSampleDeconvs')
             out_path_dcv.mkdir(parents=True, exist_ok=True)
             if DTG_lab is None:
