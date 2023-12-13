@@ -498,6 +498,13 @@ class TGAExp:
     resolution_T_dtg=5
     dtg_w_SavFil=101
     
+    @classmethod
+    def set_folder(cls, new_folder):
+        cls.folder = new_folder
+        # Update paths based on new folder
+        cls.in_path, cls.out_path = paths_create(cls.folder)
+
+
     def __init__(self, name, filenames, load_skiprows=0,
                  label=None, time_moist=38, 
                  time_vm=147, T_initial_C=40, Tlims_dtg_C=[120, 800], 
@@ -2004,7 +2011,9 @@ def KAS_plot_Ea(exps, kas_names=None, filename='KASEa',
 
 # %%
 if __name__ == "__main__":
-    TGAExp.folder = '_test'
+    
+    folder = '_test'
+    TGAExp.set_folder(folder)
     TGAExp.plot_grid = False
     P1 = TGAExp(name='P1', filenames=['MIS_1', 'MIS_2', 'MIS_3'],
                 time_moist=38, time_vm=147)
