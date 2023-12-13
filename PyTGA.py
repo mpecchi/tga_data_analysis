@@ -1646,8 +1646,9 @@ if __name__ == "__main__":
     # %%
     tg_multi_plot([P1, P2, Ox5, SD1], filename='P1P2Ox5SD1')
     dtg_multi_plot([P1, P2, Ox5, SD1], filename='P1P2Ox5SD1')
-    h = proximate_multi_report([P1, P2, Ox5, SD1], filename='P1P2')
-    proximate_multi_plot([P1, P2, Ox5, SD1], filename='P1P2')
+    h = proximate_multi_report([P1, P2, Ox5, SD1], filename='P1P2Ox5SD1')
+    proximate_multi_plot([P1, P2, Ox5, SD1], filename='P1P2Ox5SD1',
+                         bboxtoanchor=False)
     i = oxidation_multi_report([Ox5, Ox10, Ox50], filename='Ox5Ox10Ox50')
     oxidation_multi_plot([Ox5, Ox10, Ox50], yLim=[250, 400],
                          filename='Ox5Ox10Ox50')
