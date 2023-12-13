@@ -69,7 +69,7 @@ lttrs = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
 mrkrs = ["o", "v", "X", "s", "p", "^", "P", "<", ">", "*", "d", "1", "2", "3",
          "o", "v", "X", "s", "p", "^", "P", "<", ">", "*", "d", "1", "2", "3"]
 
-def PathsCreate(subfolder=''):
+def paths_create(subfolder=''):
     ''' This function creates 2 folder paths (independently of the os). \
         For each path checks the folder existence, if False it creates it.
     in_path : pathlib object
