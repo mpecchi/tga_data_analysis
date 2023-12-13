@@ -515,12 +515,19 @@ class tga_exp:
         self.dtg_basis = dtg_basis
         self.dtg_w_SavFil = dtg_w_SavFil
         self.oxid_Tb_thresh = oxid_Tb_thresh
+        # for variables and computations
         self.data_loaded = False  # Flag to track if data is loaded
         self.proximate_computed = False
         self.oxidation_computed = False
         self.soliddist_computed = False
         self.deconv_computed = False
         self.KAS_computed = False
+        # for reports
+        self.proximate_report_computed = False
+        self.oxidation_report_computed = False
+        self.soliddist_report_computed = False
+        self.deconv_report_computed = False
+        self.KAS_report_computed = False
         # plotting parameters
         self.plot_font = plot_font
 
@@ -608,35 +615,35 @@ class tga_exp:
 
             self.idx_moist_stk[f] = np.argmax(self.time_stk[:, f]
                                               > self.t_moist+0.01)
-            self.idx_vm_stk[f] = np.argmax(self.time_stk[:, f] > self.t_VM)
+
 
             self.moist_ar_stk[f] = 100 - self.mp_ar_stk[self.idx_moist_stk[f],
                                                         f]
-
             self.ash_ar_stk[f] = self.mp_ar_stk[-1, f]
-
-            self.fc_ar_stk[f] = (self.mp_ar_stk[self.idx_vm_stk[f], f]
-                                 - self.ash_ar_stk[f])
-            self.vm_ar_stk[f] = (100 - self.moist_ar_stk[f] -
-                                 self.ash_ar_stk[f] - self.fc_ar_stk[f])
-
             self.mp_db_stk[:, f] = self.mp_ar_stk[:, f] * \
                 100/(100-self.moist_ar_stk[f])
             self.mp_db_stk[:, f] = np.where(self.mp_db_stk[:, f] > 100, 100,
                                             self.mp_db_stk[:, f])
             self.ash_db_stk[f] = self.ash_ar_stk[f]*100 / \
                 (100-self.moist_ar_stk[f])
-            self.vm_db_stk[f] = self.vm_ar_stk[f]*100 / (100 -
-                                                         self.moist_ar_stk[f])
-            self.fc_db_stk[f] = self.fc_ar_stk[f]*100 / (100 -
-                                                         self.moist_ar_stk[f])
-
             self.mp_daf_stk[:, f] = (self.mp_db_stk[:, f] - self.ash_db_stk[f]
                                      )*100/(100-self.ash_db_stk[f])
-            self.vm_daf_stk[f] = (self.vm_db_stk[f] - self.ash_db_stk[f]
-                                  )*100/(100-self.ash_db_stk[f])
-            self.fc_daf_stk[f] = (self.fc_db_stk[f] - self.ash_db_stk[f]
-                                  )*100/(100-self.ash_db_stk[f])
+            if self.t_VM is not None:
+                self.idx_vm_stk[f] = np.argmax(self.time_stk[:, f] > self.t_VM)
+                self.fc_ar_stk[f] = (self.mp_ar_stk[self.idx_vm_stk[f], f]
+                                    - self.ash_ar_stk[f])
+                self.vm_ar_stk[f] = (100 - self.moist_ar_stk[f] -
+                                    self.ash_ar_stk[f] - self.fc_ar_stk[f])
+                self.vm_db_stk[f] = self.vm_ar_stk[f]*100 / (100 -
+                                                            self.moist_ar_stk[f])
+                self.fc_db_stk[f] = self.fc_ar_stk[f]*100 / (100 -
+                                                            self.moist_ar_stk[f])
+
+
+                self.vm_daf_stk[f] = (self.vm_db_stk[f] - self.ash_db_stk[f]
+                                    )*100/(100-self.ash_db_stk[f])
+                self.fc_daf_stk[f] = (self.fc_db_stk[f] - self.ash_db_stk[f]
+                                    )*100/(100-self.ash_db_stk[f])
         # average
         self.time = np.average(self.time_stk, axis=1)
         self.T = np.average(self.T_stk, axis=1)
@@ -888,6 +895,7 @@ class tga_exp:
                           self.fc_daf_std, self.AveTGstd_p_std]
         self.proximate = rep
         rep.to_excel(plib.Path(out_path, self.name + '_proximate.xlsx'))
+        self.proximate_report_computed = True
         return self.proximate
 
     def oxidation_report(self):
@@ -914,6 +922,7 @@ class tga_exp:
                           self.dwdT_max_std, self.dwdT_mean_std, self.S_std]
         self.oxidation = rep
         rep.to_excel(plib.Path(out_path, self.name + '_oxidation.xlsx'))
+        self.oxidation_report_computed = True
         return self.oxidation
 
     def soliddist_report(self):
@@ -936,6 +945,7 @@ class tga_exp:
 
         self.soliddist = rep
         rep.to_excel(plib.Path(out_path, self.name + '_soliddist.xlsx'))
+        self.soliddist_report_computed = True
         return self.soliddist
 
     # methods to plot results for a single sample
@@ -1100,7 +1110,7 @@ class tga_exp:
 # =============================================================================
 def proximate_multi_report(exps, filename='Rep'):
     for exp in exps:
-        if not exp.proximate_computed:
+        if not exp.proximate_report_computed:
             exp.proximate_report()
     out_path = plib.Path(exps[0].out_path, 'MultiSampleReports')
     out_path.mkdir(parents=True, exist_ok=True)
@@ -1116,7 +1126,7 @@ def proximate_multi_report(exps, filename='Rep'):
 
 def oxidation_multi_report(exps, filename='Rep'):
     for exp in exps:
-        if not exp.oxidation_computed:
+        if not exp.oxidation_report_computed:
             exp.oxidation_report()
     out_path = plib.Path(exps[0].out_path, 'MultiSampleReports')
     out_path.mkdir(parents=True, exist_ok=True)
@@ -1132,7 +1142,7 @@ def oxidation_multi_report(exps, filename='Rep'):
 
 def soliddist_multi_report(exps, filename='Rep'):
     for exp in exps:
-        if not exp.soliddist_computed:
+        if not exp.soliddist_report_computed:
             exp.soliddist_report()
     out_path = plib.Path(exps[0].out_path, 'MultiSampleReports')
     out_path.mkdir(parents=True, exist_ok=True)
@@ -1484,7 +1494,7 @@ def KAS_plot_isolines(exps, kas_names=None, filename='KAsIso',
                       legend_loc='best'):
     for exp in exps:
         if not exp.KAS_computed:
-            exp.KAS_analysis()
+            print('need KAS analysis')
     out_path = plib.Path(exps[0].out_path, 'KAS')
     out_path.mkdir(parents=True, exist_ok=True)
     kass = [exp.kas for exp in exps]
@@ -1508,7 +1518,7 @@ def KAS_plot_isolines(exps, kas_names=None, filename='KAsIso',
     cols = 1
     ax_for_legend = 0
     if n_exp > 3:
-        rows = rows//2
+        rows = round(rows/2 + 0.01)
         cols += 1
         paper_col *= 1.5
         ax_for_legend += 1
@@ -1579,7 +1589,7 @@ def KAS_plot_Ea(exps, kas_names=None, filename='KASEa',
                        linestyle='None', marker=mrkrs[k],
                        label=kas_names[k])
         elif plot_type == 'line':
-            ax[0].plot(alpha, kas['Ea'],
+            ax[0].plot(alpha, kas['Ea'], color=clrs[k],
                        linestyle=lnstls[k], label=kas_names[k])
             ax[0].fill_between(alpha, kas['Ea'] - kas['Ea_std'],
                                kas['Ea'] + kas['Ea_std'], color=clrs[k],
@@ -1589,16 +1599,16 @@ def KAS_plot_Ea(exps, kas_names=None, filename='KASEa',
     else:
         if bboxtoanchor:  # legend goes outside of plot area
             ax[0].legend(ncol=leg_cols, loc='upper left',
-                          bbox_to_anchor=(x_anchor, y_anchor))
+                         bbox_to_anchor=(x_anchor, y_anchor))
         else:  # legend is inside of plot area
             ax[0].legend(ncol=leg_cols,
-                          loc=legend_loc)
+                         loc=legend_loc)
     FigSave(filename + '_Ea', out_path, fig, ax, axt, fig_par,
             xLim=xLim, yLim=yLim,
             legend=legend_loc, yTicks=yTicks, xLab=r'$\alpha$ [-]',
             yLab=r'$E_{a}$ [kJ/mol]', grid=grid)
 
-
+# %%
 if __name__ == "__main__":
     folder = '_test'
     P1 = tga_exp(folder=folder, name='P1',
@@ -1609,19 +1619,19 @@ if __name__ == "__main__":
                   t_moist=22, t_VM=98, T_unit='Celsius')
     Ox5 = tga_exp(folder=folder, name='Ox5',
                      filenames=['CLSOx5_1', 'CLSOx5_2', 'CLSOx5_3'],
-                     t_moist=38, t_VM=147, T_unit='Celsius')
+                     t_moist=38, t_VM=None, T_unit='Celsius')
     Ox10 = tga_exp(folder=folder, name='Ox10', load_skiprows=8,
                       filenames=['CLSOx10_2', 'CLSOx10_3'],
-                      t_moist=38, t_VM=147, T_unit='Celsius')
+                      t_moist=38, t_VM=None, T_unit='Celsius')
     Ox50 = tga_exp(folder=folder, name='Ox50', load_skiprows=8,
                       filenames=['CLSOx50_4', 'CLSOx50_5'],
-                      t_moist=38, t_VM=147, T_unit='Celsius')
+                      t_moist=38, t_VM=None, T_unit='Celsius')
     SD1 = tga_exp(folder=folder, name='SDa',
                   filenames=['SDa_1', 'SDa_2', 'SDa_3'],
-                  t_moist=38, t_VM=147, T_unit='Celsius')
+                  t_moist=38, t_VM=None, T_unit='Celsius')
     SD2 = tga_exp(folder=folder, name='SDb',
                   filenames=['SDb_1', 'SDb_2', 'SDb_3'],
-                  t_moist=38, t_VM=147, T_unit='Celsius')
+                  t_moist=38, t_VM=None, T_unit='Celsius')
     #%% si
     a = P1.proximate_report()
     b = P2.proximate_report()
@@ -1636,8 +1646,8 @@ if __name__ == "__main__":
     # %%
     tg_multi_plot([P1, P2, Ox5, SD1], filename='P1P2Ox5SD1')
     dtg_multi_plot([P1, P2, Ox5, SD1], filename='P1P2Ox5SD1')
-    h = proximate_multi_report([P1, P2], filename='P1P2')
-    proximate_multi_plot([P1, P2], filename='P1P2')
+    h = proximate_multi_report([P1, P2, Ox5, SD1], filename='P1P2')
+    proximate_multi_plot([P1, P2, Ox5, SD1], filename='P1P2')
     i = oxidation_multi_report([Ox5, Ox10, Ox50], filename='Ox5Ox10Ox50')
     oxidation_multi_plot([Ox5, Ox10, Ox50], yLim=[250, 400],
                          filename='Ox5Ox10Ox50')
