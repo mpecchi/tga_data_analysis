@@ -4,24 +4,16 @@ Created on Wed Dec 14 14:28:04 2022
 
 @author: mp933
 """
+import pathlib as plib
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import pathlib as plib
 import pandas as pd
 from scipy.signal import savgol_filter as SavFil
 from lmfit.models import GaussianModel, LinearModel
 
-# for plot cosmetics
-font_scale = 1.25
-font='Times'
-font='Dejavu Sans'
-sns.set("notebook", font_scale=1.25)
-sns_style = "ticks"
 # list with colors
-palette = 'deep'
-n_of_colors = 30
-clrs = sns.color_palette(palette, n_of_colors)
+clrs = sns.color_palette('deep', 30)
 # list with linestyles for plotting
 lnstls = [(0, ()),  # solid
           (0, (1, 1)),  # 'densely dotted'
@@ -64,7 +56,7 @@ lnstls = [(0, ()),  # solid
             (0, (3, 10, 1, 10, 1, 10)),]  # 'loosely dashdotdotted'
 # list with letters for plotting
 lttrs = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
-         'o', 'p', 'q']
+         'o', 'p', 'q', 'r']
 # list with markers for plotting
 mrkrs = ["o", "v", "X", "s", "p", "^", "P", "<", ">", "*", "d", "1", "2", "3",
          "o", "v", "X", "s", "p", "^", "P", "<", ">", "*", "d", "1", "2", "3"]
@@ -94,15 +86,9 @@ def paths_create(subfolder=''):
     return in_path, out_path  # returns the two object-paths
 
 
-# used to make plot all Times New Roman
-# def FigCreate(rows=1, cols=1, plot_type=0, paper_col=1,
-#               gridspec_hgt_fr=None,
-#               gridspec_wdt_fr=None, hgt_mltp=1, font='DejaVu Sans',
-#               sns_style='ticks'):
-def FigCreate(rows=1, cols=1, plot_type=0, paper_col=1,
-              gridspec_hgt_fr=None,
-              gridspec_wdt_fr=None, hgt_mltp=1, font=font,
-              sns_style='ticks'):
+def fig_create(rows=1, cols=1, plot_type=0, paper_col=1,
+    hgt_mltp=1, font='Dejavu Sans',
+    sns_style='ticks'):
     """
     This function creates all the necessary objects to produce plots with
     replicable characteristics.
@@ -110,60 +96,60 @@ def FigCreate(rows=1, cols=1, plot_type=0, paper_col=1,
     Parameters
     ----------
     rows : int, optional
-        number of plot rows in the grid. The default is 1.
+        Number of plot rows in the grid. The default is 1.
     cols : int, optional
-        number of plot colums in the grid. The default is 1.
+        Number of plot columns in the grid. The default is 1.
     plot_type : int, optional
-        one of the different plots available. The default is 0.
+        One of the different plot types available. The default is 0.
         Plot types and their labels:
         0. Std: standard plot (single or grid rows x cols)
         1. Twin-x: secondary axis plot (single or grid rows x cols)
         5. Subplots with different heights
-        6. multiplot without internal x and y tickslabels
-        7. multiplot without internal x tickslabels
-        8. plot with specific distances between subplots and diffeerent heights
+        6. Multiplot without internal x and y tick labels
+        7. Multiplot without internal x tick labels
+        8. Plot with specific distances between subplots and different heights
     paper_col : int, optional
-        single or double column size for the plot, meaning the actual space
+        Single or double column size for the plot, meaning the actual space
         it will fit in a paper. The default is 1.
-    gridspec_wdt_ratio : list of float, optional
-        for multiple cols, list of relative width of each subplot.
-        The default is None.
-    no_par : bool, optional
-        if True, no size setting parameters are passed. The default is None.
-    font: str
-        if the str'Times' is given, it sets Times New Roman as the default
+    hgt_mltp: float, optional
+        Multiplies the figure height. Default is 1. Best using values between
+        0.65 and 2. May not work with multiplot and paper_col=1 or out of the
+        specified range.
+    font: str, optional
+        If the string 'Times' is given, it sets Times New Roman as the default
         font for the plot, otherwise the default Dejavu Sans is maintained.
-        Default is 'Dejavu Sans'
-    hgt_mltp: float
-        multiplies the fig height. default is to 1. best using values between
-        .65 and 2. may not work with multiplot and paper_col=1 or out of the
-        specified range
+        Default is 'Dejavu Sans'.
+    sns_style: str, optional
+        The style of the seaborn plot. The default is 'ticks'.
+
     Returns
     -------
     fig : object
-        the figure object to be passed to FigSave.
+        The figure object to be passed to fig_save.
     lst_ax : list of axis
-        list of axis (it is a list even with 1 axis) on which to plot.
+        List of axis (it is a list even with 1 axis) on which to plot.
     lst_axt : list of axis
-        list of secondary axis (it is a list even with 1 axis)
+        List of secondary axis (it is a list even with 1 axis).
     fig_par : list of float
-        ist of parameters to reserve space around the plot canvas.
+        List of parameters to reserve space around the plot canvas.
+
+    Raises
+    ------
+    ValueError
+        If cols > 2, which is not supported.
 
     """
-
+  
+    sns.set_palette("deep")
     if font == 'Times':  # set Times New Roman as the plot font fot text
         # this may require the installation of the font package
-        sns.set("paper", font_scale=font_scale)
-        sns.set_palette(palette, n_of_colors)
         sns.set_style(sns_style, {'font.family': 'Times New Roman'})
     else:  # leave Dejavu Sans (default) as the plot font fot text
-        sns.set("paper", font_scale=font_scale)
-        sns.set_palette(palette, n_of_colors)
         sns.set_style(sns_style)
     # single or double column in paperthat the figure will occupy
     if cols > 2:  # numer of columns (thus of plots in the figure)
-        raise ValueError('\n FigCreate: cols>2 not supported')
-
+        raise ValueError('\n fig_create: cols>2 not supported')
+    
     # width of the figure in inches, it's fixed to keep the same text size
     # is 6, 9, 12 for 1, 1.5, and 3 paper_col (columns in paper)
     fig_wdt = 6*paper_col  # width of the plot in inches
@@ -218,7 +204,7 @@ def FigCreate(rows=1, cols=1, plot_type=0, paper_col=1,
     return fig, lst_ax, lst_axt, fig_par
 
 
-def FigSave(filename, out_path, fig, lst_ax, lst_axt, fig_par,
+def fig_save(filename, out_path, fig, lst_ax, lst_axt, fig_par,
             xLab=None, yLab=None, ytLab=None,
             xLim=None, yLim=None, ytLim=None,
             xTicks=None, yTicks=None, ytTicks=None,
@@ -230,10 +216,7 @@ def FigSave(filename, out_path, fig, lst_ax, lst_axt, fig_par,
             set_size_inches=None
             ):
     '''
-    FIXES:
-        1. px, py moved to FIgCreate
-
-    This function takes the obects created in FigCreate and allows to modify
+    This function takes the obects created in fig_create and allows to modify
     their appeareance and saving the results.
 
     Parameters
@@ -241,12 +224,12 @@ def FigSave(filename, out_path, fig, lst_ax, lst_axt, fig_par,
     filename : str
         name of figure. It is the name of the png od pfd file to be saved
     out_path : pathlib.Path object. path to the output folder.
-    fig : figure object. created in FigSave.
-    lst_ax : list of axis. Created in FigCreate
-    lst_axt : list of twin (secondary) axis. Created in FigCreate
+    fig : figure object. created in fig_save.
+    lst_ax : list of axis. Created in fig_create
+    lst_axt : list of twin (secondary) axis. Created in fig_create
     fig_par : list of figure parameters for space settings
         left, bottom, right, top, widthspace, heightspace, px, py.
-        Created in FigCreate
+        Created in fig_create
     tight_layout : bool
         If True, ignore fig_par[0:6] and fit the figure to the tightest layout
         possible. Avoids to lose part of figure, but loses control of margins
@@ -470,50 +453,131 @@ def FigSave(filename, out_path, fig, lst_ax, lst_axt, fig_par,
     if title is True:
         lst_ax[0].annotate(filename, xycoords='axes fraction', size='small',
                             xy=(0, 0), xytext=(0.05, .95), clip_on=True)
-    return
 
 
-class tga_exp:
+class TGAExp:
+    """
+    Class representing a TGA Experiment.
 
-    def __init__(self, name, filenames, folder, load_skiprows=0,
-                 label=None, t_moist=38,
-                 t_VM=147, Tlims_dtg_C=[120, 800], T_unit='Celsius',
+    Attributes:
+        folder (str): The folder name for the experiment.
+        in_path (str): The input path for the experiment.
+        out_path (str): The output path for the experiment.
+        T_unit (str): The unit of temperature (Celsius or Kelvin).
+        T_symbol (str): The symbol for temperature unit.
+        plot_font (str): The font for plotting.
+        plot_grid (bool): Flag indicating whether to plot grid or not.
+        dtg_basis (str): The basis for computing DTG (temperature or time).
+        resolution_T_dtg (int): The resolution of temperature for DTG computation.
+        dtg_w_SavFil (int): The width parameter for Savitzky-Golay filter in DTG computation.
+
+    Methods:
+        __init__(self, name, filenames, load_skiprows=0, label=None, time_moist=38, time_vm=147, T_initial_C=40, Tlims_dtg_C=[120, 800], correct_ash_mg=None, correct_ash_fr=None, oxid_Tb_thresh=1):
+            Initializes a TGAExp object with the given parameters.
+        
+        load_single_file(self, filename):
+            Loads a single file for the experiment.
+        
+        load_files(self):
+            Loads all the files for the experiment.
+        
+        proximate_analysis(self):
+            Performs proximate analysis on the loaded files.
+    """
+    # Rest of the code...
+import pandas as pd
+import numpy as np
+import pathlib as plib
+
+class TGAExp:
+    """
+    Represents a TGA (Thermogravimetric Analysis) Experiment.
+
+    Attributes:
+        folder (str): The folder name for the experiment.
+        in_path (str): The input path for the experiment.
+        out_path (str): The output path for the experiment.
+        T_unit (str): The unit of temperature used in the experiment.
+        T_symbol (str): The symbol for the temperature unit.
+        plot_font (str): The font used for plotting.
+        plot_grid (bool): Flag indicating whether to show grid in plots.
+        dtg_basis (str): The basis for calculating the derivative thermogravimetric (DTG) curve.
+        resolution_T_dtg (int): The resolution of the temperature range for the DTG curve.
+        dtg_w_SavFil (int): The window size for Savitzky-Golay filtering of the DTG curve.
+
+    Methods:
+        __init__(... (see below)):
+            Initializes a TGAExp object with the specified parameters.
+        
+        load_single_file(self, filename):
+            Loads a single file for the experiment.
+        
+        load_files(self):
+            Loads all the files for the experiment.
+        
+        proximate_analysis(self):
+            Performs proximate analysis on the loaded data.
+    """
+
+    folder = '_test'
+    in_path, out_path = paths_create(folder)
+    T_unit='Celsius'
+    if T_unit == 'Celsius':
+        T_symbol = '°C'
+    elif T_unit == 'Kelvin':
+        T_symbol = 'K'
+    plot_font='Dejavu Sans'
+    plot_grid=False
+    dtg_basis='temperature'
+    resolution_T_dtg=5
+    dtg_w_SavFil=101
+    
+    def __init__(self, name, filenames, load_skiprows=0,
+                 label=None, time_moist=38, 
+                 time_vm=147, T_initial_C=40, Tlims_dtg_C=[120, 800], 
                  correct_ash_mg=None, correct_ash_fr=None,
-                 T_intial_C=40, resolution_T_dtg=5, dtg_basis='temperature',
-                 dtg_w_SavFil=101, oxid_Tb_thresh=1, plot_font='Dejavu Sans',
-                 ):
+                 oxid_Tb_thresh=1):
+        """
+        Initializes a TGAExp object with the specified parameters.
+
+        Args:
+            name (str): The name of the experiment.
+            filenames (list): The list of filenames for the experiment.
+            load_skiprows (int, optional): The number of rows to skip while loading the files. Defaults to 0.
+            label (str, optional): The label for the experiment. Defaults to None.
+            time_moist (int, optional): The time for moisture analysis. Defaults to 38.
+            time_vm (int, optional): The time for volatile matter analysis. Defaults to 147.
+            T_initial_C (int, optional): The initial temperature in Celsius. Defaults to 40.
+            Tlims_dtg_C (list, optional): The temperature limits for the DTG curve in Celsius. Defaults to [120, 800].
+            correct_ash_mg (float, optional): The correction value for ash mass in mg. Defaults to None.
+            correct_ash_fr (float, optional): The correction value for ash fraction. Defaults to None.
+            oxid_Tb_thresh (int, optional): The threshold for oxidation temperature. Defaults to 1.
+        """
         self.name = name
-        self.filenames = filenames
+        if filenames is None:
+            self.filenames = []
+        else:
+            self.filenames = filenames
         if not label:
             self.label = name
         else:
             self.label = label
-        self.n_repl = len(filenames)
-        self.dataframes = []
-        self.processed_data = {}  # Dictionary to store processed data
-        self.folder = folder
-        self.in_path, self.out_path = PathsCreate(folder)
+        self.n_repl = len(self.filenames)
         self.load_skiprows = load_skiprows
         self.column_name_mapping = \
             {'Time': 't_min', 'Temperature': 'T_C', 'Weight': 'm_p',
              'Weight.1': 'm_mg', 'Heat Flow': 'heatflow_mW',
              '##Temp./>C': 'T_C', 'Time/min': 't_min', 'Mass/%': 'm_p',
              'Segment': 'segment'}
-        self.t_moist = t_moist
-        self.t_VM = t_VM
+        self.time_moist = time_moist
+        self.time_vm = time_vm
         self.correct_ash_mg = correct_ash_mg
         self.correct_ash_fr = correct_ash_fr
-        self.T_unit = T_unit
-        self.T_intial_C = T_intial_C
-        if self.T_unit == 'Celsius':
-            self.T_symbol = '°C'
+        self.T_initial_C = T_initial_C
+        if TGAExp.T_unit == 'Celsius':
             self.Tlims_dtg = Tlims_dtg_C
-        elif self.T_unit == 'Kelvin':
-            self.T_symbol = 'K'
+        elif TGAExp.T_unit == 'Kelvin':
             self.Tlims_dtg = [T + 273.15 for T in Tlims_dtg_C]
-        self.resolution_T_dtg = resolution_T_dtg
-        self.dtg_basis = dtg_basis
-        self.dtg_w_SavFil = dtg_w_SavFil
         self.oxid_Tb_thresh = oxid_Tb_thresh
         # for variables and computations
         self.data_loaded = False  # Flag to track if data is loaded
@@ -528,13 +592,20 @@ class tga_exp:
         self.soliddist_report_computed = False
         self.deconv_report_computed = False
         self.KAS_report_computed = False
-        # plotting parameters
-        self.plot_font = plot_font
 
     def load_single_file(self, filename):
-        path = plib.Path(self.in_path, filename + '.txt')
+        """
+        Loads a single file for the experiment.
+
+        Args:
+            filename (str): The filename of the file to load.
+
+        Returns:
+            list: The list of loaded files.
+        """
+        path = plib.Path(TGAExp.in_path, filename + '.txt')
         if not path.is_file():
-            path = plib.Path(self.in_path, filename + '.csv')
+            path = plib.Path(TGAExp.in_path, filename + '.csv')
         file = pd.read_csv(path, sep='\t', skiprows=self.load_skiprows)
         if file.shape[1] < 3:
             file = pd.read_csv(path, sep=',', skiprows=self.load_skiprows)
@@ -549,10 +620,16 @@ class tga_exp:
         return self.files
 
     def load_files(self):
+        """
+        Loads all the files for the experiment.
+
+        Returns:
+            list: The list of loaded files.
+        """
         print('\n' + self.name)
         # import files and makes sure that replicates have the same size
         files, len_files,  = [], []
-        for i, filename in enumerate(self.filenames):
+        for filename in self.filenames:
             print(filename)
             file = self.load_single_file(filename)[0]
             # FILE CORRECTION
@@ -572,7 +649,7 @@ class tga_exp:
                 file['m_p'] = file['m_p'] - np.min(file['m_p']
                                                    ) + self.correct_ash_fr
                 file['m_p'] = file['m_p']/np.max(file['m_p'])*100
-            file = file[file['T_C'] >= self.T_intial_C].copy()
+            file = file[file['T_C'] >= self.T_initial_C].copy()
             file['T_K'] = file['T_C'] + 273.15
             files.append(file)
             len_files.append(max(file.shape))
@@ -583,6 +660,9 @@ class tga_exp:
         return self.files
 
     def proximate_analysis(self):
+        """
+        Performs proximate analysis on the loaded data.
+        """
         if not self.data_loaded:
             self.load_files()
 
@@ -604,9 +684,9 @@ class tga_exp:
         self.fc_daf_stk = np.zeros(self.n_repl)
         self.vm_daf_stk = np.zeros(self.n_repl)
         for f, file in enumerate(self.files):
-            if self.T_unit == 'Celsius':
+            if TGAExp.T_unit == 'Celsius':
                 self.T_stk[:, f] = file['T_C']
-            elif self.T_unit == 'Kelvin':
+            elif TGAExp.T_unit == 'Kelvin':
                 self.T_stk[:, f] = file['T_K']
             self.time_stk[:, f] = file['t_min']
 
@@ -614,7 +694,7 @@ class tga_exp:
             self.mp_ar_stk[:, f] = file['m_p']
 
             self.idx_moist_stk[f] = np.argmax(self.time_stk[:, f]
-                                              > self.t_moist+0.01)
+                                              > self.time_moist+0.01)
 
 
             self.moist_ar_stk[f] = 100 - self.mp_ar_stk[self.idx_moist_stk[f],
@@ -628,8 +708,8 @@ class tga_exp:
                 (100-self.moist_ar_stk[f])
             self.mp_daf_stk[:, f] = (self.mp_db_stk[:, f] - self.ash_db_stk[f]
                                      )*100/(100-self.ash_db_stk[f])
-            if self.t_VM is not None:
-                self.idx_vm_stk[f] = np.argmax(self.time_stk[:, f] > self.t_VM)
+            if self.time_vm is not None:
+                self.idx_vm_stk[f] = np.argmax(self.time_stk[:, f] > self.time_vm)
                 self.fc_ar_stk[f] = (self.mp_ar_stk[self.idx_vm_stk[f], f]
                                     - self.ash_ar_stk[f])
                 self.vm_ar_stk[f] = (100 - self.moist_ar_stk[f] -
@@ -673,7 +753,7 @@ class tga_exp:
         self.fc_daf_std = np.std(self.fc_daf_stk)
 
         self.len_dtg_db = int((self.Tlims_dtg[1] - self.Tlims_dtg[0]
-                          )*self.resolution_T_dtg)
+                          )*TGAExp.resolution_T_dtg)
         self.T_dtg = np.linspace(self.Tlims_dtg[0], self.Tlims_dtg[1],
                                  self.len_dtg_db)
         self.time_dtg_stk = np.ones((self.len_dtg_db, self.n_repl))
@@ -694,12 +774,12 @@ class tga_exp:
                 np.interp(self.T_dtg, self.T_stk[idxs_dtg[0]: idxs_dtg[1], f],
                           self.mp_db_stk[idxs_dtg[0]: idxs_dtg[1], f])
             # the combusiton indexes use rates as /min
-            if self.dtg_basis == 'temperature':
+            if TGAExp.dtg_basis == 'temperature':
                 dtg = np.gradient(self.mp_db_dtg_stk[:, f], self.T_dtg)
-            if self.dtg_basis == 'time':
+            if TGAExp.dtg_basis == 'time':
                 dtg = np.gradient(self.mp_db_dtg_stk[:, f],
                                   self.time_dtg_stk[:, f])
-            self.dtg_db_stk[:, f] = SavFil(dtg, self.dtg_w_SavFil, 1)
+            self.dtg_db_stk[:, f] = SavFil(dtg, TGAExp.dtg_w_SavFil, 1)
         # average
         self.time_dtg = np.average(self.time_dtg_stk, axis=1)
         self.mp_db_dtg = np.average(self.mp_db_dtg_stk, axis=1)
@@ -713,6 +793,16 @@ class tga_exp:
         self.proximate_computed = True
 
     def oxidation_analysis(self):
+        """
+        Perform oxidation analysis on the data.
+
+        This method calculates various oxidation parameters based on the proximate analysis results.
+        It computes the Ti, Tp, Tb, dwdT_max, dwdT_mean, and S values for each file in the dataset,
+        and then calculates the average and standard deviation of these values.
+
+        Returns:
+            None
+        """
         if not self.proximate_computed:
             self.proximate_analysis()
         self.Ti_idx_stk = np.zeros(self.n_repl, dtype=int)
@@ -762,12 +852,21 @@ class tga_exp:
         self.oxidation_computed = True
 
     def soliddist_analysis(self, steps_min=[40, 70, 100, 130, 160, 190]):
+        """
+        Perform solid distance analysis.
+
+        Args:
+            steps_min (list, optional): List of minimum steps for analysis.
+              Defaults to [40, 70, 100, 130, 160, 190].
+
+        Returns:
+            None
+        """
         if not self.proximate_computed:
             self.proximate_analysis()
         self.dist_steps_min = steps_min + ['end']
         len_dist_step = len(self.dist_steps_min)
 
-        self.idxs_dist_steps_min_stk = np.ones((len_dist_step, self.n_repl))
         self.T_dist_stk = np.ones((len_dist_step, self.n_repl))
         self.time_dist_stk = np.ones((len_dist_step, self.n_repl))
         self.dmp_dist_stk = np.ones((len_dist_step, self.n_repl))
@@ -777,7 +876,7 @@ class tga_exp:
             idxs = []
             for step in steps_min:
                 idxs.append(np.argmax(self.time_stk[:, f] > step))
-            self.idxs_dist_steps_min_stk[:, f] = idxs.append(len(self.time)-1)
+            idxs.append(len(self.time)-1)
             self.T_dist_stk[:, f] = self.T_stk[idxs, f]
             self.time_dist_stk[:, f] = self.time_stk[idxs, f]
 
@@ -799,10 +898,27 @@ class tga_exp:
 
     def _prepare_deconvolution_model(self, centers, sigmas, amplitudes, c_mins,
                                      c_maxs, s_mins, s_maxs, a_mins, a_maxs):
+        """
+        Prepare the deconvolution model for peak fitting.
+
+        Args:
+            centers (list): List of peak centers.
+            sigmas (list): List of peak sigmas.
+            amplitudes (list): List of peak amplitudes.
+            c_mins (list): List of minimum values for peak centers.
+            c_maxs (list): List of maximum values for peak centers.
+            s_mins (list): List of minimum values for peak sigmas.
+            s_maxs (list): List of maximum values for peak sigmas.
+            a_mins (list): List of minimum values for peak amplitudes.
+            a_maxs (list): List of maximum values for peak amplitudes.
+
+        Returns:
+            tuple: A tuple containing the deconvolution model and parameters.
+        """
         model = LinearModel(prefix="bkg_")
         params = model.make_params(intercept=0, slope=0, vary=False)
 
-        for i in range(len(centers)):
+        for i, _ in enumerate(centers):
             prefix = f'peak{i}_'
             peak_model = GaussianModel(prefix=prefix)
             pars = peak_model.make_params()
@@ -820,6 +936,47 @@ class tga_exp:
     def deconv_analysis(self, centers, sigmas=None, amplitudes=None,
                         c_mins=None, c_maxs=None, s_mins=None, s_maxs=None,
                         a_mins=None, a_maxs=None, TLim=None):
+        """
+        Perform deconvolution analysis on the data.
+
+        Args:
+            centers (list): List of peak centers.
+            sigmas (list, optional): List of peak sigmas. Defaults to None.
+            amplitudes (list, optional): List of peak amplitudes. Defaults to None.
+            c_mins (list, optional): List of minimum values for peak centers. Defaults to None.
+            c_maxs (list, optional): List of maximum values for peak centers. Defaults to None.
+            s_mins (list, optional): List of minimum values for peak sigmas. Defaults to None.
+            s_maxs (list, optional): List of maximum values for peak sigmas. Defaults to None.
+            a_mins (list, optional): List of minimum values for peak amplitudes. Defaults to None.
+            a_maxs (list, optional): List of maximum values for peak amplitudes. Defaults to None.
+            TLim (tuple, optional): Tuple specifying the time range for analysis. Defaults to None.
+
+        Returns:
+            None
+        """
+        # Function implementation
+        ...
+    def deconv_analysis(self, centers, sigmas=None, amplitudes=None,
+                        c_mins=None, c_maxs=None, s_mins=None, s_maxs=None,
+                        a_mins=None, a_maxs=None, TLim=None):
+        """
+        Perform deconvolution analysis on the data.
+
+        Args:
+            centers (list): List of peak centers.
+            sigmas (list, optional): List of peak sigmas. Defaults to None.
+            amplitudes (list, optional): List of peak amplitudes. Defaults to None.
+            c_mins (list, optional): List of minimum values for peak centers. Defaults to None.
+            c_maxs (list, optional): List of maximum values for peak centers. Defaults to None.
+            s_mins (list, optional): List of minimum values for peak sigmas. Defaults to None.
+            s_maxs (list, optional): List of maximum values for peak sigmas. Defaults to None.
+            a_mins (list, optional): List of minimum values for peak amplitudes. Defaults to None.
+            a_maxs (list, optional): List of maximum values for peak amplitudes. Defaults to None.
+            TLim (tuple, optional): Tuple specifying the time range for analysis. Defaults to None.
+
+        Returns:
+            None
+        """
         if not self.proximate_computed:
             self.proximate_analysis()
         self.dcv_best_fit_stk = np.zeros((self.len_dtg_db, self.n_repl))
@@ -871,66 +1028,99 @@ class tga_exp:
 
     # section with methods to print reports
     def proximate_report(self):
-        if not self.proximate_computed:
-            self.proximate_analysis()
+            """
+            Generates a proximate report for the TGA experiment.
 
-        out_path = plib.Path(self.out_path, 'SingleSampleReports')
-        out_path.mkdir(parents=True, exist_ok=True)
+            If the proximate analysis has not been computed, it will be computed first.
+            The report includes the following columns: 'moist_ar_p', 'ash_ar_p', 'ash_db_p', 'vm_db_p', 'fc_db_p',
+            'vm_daf_p', 'fc_daf_p', 'AveTGstd_p'.
 
-        columns = ['moist_ar_p', 'ash_ar_p', 'ash_db_p', 'vm_db_p', 'fc_db_p',
-                   'vm_daf_p', 'fc_daf_p', 'AveTGstd_p']
-        rep = pd.DataFrame(index=self.filenames, columns=columns)
+            Returns:
+                pandas.DataFrame: The proximate report with the calculated values for each sample.
+            """
+            
+            if not self.proximate_computed:
+                self.proximate_analysis()
 
-        for f, filename in enumerate(self.filenames):
-            rep.loc[filename] = [self.moist_ar_stk[f], self.ash_ar_stk[f],
-                                 self.ash_db_stk[f], self.vm_db_stk[f],
-                                 self.fc_db_stk[f], self.vm_daf_stk[f],
-                                 self.fc_daf_stk[f], np.nan]
+            out_path = plib.Path(TGAExp.out_path, 'SingleSampleReports')
+            out_path.mkdir(parents=True, exist_ok=True)
 
-        rep.loc['ave'] = [self.moist_ar, self.ash_ar, self.ash_db,
-                          self.vm_db, self.fc_db, self.vm_daf, self.fc_daf,
-                          self.AveTGstd_p]
-        rep.loc['std'] = [self.moist_ar_std, self.ash_ar_std, self.ash_db_std,
-                          self.vm_db_std, self.fc_db_std, self.vm_daf_std,
-                          self.fc_daf_std, self.AveTGstd_p_std]
-        self.proximate = rep
-        rep.to_excel(plib.Path(out_path, self.name + '_proximate.xlsx'))
-        self.proximate_report_computed = True
-        return self.proximate
+            columns = ['moist_ar_p', 'ash_ar_p', 'ash_db_p', 'vm_db_p', 'fc_db_p',
+                       'vm_daf_p', 'fc_daf_p', 'AveTGstd_p']
+            rep = pd.DataFrame(index=self.filenames, columns=columns)
+
+            for f, filename in enumerate(self.filenames):
+                rep.loc[filename] = [self.moist_ar_stk[f], self.ash_ar_stk[f],
+                                     self.ash_db_stk[f], self.vm_db_stk[f],
+                                     self.fc_db_stk[f], self.vm_daf_stk[f],
+                                     self.fc_daf_stk[f], np.nan]
+
+            rep.loc['ave'] = [self.moist_ar, self.ash_ar, self.ash_db,
+                              self.vm_db, self.fc_db, self.vm_daf, self.fc_daf,
+                              self.AveTGstd_p]
+            rep.loc['std'] = [self.moist_ar_std, self.ash_ar_std, self.ash_db_std,
+                              self.vm_db_std, self.fc_db_std, self.vm_daf_std,
+                              self.fc_daf_std, self.AveTGstd_p_std]
+            self.proximate = rep
+            rep.to_excel(plib.Path(out_path, self.name + '_proximate.xlsx'))
+            self.proximate_report_computed = True
+            return self.proximate
 
     def oxidation_report(self):
-        if not self.oxidation_computed:
-            self.oxidation_analysis()
-        out_path = plib.Path(self.out_path, 'SingleSampleReports')
-        out_path.mkdir(parents=True, exist_ok=True)
-        if self.T_unit == 'Celsius':
-            TiTpTb = ['Ti_C', 'Tp_C', 'Tb_C']
-        elif self.T_unit == 'Kelvin':
-            TiTpTb = ['Ti_K', 'Tp_K', 'Tb_K']
-        columns = TiTpTb + ['idx_dwdT_max_p_min', 'dwdT_mean_p_min', 'S_comb']
-        rep = pd.DataFrame(index=self.filenames, columns=columns)
+            """
+            Generates an oxidation report for the TGA experiment.
 
-        for f, filename in enumerate(self.filenames):
-            rep.loc[filename] = [self.Ti_stk[f], self.Tp_stk[f],
-                                 self.Tb_stk[f], self.dwdT_max_stk[f],
-                                 self.dwdT_mean_stk[f], self.S_stk[f]]
+            If the oxidation analysis has not been computed, it will be computed first.
+            The report includes various parameters such as temperature values (Ti, Tp, Tb),
+            maximum derivative of weight loss rate (dwdT_max), mean derivative of weight loss rate (dwdT_mean),
+            and the combustion sensitivity (S_comb).
 
-        rep.loc['ave'] = [self.Ti, self.Tp, self.Tb, self.dwdT_max,
-                          self.dwdT_mean, self.S]
+            Returns:
+                pandas.DataFrame: The oxidation report containing the calculated parameters for each sample.
+            """
+            
+            if not self.oxidation_computed:
+                self.oxidation_analysis()
+            out_path = plib.Path(TGAExp.out_path, 'SingleSampleReports')
+            out_path.mkdir(parents=True, exist_ok=True)
+            if TGAExp.T_unit == 'Celsius':
+                TiTpTb = ['Ti_C', 'Tp_C', 'Tb_C']
+            elif TGAExp.T_unit == 'Kelvin':
+                TiTpTb = ['Ti_K', 'Tp_K', 'Tb_K']
+            columns = TiTpTb + ['idx_dwdT_max_p_min', 'dwdT_mean_p_min', 'S_comb']
+            rep = pd.DataFrame(index=self.filenames, columns=columns)
 
-        rep.loc['std'] = [self.Ti_std, self.Tp_std, self.Tb_std,
-                          self.dwdT_max_std, self.dwdT_mean_std, self.S_std]
-        self.oxidation = rep
-        rep.to_excel(plib.Path(out_path, self.name + '_oxidation.xlsx'))
-        self.oxidation_report_computed = True
-        return self.oxidation
+            for f, filename in enumerate(self.filenames):
+                rep.loc[filename] = [self.Ti_stk[f], self.Tp_stk[f],
+                                     self.Tb_stk[f], self.dwdT_max_stk[f],
+                                     self.dwdT_mean_stk[f], self.S_stk[f]]
+
+            rep.loc['ave'] = [self.Ti, self.Tp, self.Tb, self.dwdT_max,
+                              self.dwdT_mean, self.S]
+
+            rep.loc['std'] = [self.Ti_std, self.Tp_std, self.Tb_std,
+                              self.dwdT_max_std, self.dwdT_mean_std, self.S_std]
+            self.oxidation = rep
+            rep.to_excel(plib.Path(out_path, self.name + '_oxidation.xlsx'))
+            self.oxidation_report_computed = True
+            return self.oxidation
 
     def soliddist_report(self):
+        """
+        Generates a report of solid distribution.
+
+        If the solid distribution has not been computed, it computes it using the soliddist_analysis method.
+        The report is saved as an Excel file in the 'SingleSampleReports' directory.
+        The report includes temperature values and dmp values for each time step.
+
+        Returns:
+            pandas.DataFrame: The solid distribution report.
+        """
         if not self.soliddist_computed:
             self.soliddist_analysis()
-        out_path = plib.Path(self.out_path, 'SingleSampleReports')
+        out_path = plib.Path(TGAExp.out_path, 'SingleSampleReports')
         out_path.mkdir(parents=True, exist_ok=True)
-        columns = ['T [' + self.T_symbol + '](' + str(s) + 'min)'
+        columns = ['T [' + TGAExp.T_symbol + '](' + str(s) + 'min)'
                    for s in self.dist_steps_min
                    ] + ['dmp (' + str(s) + 'min)' for s in self.dist_steps_min]
         rep = pd.DataFrame(index=self.filenames, columns=columns)
@@ -949,14 +1139,20 @@ class tga_exp:
         return self.soliddist
 
     # methods to plot results for a single sample
-    def tg_plot(self, TG_lab='TG [wt%]', grid=False):
+    def tg_plot(self, TG_lab='TG [wt%]'):
+        """
+        Plot the TGA data.
+
+        Args:
+            TG_lab (str, optional): Label for the TG axis. Defaults to 'TG [wt%]'.
+        """
         if not self.proximate_computed:
             self.proximate_analysis()
-        out_path = plib.Path(self.out_path, 'SingleSamplePlots')
+        out_path = plib.Path(TGAExp.out_path, 'SingleSamplePlots')
         out_path.mkdir(parents=True, exist_ok=True)
         filename = self.name
-        fig, ax, axt, fig_par = FigCreate(rows=3, cols=1, plot_type=0,
-                                          paper_col=1, font=self.plot_font)
+        fig, ax, axt, fig_par = fig_create(rows=3, cols=1, plot_type=0,
+                                          paper_col=1, font=TGAExp.plot_font)
         for f in range(self.n_repl):
             ax[0].plot(self.time_stk[:, f], self.T_stk[:, f], color=clrs[f],
                        linestyle=lnstls[f], label=self.filenames[f])
@@ -982,133 +1178,176 @@ class tga_exp:
                              self.mp_db_stk[self.idx_vm_stk[f], f] + 5,
                              linestyle=lnstls[f], color=clrs[f])
         ax[0].legend(loc='best')
-        FigSave(filename + '_tg', out_path, fig, ax, axt, fig_par,
+        fig_save(filename + '_tg', out_path, fig, ax, axt, fig_par,
                 xLab='time [min]',
-                yLab=['T ['+self.T_symbol+']',
-                      TG_lab+'(stb)', TG_lab+'(db)'], grid=grid)
+                yLab=['T ['+TGAExp.T_symbol+']',
+                      TG_lab+'(stb)', TG_lab+'(db)'], grid=TGAExp.plot_grid)
 
-    def dtg_plot(self, TG_lab='TG [wt%]', DTG_lab=None, grid=False):
-        if not self.proximate_computed:
-            self.proximate_analysis()
-        out_path = plib.Path(self.out_path, 'SingleSamplePlots')
-        out_path.mkdir(parents=True, exist_ok=True)
+    def dtg_plot(self, TG_lab='TG [wt%]', DTG_lab=None):
+            """
+            Plot the DTG (Derivative Thermogravimetric) data.
 
-        if DTG_lab is None:
-            if self.dtg_basis == 'temperature':
-                DTG_lab = 'DTG [wt%/' + self.T_symbol + ']'
-            elif self.dtg_basis == 'time':
-                DTG_lab='DTG [wt%/min]'
-        filename = self.name
+            Args:
+                TG_lab (str, optional): Label for TG data. Defaults to 'TG [wt%]'.
+                DTG_lab (str, optional): Label for DTG data. Defaults to None.
+            """
+            
+            if not self.proximate_computed:
+                self.proximate_analysis()
+            out_path = plib.Path(TGAExp.out_path, 'SingleSamplePlots')
+            out_path.mkdir(parents=True, exist_ok=True)
 
-        fig, ax, axt, fig_par = FigCreate(rows=3, cols=1, plot_type=0,
-                                          paper_col=1, font=self.plot_font)
-        for f in range(self.n_repl):
-            ax[0].plot(self.time_dtg, self.T_dtg, color=clrs[f],
-                       linestyle=lnstls[f], label=self.filenames[f])
-            ax[1].plot(self.time_dtg, self.mp_db_dtg_stk[:, f], color=clrs[f],
-                       linestyle=lnstls[f])
-            ax[2].plot(self.time_dtg, self.dtg_db_stk[:, f], color=clrs[f],
-                       linestyle=lnstls[f])
-            if self.oxidation_computed:
-                ax[2].vlines(self.time_dtg[self.Ti_idx_stk[f]],
-                             ymin=-1.5, ymax=0,
-                             linestyle=lnstls[f], color=clrs[f], label='Ti')
-                ax[2].vlines(self.time_dtg[self.Tp_idx_stk[f]],
-                             ymin=np.min(self.dtg_db_stk[:, f]),
-                             ymax=np.min(self.dtg_db_stk[:, f])/5,
-                             linestyle=lnstls[f], color=clrs[f], label='Tp')
-                ax[2].vlines(self.time_dtg[self.Tb_idx_stk[f]],
-                             ymin=-1.5, ymax=0,
-                             linestyle=lnstls[f], color=clrs[f], label='Tb')
-        ax[0].legend(loc='best')
-        FigSave(filename + '_dtg', out_path, fig, ax, axt, fig_par,
-                xLab='time [min]',
-                yLab=['T ['+self.T_symbol+']', TG_lab + '(db)',
-                      DTG_lab + '(db)'], grid=grid)
+            if DTG_lab is None:
+                if TGAExp.dtg_basis == 'temperature':
+                    DTG_lab = 'DTG [wt%/' + TGAExp.T_symbol + ']'
+                elif TGAExp.dtg_basis == 'time':
+                    DTG_lab='DTG [wt%/min]'
+            filename = self.name
 
-    def soliddist_plot(self, paper_col=1, hgt_mltp=1.25, TG_lab='TG [wt%]',
-                       grid=False):
-        # slightly different plotting behaviour (uses averages)
-        if not self.soliddist_computed:
-            self.soliddist_analysis()
-        out_path = plib.Path(self.out_path, 'SingleSamplePlots')
-        out_path.mkdir(parents=True, exist_ok=True)
-        filename = self.name
-        fig, ax, axt, fig_par = FigCreate(rows=2, cols=1, plot_type=0,
-                                          paper_col=paper_col,
-                                          hgt_mltp=hgt_mltp)
+            fig, ax, axt, fig_par = fig_create(rows=3, cols=1, plot_type=0,
+                                              paper_col=1, font=TGAExp.plot_font)
+            for f in range(self.n_repl):
+                ax[0].plot(self.time_dtg, self.T_dtg, color=clrs[f],
+                           linestyle=lnstls[f], label=self.filenames[f])
+                ax[1].plot(self.time_dtg, self.mp_db_dtg_stk[:, f], color=clrs[f],
+                           linestyle=lnstls[f])
+                ax[2].plot(self.time_dtg, self.dtg_db_stk[:, f], color=clrs[f],
+                           linestyle=lnstls[f])
+                if self.oxidation_computed:
+                    ax[2].vlines(self.time_dtg[self.Ti_idx_stk[f]],
+                                 ymin=-1.5, ymax=0,
+                                 linestyle=lnstls[f], color=clrs[f], label='Ti')
+                    ax[2].vlines(self.time_dtg[self.Tp_idx_stk[f]],
+                                 ymin=np.min(self.dtg_db_stk[:, f]),
+                                 ymax=np.min(self.dtg_db_stk[:, f])/5,
+                                 linestyle=lnstls[f], color=clrs[f], label='Tp')
+                    ax[2].vlines(self.time_dtg[self.Tb_idx_stk[f]],
+                                 ymin=-1.5, ymax=0,
+                                 linestyle=lnstls[f], color=clrs[f], label='Tb')
+            ax[0].legend(loc='best')
+            fig_save(filename + '_dtg', out_path, fig, ax, axt, fig_par,
+                    xLab='time [min]',
+                    yLab=['T ['+TGAExp.T_symbol+']', TG_lab + '(db)',
+                          DTG_lab + '(db)'], grid=TGAExp.plot_grid)
 
-        ax[0].plot(self.time, self.T)
-        ax[0].fill_between(self.time, self.T - self.T_std, self.T + self.T_std,
-                           alpha=.3)
-        ax[1].plot(self.time, self.mp_db)
-        ax[1].fill_between(self.time, self.mp_db - self.mp_db_std,
-                           self.mp_db + self.mp_db_std,
-                           alpha=.3)
-        for tm, mp, dmp in zip(self.time_dist, self.loc_dist,
-                               self.dmp_dist):
-            ax[1].annotate(str(np.round(dmp, 0)) + '%',
-                           ha='center', va='top',
-                           xy=(tm - 10, mp+1), fontsize=9)
-        FigSave(filename + '_soliddist', out_path, fig, ax, axt, fig_par,
-                xLab='time [min]',
-                yLab=['T ['+self.T_symbol+']', TG_lab+'(db)'],
-                grid=grid)
+    def soliddist_plot(self, paper_col=1, hgt_mltp=1.25, TG_lab='TG [wt%]'):
+            """
+            Plot the solid distribution analysis.
+
+            Args:
+                paper_col (int): Number of columns in the plot for paper publication (default is 1).
+                hgt_mltp (float): Height multiplier for the plot (default is 1.25).
+                TG_lab (str): Label for the TG axis (default is 'TG [wt%]').
+
+            Returns:
+                None
+            """
+            
+            # slightly different plotting behaviour (uses averages)
+            if not self.soliddist_computed:
+                self.soliddist_analysis()
+            out_path = plib.Path(TGAExp.out_path, 'SingleSamplePlots')
+            out_path.mkdir(parents=True, exist_ok=True)
+            filename = self.name
+            fig, ax, axt, fig_par = fig_create(rows=2, cols=1, plot_type=0,
+                                              paper_col=paper_col,
+                                              hgt_mltp=hgt_mltp)
+
+            ax[0].plot(self.time, self.T)
+            ax[0].fill_between(self.time, self.T - self.T_std, self.T + self.T_std,
+                               alpha=.3)
+            ax[1].plot(self.time, self.mp_db)
+            ax[1].fill_between(self.time, self.mp_db - self.mp_db_std,
+                               self.mp_db + self.mp_db_std,
+                               alpha=.3)
+            for tm, mp, dmp in zip(self.time_dist, self.loc_dist,
+                                   self.dmp_dist):
+                ax[1].annotate(str(np.round(dmp, 0)) + '%',
+                               ha='center', va='top',
+                               xy=(tm - 10, mp+1), fontsize=9)
+            fig_save(filename + '_soliddist', out_path, fig, ax, axt, fig_par,
+                    xLab='time [min]',
+                    yLab=['T ['+TGAExp.T_symbol+']', TG_lab+'(db)'],
+                    grid=TGAExp.plot_grid)
 
     def deconv_plot(self, filename='Deconv',
-                    xLim=None, yLim=None, grid=False, DTG_lab=None,
+                    xLim=None, yLim=None, DTG_lab=None,
                     pdf=False, svg=False, legend='best'):
-        if not self.deconv_computed:
-            self.deconv_analysis()
-        out_path_dcv = plib.Path(self.out_path, 'SingleSampleDeconvs')
-        out_path_dcv.mkdir(parents=True, exist_ok=True)
-        if DTG_lab is None:
-            if self.dtg_basis == 'temperature':
-                DTG_lab = 'DTG [wt%/' + self.T_symbol + ']'
-            elif self.dtg_basis == 'time':
-                DTG_lab='DTG [wt%/min]'
-        filename = self.name
-        fig, ax, axt, fig_par = FigCreate(rows=1, cols=1, plot_type=0,
-                                          paper_col=0.78, hgt_mltp=1.25,
-                                          )
-        # Plot DTG data
-        ax[0].plot(self.T_dtg, self.dtg_db, color='black', label='DTG')
-        ax[0].fill_between(self.T_dtg, self.dtg_db - self.dtg_db_std,
-                           self.dtg_db + self.dtg_db_std, color='black',
-                           alpha=0.3)
+            """
+            Plot the deconvolution results.
 
-        # Plot best fit and individual peaks
-        ax[0].plot(self.T_dtg, self.dcv_best_fit, label='best fit', color='red',
-                   linestyle='--')
-        ax[0].fill_between(self.T_dtg,
-                           self.dcv_best_fit - self.dcv_best_fit_std,
-                           self.dcv_best_fit + self.dcv_best_fit_std,
-                           color='red', alpha=0.3)
-        clrs_p = clrsp = clrs[:3] + clrs[5:]  # avoid using red
-        p = 0
-        for peak, peak_std in zip(self.dcv_peaks.T, self.dcv_peaks_std.T):
+            Args:
+                filename (str, optional): The filename to save the plot. Defaults to 'Deconv'.
+                xLim (tuple, optional): The x-axis limits of the plot. Defaults to None.
+                yLim (tuple, optional): The y-axis limits of the plot. Defaults to None.
+                DTG_lab (str, optional): The label for the y-axis. Defaults to None.
+                pdf (bool, optional): Whether to save the plot as a PDF file. Defaults to False.
+                svg (bool, optional): Whether to save the plot as an SVG file. Defaults to False.
+                legend (str, optional): The position of the legend in the plot. Defaults to 'best'.
+            """
+            
+            if not self.deconv_computed:
+                self.deconv_analysis()
+            out_path_dcv = plib.Path(TGAExp.out_path, 'SingleSampleDeconvs')
+            out_path_dcv.mkdir(parents=True, exist_ok=True)
+            if DTG_lab is None:
+                if TGAExp.dtg_basis == 'temperature':
+                    DTG_lab = 'DTG [wt%/' + TGAExp.T_symbol + ']'
+                elif TGAExp.dtg_basis == 'time':
+                    DTG_lab='DTG [wt%/min]'
+            filename = self.name
+            fig, ax, axt, fig_par = fig_create(rows=1, cols=1, plot_type=0,
+                                              paper_col=0.78, hgt_mltp=1.25,
+                                              )
+            # Plot DTG data
+            ax[0].plot(self.T_dtg, self.dtg_db, color='black', label='DTG')
+            ax[0].fill_between(self.T_dtg, self.dtg_db - self.dtg_db_std,
+                               self.dtg_db + self.dtg_db_std, color='black',
+                               alpha=0.3)
 
-            ax[0].plot(self.T_dtg, peak, label='peak ' + str(int(p+1)),
-                       color=clrs_p[p], linestyle=lnstls[p])
+            # Plot best fit and individual peaks
+            ax[0].plot(self.T_dtg, self.dcv_best_fit, label='best fit', color='red',
+                       linestyle='--')
             ax[0].fill_between(self.T_dtg,
-                               peak - peak_std,
-                               peak + peak_std,
-                               color=clrs_p[p], alpha=0.3)
-            p += 1
-        ax[0].annotate(f"r$^2$={self.dcv_r2:.2f}", xycoords='axes fraction',
-                       xy=(0.85, 0.96), size='x-small')
+                               self.dcv_best_fit - self.dcv_best_fit_std,
+                               self.dcv_best_fit + self.dcv_best_fit_std,
+                               color='red', alpha=0.3)
+            clrs_p = clrsp = clrs[:3] + clrs[5:]  # avoid using red
+            p = 0
+            for peak, peak_std in zip(self.dcv_peaks.T, self.dcv_peaks_std.T):
 
-        # Save figure using FigSave
-        FigSave(filename, out_path_dcv, fig, ax, axt, fig_par,
-                xLab='T ['+self.T_symbol+']', yLab=DTG_lab,
-                xLim=xLim, yLim=yLim, legend=legend,
-                pdf=pdf, svg=svg)  # Set additional parameters as needed
+                ax[0].plot(self.T_dtg, peak, label='peak ' + str(int(p+1)),
+                           color=clrs_p[p], linestyle=lnstls[p])
+                ax[0].fill_between(self.T_dtg,
+                                   peak - peak_std,
+                                   peak + peak_std,
+                                   color=clrs_p[p], alpha=0.3)
+                p += 1
+            ax[0].annotate(f"r$^2$={self.dcv_r2:.2f}", xycoords='axes fraction',
+                           xy=(0.85, 0.96), size='x-small')
+
+            # Save figure using fig_save
+            fig_save(filename, out_path_dcv, fig, ax, axt, fig_par,
+                    xLab='T ['+TGAExp.T_symbol+']', yLab=DTG_lab,
+                    xLim=xLim, yLim=yLim, legend=legend, grid=TGAExp.plot_grid,
+                    pdf=pdf, svg=svg)  # Set additional parameters as needed
 
 
 # =============================================================================
 # # functions to print reports with ave and std of multiple samples
 # =============================================================================
 def proximate_multi_report(exps, filename='Rep'):
+    """
+    Generate a multi-sample proximate report.
+
+    Args:
+        exps (list): List of experiments.
+        filename (str, optional): Name of the output file. Defaults to 'Rep'.
+
+    Returns:
+        pandas.DataFrame: DataFrame containing the multi-sample proximate report.
+    """
+
     for exp in exps:
         if not exp.proximate_report_computed:
             exp.proximate_report()
@@ -1125,6 +1364,16 @@ def proximate_multi_report(exps, filename='Rep'):
 
 
 def oxidation_multi_report(exps, filename='Rep'):
+    """
+    Generate a multi-sample oxidation report.
+
+    Args:
+        exps (list): List of experiments.
+        filename (str, optional): Name of the output file. Defaults to 'Rep'.
+
+    Returns:
+        pandas.DataFrame: DataFrame containing the multi-sample oxidation report.
+    """
     for exp in exps:
         if not exp.oxidation_report_computed:
             exp.oxidation_report()
@@ -1141,6 +1390,17 @@ def oxidation_multi_report(exps, filename='Rep'):
 
 
 def soliddist_multi_report(exps, filename='Rep'):
+    """
+    Generate a multi-sample solid distance report.
+
+    Args:
+        exps (list): List of experiments.
+        filename (str, optional): Name of the output file. Defaults to 'Rep'.
+
+    Returns:
+        pandas.DataFrame: DataFrame containing the solid distance report.
+    """
+
     for exp in exps:
         if not exp.soliddist_report_computed:
             exp.soliddist_report()
@@ -1160,14 +1420,34 @@ def soliddist_multi_report(exps, filename='Rep'):
 # # functions for plotting ave and std of multiple samples
 # =============================================================================
 def tg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
-                  xLim=None, yLim=[0, 100], yTicks=None, grid=False,
+                  xLim=None, yLim=[0, 100], yTicks=None, 
                   TG_lab='TG [wt%]', lttrs=False, pdf=False, svg=False):
+    """
+    Plot multiple thermogravimetric (TG) curves.
+
+    Args:
+        exps (list): List of experimental data objects.
+        filename (str, optional): Name of the output file. Defaults to 'Fig'.
+        paper_col (float, optional): Width of the figure in inches. Defaults to 0.78.
+        hgt_mltp (float, optional): Height multiplier of the figure. Defaults to 1.25.
+        xLim (tuple, optional): Limits of the x-axis. Defaults to None.
+        yLim (list, optional): Limits of the y-axis. Defaults to [0, 100].
+        yTicks (list, optional): Custom y-axis tick locations. Defaults to None.
+        TG_lab (str, optional): Label for the y-axis. Defaults to 'TG [wt%]'.
+        lttrs (bool, optional): Whether to annotate letters on the plot. Defaults to False.
+        pdf (bool, optional): Whether to save the figure as a PDF file. Defaults to False.
+        svg (bool, optional): Whether to save the figure as an SVG file. Defaults to False.
+
+    Returns:
+        None
+    """
+    
     for exp in exps:
         if not exp.proximate_computed:
             exp.proximate_analysis()
     out_path_TGs = plib.Path(exps[0].out_path, 'MultiSamplePlots')
     out_path_TGs.mkdir(parents=True, exist_ok=True)
-    fig, ax, axt, fig_par = FigCreate(rows=1, cols=1, plot_type=0,
+    fig, ax, axt, fig_par = fig_create(rows=1, cols=1, plot_type=0,
                                       paper_col=paper_col,
                                       hgt_mltp=hgt_mltp)
     for i, exp in enumerate(exps):
@@ -1176,17 +1456,39 @@ def tg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
         ax[0].fill_between(exp.T, exp.mp_db - exp.mp_db_std,
                            exp.mp_db + exp.mp_db_std, color=clrs[i],
                            alpha=.3)
-    FigSave(filename + '_tg', out_path_TGs, fig, ax, axt, fig_par,
+    fig_save(filename + '_tg', out_path_TGs, fig, ax, axt, fig_par,
             xLim=xLim, yLim=yLim,
             yTicks=yTicks,
-            xLab='T [' + exps[0].T_symbol + ']', legend='upper right',
-            yLab=TG_lab, annotate_lttrs=lttrs, grid=grid, pdf=pdf, svg=svg)
+            xLab='T [' + TGAExp.T_symbol + ']', legend='upper right',
+            yLab=TG_lab, annotate_lttrs=lttrs, grid=TGAExp.plot_grid, pdf=pdf, svg=svg)
 
 
 def dtg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
-                   xLim=None, yLim=None, yTicks=None, grid=False,
+                   xLim=None, yLim=None, yTicks=None,
                    DTG_lab=None, lttrs=False, plt_gc=False, gc_Tlim=300,
                    pdf=False, svg=False):
+    """
+    Plot multiple DTG curves for a list of experiments.
+
+    Args:
+        exps (list): List of TGAExp objects representing the experiments.
+        filename (str, optional): Name of the output file. Defaults to 'Fig'.
+        paper_col (float, optional): Color of the plot background. Defaults to 0.78.
+        hgt_mltp (float, optional): Height multiplier for the plot. Defaults to 1.25.
+        xLim (tuple, optional): Limits of the x-axis. Defaults to None.
+        yLim (tuple, optional): Limits of the y-axis. Defaults to None.
+        yTicks (list, optional): Custom y-axis tick labels. Defaults to None.
+        DTG_lab (str, optional): Label for the y-axis. Defaults to None.
+        lttrs (bool, optional): Whether to annotate letters on the plot. Defaults to False.
+        plt_gc (bool, optional): Whether to plot the GC-MS maximum temperature line. Defaults to False.
+        gc_Tlim (int, optional): Maximum temperature for the GC-MS line. Defaults to 300.
+        pdf (bool, optional): Whether to save the plot as a PDF file. Defaults to False.
+        svg (bool, optional): Whether to save the plot as an SVG file. Defaults to False.
+
+    Returns:
+        None
+    """
+    
     for exp in exps:
         if not exp.proximate_computed:
             exp.proximate_analysis()
@@ -1194,9 +1496,9 @@ def dtg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
     out_path.mkdir(parents=True, exist_ok=True)
 
     if not DTG_lab:
-        DTG_lab = 'DTG [wt%/' + exps[0].T_symbol + ']'
+        DTG_lab = 'DTG [wt%/' + TGAExp.T_symbol + ']'
 
-    fig, ax, axt, fig_par = FigCreate(rows=1, cols=1, plot_type=0,
+    fig, ax, axt, fig_par = fig_create(rows=1, cols=1, plot_type=0,
                                       paper_col=paper_col,
                                       hgt_mltp=hgt_mltp)
     for i, exp in enumerate(exps):
@@ -1210,19 +1512,41 @@ def dtg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
                      linestyle=lnstls[1], color=clrs[7],
                      label='T$_{max GC-MS}$')
     ax[0].legend(loc='lower right')
-    FigSave(filename + '_dtg', out_path, fig, ax, axt, fig_par,
+    fig_save(filename + '_dtg', out_path, fig, ax, axt, fig_par,
             xLim=xLim, yLim=yLim,
             yTicks=yTicks,
-            yLab=DTG_lab, xLab='T [' + exps[0].T_symbol + ']',
-            pdf=pdf, svg=svg, annotate_lttrs=lttrs, grid=grid)
+            yLab=DTG_lab, xLab='T [' + TGAExp.T_symbol + ']',
+            pdf=pdf, svg=svg, annotate_lttrs=lttrs, grid=TGAExp.plot_grid)
 
 
 def proximate_multi_plot(exps, filename="Prox",
                          smpl_labs=None, xlab_rot=0,
-                         paper_col=.8, hgt_mltp=1.5, grid=False,
+                         paper_col=.8, hgt_mltp=1.5,
                          bboxtoanchor=True, x_anchor=1.13, y_anchor=1.02,
                          legend_loc='best', yLim=[0, 100], ytLim=[0, 1],
                          yTicks=None, ytTicks=None):
+    """
+    Generate a multi-plot for proximate analysis.
+
+    Parameters:
+    - exps (list): List of experiments.
+    - filename (str): Name of the output file (default: "Prox").
+    - smpl_labs (list): List of sample labels (default: None).
+    - xlab_rot (int): Rotation angle of x-axis labels (default: 0).
+    - paper_col (float): Color of the plot background (default: 0.8).
+    - hgt_mltp (float): Height multiplier of the plot (default: 1.5).
+    - bboxtoanchor (bool): Whether to place the legend outside the plot area (default: True).
+    - x_anchor (float): X-coordinate of the legend anchor point (default: 1.13).
+    - y_anchor (float): Y-coordinate of the legend anchor point (default: 1.02).
+    - legend_loc (str): Location of the legend (default: 'best').
+    - yLim (list): Y-axis limits for the bar plot (default: [0, 100]).
+    - ytLim (list): Y-axis limits for the scatter plot (default: [0, 1]).
+    - yTicks (list): Y-axis tick positions for the bar plot (default: None).
+    - ytTicks (list): Y-axis tick positions for the scatter plot (default: None).
+
+    Returns:
+    - None
+    """
     for exp in exps:
         if not exp.proximate_computed:
             exp.proximate_analysis()
@@ -1246,7 +1570,7 @@ def proximate_multi_plot(exps, filename="Prox",
     df_std['Ash (db)'] = [exp.ash_db_std for exp in exps]
 
     S_combs = [exp.AveTGstd_p for exp in exps]
-    fig, ax, axt, fig_par = FigCreate(1, 1, 1, paper_col=paper_col,
+    fig, ax, axt, fig_par = fig_create(1, 1, 1, paper_col=paper_col,
                                       hgt_mltp=hgt_mltp)
     df_ave.plot(kind='bar', ax=ax[0], yerr=df_std, capsize=2, width=.85,
                 ecolor='k', edgecolor='black', rot=xlab_rot)
@@ -1273,18 +1597,41 @@ def proximate_multi_plot(exps, filename="Prox",
     if xlab_rot != 0:
         ax[0].set_xticklabels(df_ave.index, rotation=xlab_rot, ha='right',
                               rotation_mode='anchor')
-    FigSave(filename + '_prox', out_path, fig, ax, axt, fig_par, tight_layout=True,
+    fig_save(filename + '_prox', out_path, fig, ax, axt, fig_par, tight_layout=True,
             legend=None,
             yLab='mass fraction [wt%]', ytLab='Mean TG deviation [%]',
-            yLim=yLim, ytLim=ytLim, yTicks=yTicks, ytTicks=ytTicks, grid=grid)
+            yLim=yLim, ytLim=ytLim, yTicks=yTicks, ytTicks=ytTicks, grid=TGAExp.plot_grid)
 
 
 def oxidation_multi_plot(exps, filename="Oxidations",
                          smpl_labs=None, xlab_rot=0,
-                         paper_col=.8, hgt_mltp=1.5, grid=False,
+                         paper_col=.8, hgt_mltp=1.5,
                          bboxtoanchor=True, x_anchor=1.13, y_anchor=1.02,
                          legend_loc='best',
                          yLim=None, ytLim=None, yTicks=None, ytTicks=None):
+    """
+    Generate a multi-plot for oxidation analysis.
+
+    Parameters:
+    - exps (list): List of experiments to be plotted.
+    - filename (str): Name of the output file (default: "Oxidations").
+    - smpl_labs (list): List of sample labels (default: None).
+    - xlab_rot (int): Rotation angle of x-axis labels (default: 0).
+    - paper_col (float): Color of the plot background (default: 0.8).
+    - hgt_mltp (float): Height multiplier of the plot (default: 1.5).
+    - bboxtoanchor (bool): Whether to place the legend outside the plot area (default: True).
+    - x_anchor (float): X-coordinate of the legend anchor point (default: 1.13).
+    - y_anchor (float): Y-coordinate of the legend anchor point (default: 1.02).
+    - legend_loc (str): Location of the legend (default: 'best').
+    - yLim (tuple): Limits of the y-axis (default: None).
+    - ytLim (tuple): Limits of the twin y-axis (default: None).
+    - yTicks (list): Custom tick positions for the y-axis (default: None).
+    - ytTicks (list): Custom tick positions for the twin y-axis (default: None).
+
+    Returns:
+    - None
+    """
+
     for exp in exps:
         if not exp.oxidation_computed:
             exp.oxidation_analysis()
@@ -1307,7 +1654,7 @@ def oxidation_multi_plot(exps, filename="Oxidations",
 
     S_combs = [exp.S for exp in exps]
     S_combs_std = [exp.S_std for exp in exps]
-    fig, ax, axt, fig_par = FigCreate(1, 1, 1, paper_col=paper_col,
+    fig, ax, axt, fig_par = fig_create(1, 1, 1, paper_col=paper_col,
                                       hgt_mltp=hgt_mltp)
     df_ave.plot(kind='bar', ax=ax[0], yerr=df_std, capsize=2, width=.85,
                 ecolor='k', edgecolor='black', rot=xlab_rot)
@@ -1335,18 +1682,36 @@ def oxidation_multi_plot(exps, filename="Oxidations",
     if xlab_rot != 0:
         ax[0].set_xticklabels(df_ave.index, rotation=xlab_rot, ha='right',
                               rotation_mode='anchor')
-    FigSave(filename + '_oxidation', out_path, fig, ax, axt, fig_par,
+    fig_save(filename + '_oxidation', out_path, fig, ax, axt, fig_par,
             tight_layout=True,
             legend=None, ytLab='S (combustion index) [-]',
-            yLab='T [' + exps[0].T_symbol + ']',
-            yLim=yLim, ytLim=ytLim, yTicks=yTicks, ytTicks=ytTicks, grid=grid)
+            yLab='T [' + TGAExp.T_symbol + ']',
+            yLim=yLim, ytLim=ytLim, yTicks=yTicks, ytTicks=ytTicks, grid=TGAExp.plot_grid)
 
 
 def soliddist_multi_plot(exps, filename="Dist",
                          TG_lab='TG [wt%]', DTG_lab='DTG [wt%/min]',
                          hgt_mltp=1.25, paper_col=.78, labels=None, lttrs=False,
                          xLim=None, yLim=[[0, 1000], [0, 100]], yTicks=None,
-                         print_dfs=True, grid=False):
+                         print_dfs=True):
+    """
+    Plot the solid distribution for multiple experiments.
+
+    Args:
+        exps (list): List of Experiment objects.
+        filename (str, optional): Name of the output file. Defaults to "Dist".
+        TG_lab (str, optional): Label for the TG axis. Defaults to 'TG [wt%]'.
+        DTG_lab (str, optional): Label for the DTG axis. Defaults to 'DTG [wt%/min]'.
+        hgt_mltp (float, optional): Height multiplier for the plot. Defaults to 1.25.
+        paper_col (float, optional): Color of the plot background. Defaults to .78.
+        labels (list, optional): List of labels for the experiments. Defaults to None.
+        lttrs (bool, optional): Whether to annotate letters on the plot. Defaults to False.
+        xLim (list, optional): Limits for the x-axis. Defaults to None.
+        yLim (list, optional): Limits for the y-axis. Defaults to [[0, 1000], [0, 100]].
+        yTicks (list, optional): Custom tick locations for the y-axis. Defaults to None.
+        print_dfs (bool, optional): Whether to print the dataframes. Defaults to True.
+    """
+    
     for exp in exps:
         if not exp.soliddist_computed:
             exp.soliddist_analysis()
@@ -1354,7 +1719,7 @@ def soliddist_multi_plot(exps, filename="Dist",
     out_path.mkdir(parents=True, exist_ok=True)
     if not labels:  # try with labels and use name if no label is given
         labels = [exp.label if exp.label else exp.name for exp in exps]
-    fig, ax, axt, fig_par = FigCreate(rows=2, cols=1, plot_type=0,
+    fig, ax, axt, fig_par = fig_create(rows=2, cols=1, plot_type=0,
                                       paper_col=paper_col,
                                       hgt_mltp=hgt_mltp)
     for i, exp in enumerate(exps):
@@ -1375,10 +1740,10 @@ def soliddist_multi_plot(exps, filename="Dist",
                            xy=(tm - 10, mp+1), fontsize=9, color=clrs[i])
         ax[0].legend(loc='upper left')
         # ax[1].legend(loc='center left')
-    FigSave(filename + '_soliddist', out_path, fig, ax, axt, fig_par,
+    fig_save(filename + '_soliddist', out_path, fig, ax, axt, fig_par,
             xLim=xLim, yLim=yLim, yTicks=yTicks, xLab='time [min]',
-            yLab=['T [' + exps[0].T_symbol + ']', TG_lab+'(db)'],
-            annotate_lttrs=lttrs, grid=grid)
+            yLab=['T [' + TGAExp.T_symbol + ']', TG_lab+'(db)'],
+            annotate_lttrs=lttrs, grid=TGAExp.plot_grid)
 
 
 def cscd_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
@@ -1389,6 +1754,33 @@ def cscd_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
                hgt_mltp_cscd=1.5, legend_cscd='lower right',
                y_values_cscd=[-10, 0],
                lttrs=False, DTG_lab=None, pdf=False, svg=False):
+    """
+    Generate a cascaded multi-plot for a list of experiments.
+
+    Args:
+        exps (list): List of experiments.
+        filename (str, optional): Filename for the saved plot. Defaults to 'Fig'.
+        paper_col (float, optional): Width of the plot in inches. Defaults to 0.78.
+        hgt_mltp (float, optional): Height multiplier for the plot. Defaults to 1.25.
+        xLim (tuple, optional): X-axis limits for the plot. Defaults to None.
+        clrs_cscd (bool, optional): Flag to use custom colors for each experiment. Defaults to False.
+        yLim0_cscd (int, optional): Starting value for the y-axis limits. Defaults to -8.
+        shifts_cscd (ndarray, optional): Array of shift values for each experiment. Defaults to np.asarray([0, 11, 5, 10, 10, 10, 11]).
+        peaks_cscd (list, optional): List of peaks for each experiment. Defaults to None.
+        peak_names (list, optional): List of names for each peak. Defaults to None.
+        dh_names_cscd (float, optional): Shift value for peak names. Defaults to 0.1.
+        loc_names_cscd (int, optional): Location for annotating experiment names. Defaults to 130.
+        hgt_mltp_cscd (float, optional): Height multiplier for the cascaded plot. Defaults to 1.5.
+        legend_cscd (str, optional): Location of the legend. Defaults to 'lower right'.
+        y_values_cscd (list, optional): List of y-axis tick values. Defaults to [-10, 0].
+        lttrs (bool, optional): Flag to annotate letters for each experiment. Defaults to False.
+        DTG_lab (str, optional): Label for the y-axis. Defaults to None.
+        pdf (bool, optional): Flag to save the plot as a PDF file. Defaults to False.
+        svg (bool, optional): Flag to save the plot as an SVG file. Defaults to False.
+
+    Returns:
+        None
+    """
     for exp in exps:
         if not exp.proximate_computed:
             exp.proximate_analysis()
@@ -1396,10 +1788,10 @@ def cscd_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
     out_path.mkdir(parents=True, exist_ok=True)
     labels = [exp.label if exp.label else exp.name for exp in exps]
     if not DTG_lab:
-        DTG_lab = 'DTG [wt%/' + exps[0].T_symbol + ']'
+        DTG_lab = 'DTG [wt%/' + TGAExp.T_symbol + ']'
     yLim_cscd = [yLim0_cscd, np.sum(shifts_cscd)]
     dh = np.cumsum(shifts_cscd)
-    fig, ax, axt, fig_par = FigCreate(1, 1, paper_col=.78,
+    fig, ax, axt, fig_par = fig_create(1, 1, paper_col=.78,
                                       hgt_mltp=hgt_mltp_cscd)
     for n, exp in enumerate(exps):
         if clrs_cscd:
@@ -1427,13 +1819,30 @@ def cscd_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
         ax[0].set_yticks(y_values_cscd)
     else:
         ax[0].set_yticks([])
-    FigSave(filename + '_cscd', out_path, fig, ax, axt, fig_par,
+    fig_save(filename + '_cscd', out_path, fig, ax, axt, fig_par,
             legend=legend_cscd, annotate_lttrs=lttrs,
-            xLab='T [' + exps[0].T_symbol + ']', yLab=DTG_lab,
-            xLim=xLim, yLim=yLim_cscd, svg=svg, pdf=pdf)
+            xLab='T [' + TGAExp.T_symbol + ']', yLab=DTG_lab,
+            xLim=xLim, yLim=yLim_cscd, svg=svg, pdf=pdf, grid=TGAExp.plot_grid)
 
 
 def KAS_analysis(exps, ramps, alpha=np.arange(0.05, .9, 0.05)):
+    """
+    Perform KAS (Kissinger-Akahira-Sunose) analysis on a set of experiments.
+
+    Args:
+        exps (list): List of Experiment objects representing the experiments to analyze.
+        ramps (list): List of ramp values used for each experiment.
+        alpha (numpy.ndarray, optional): Array of alpha values to investigate. Defaults to np.arange(0.05, .9, 0.05).
+
+    Returns:
+        dict: Dictionary containing the results of the KAS analysis, including the activation energy (Ea),
+              the standard deviation of the activation energy (Ea_std), the alpha values, the ramp values,
+              the x matrix, the y matrix, the fitted functions, and the name of the analysis.
+
+    Raises:
+        None
+    """
+    
     for exp in exps:
         if not exp.proximate_computed:
             exp.proximate_analysis()
@@ -1492,6 +1901,26 @@ def KAS_plot_isolines(exps, kas_names=None, filename='KAsIso',
                       annt_names=True, annotate_lttrs=False, leg_cols=1,
                       bboxtoanchor=True, x_anchor=1.13, y_anchor=1.02,
                       legend_loc='best'):
+    """
+    Plot isolines for KAS analysis.
+
+    Parameters:
+    - exps (list): List of experiments.
+    - kas_names (list, optional): List of names for each KAS analysis. If not provided, the names will be extracted from the KAS analysis data.
+    - filename (str, optional): Name of the output file. Default is 'KAsIso'.
+    - paper_col (float, optional): Width of the plot in inches. Default is 0.78.
+    - hgt_mltp (float, optional): Height multiplier for the plot. Default is 1.25.
+    - xLim (tuple, optional): Limits for the x-axis. Default is None.
+    - yLim (tuple, optional): Limits for the y-axis. Default is None.
+    - annt_names (bool, optional): Whether to annotate the names of the KAS analysis. Default is True.
+    - annotate_lttrs (bool, optional): Whether to annotate the letters for each KAS analysis. Default is False.
+    - leg_cols (int, optional): Number of columns in the legend. Default is 1.
+    - bboxtoanchor (bool, optional): Whether to place the legend outside of the plot area. Default is True.
+    - x_anchor (float, optional): X-coordinate for the legend anchor. Default is 1.13.
+    - y_anchor (float, optional): Y-coordinate for the legend anchor. Default is 1.02.
+    - legend_loc (str, optional): Location of the legend. Default is 'best'.
+    """
+    
     for exp in exps:
         if not exp.KAS_computed:
             print('need KAS analysis')
@@ -1522,7 +1951,7 @@ def KAS_plot_isolines(exps, kas_names=None, filename='KAsIso',
         cols += 1
         paper_col *= 1.5
         ax_for_legend += 1
-    fig, ax, axt, fig_par = FigCreate(rows=rows, cols=cols, plot_type=0,
+    fig, ax, axt, fig_par = fig_create(rows=rows, cols=cols, plot_type=0,
                                       paper_col=paper_col, hgt_mltp=hgt_mltp)
     for k, kas in enumerate(kass):
         ymaxiso = np.max(kas['ymatr'])
@@ -1552,18 +1981,40 @@ def KAS_plot_isolines(exps, kas_names=None, filename='KAsIso',
                                  bbox_to_anchor=(x_anchor, y_anchor))
     else:  # legend is inside of plot area
         ax[0].legend(ncol=leg_cols, loc=legend_loc)
-    FigSave(filename + '_iso', out_path, fig, ax, axt, fig_par,
+    fig_save(filename + '_iso', out_path, fig, ax, axt, fig_par,
             xLim=xLim, yLim=yLim, xLab='1000/T [1/K]', legend=None,
             annotate_lttrs=annotate_lttrs, yLab=r'ln($\beta$/T$^{2}$)',
-            tight_layout=False)
+            tight_layout=False, grid=TGAExp.plot_grid)
 
 
 def KAS_plot_Ea(exps, kas_names=None, filename='KASEa',
                 paper_col=.78, hgt_mltp=1.25, xLim=[.1, .8], yLim=[0, 300],
                 yTicks=None, annt_names=True, annotate_lttrs=False, leg_cols=1,
                 bboxtoanchor=True, x_anchor=1.13, y_anchor=2.02,
-                grid=False, plot_type='scatter',
+                plot_type='scatter',
                 legend_loc='best'):
+    """
+    Plot the activation energy (Ea) for multiple experiments.
+
+    Parameters:
+    - exps (list): List of experiments.
+    - kas_names (list, optional): List of names for the KAS analysis. If not provided, the names will be extracted from the experiments.
+    - filename (str, optional): Name of the output file. Default is 'KASEa'.
+    - paper_col (float, optional): Color of the plot background. Default is 0.78.
+    - hgt_mltp (float, optional): Height multiplier for the plot. Default is 1.25.
+    - xLim (list, optional): Limits of the x-axis. Default is [0.1, 0.8].
+    - yLim (list, optional): Limits of the y-axis. Default is [0, 300].
+    - yTicks (list, optional): Custom y-axis tick locations. Default is None.
+    - annt_names (bool, optional): Whether to annotate the names of the experiments. Default is True.
+    - annotate_lttrs (bool, optional): Whether to annotate the letters of the experiments. Default is False.
+    - leg_cols (int, optional): Number of columns in the legend. Default is 1.
+    - bboxtoanchor (bool, optional): Whether to place the legend outside of the plot area. Default is True.
+    - x_anchor (float, optional): X-coordinate of the legend anchor. Default is 1.13.
+    - y_anchor (float, optional): Y-coordinate of the legend anchor. Default is 2.02.
+    - plot_type (str, optional): Type of plot. Can be 'scatter' or 'line'. Default is 'scatter'.
+    - legend_loc (str, optional): Location of the legend. Default is 'best'.
+    """
+    
     for exp in exps:
         if not exp.KAS_computed:
             exp.KAS_analysis()
@@ -1579,7 +2030,7 @@ def KAS_plot_Ea(exps, kas_names=None, filename='KASEa',
     else:
         alpha = alphas[0]
     # plot activation energy
-    fig, ax, axt, fig_par = FigCreate(rows=1, cols=1, plot_type=0,
+    fig, ax, axt, fig_par = fig_create(rows=1, cols=1, plot_type=0,
                                       paper_col=paper_col, hgt_mltp=hgt_mltp)
     for k, kas in enumerate(kass):
         if plot_type == 'scatter':
@@ -1603,35 +2054,35 @@ def KAS_plot_Ea(exps, kas_names=None, filename='KASEa',
         else:  # legend is inside of plot area
             ax[0].legend(ncol=leg_cols,
                          loc=legend_loc)
-    FigSave(filename + '_Ea', out_path, fig, ax, axt, fig_par,
+    fig_save(filename + '_Ea', out_path, fig, ax, axt, fig_par,
             xLim=xLim, yLim=yLim,
             legend=legend_loc, yTicks=yTicks, xLab=r'$\alpha$ [-]',
-            yLab=r'$E_{a}$ [kJ/mol]', grid=grid)
+            yLab=r'$E_{a}$ [kJ/mol]', grid=TGAExp.plot_grid)
 
 # %%
 if __name__ == "__main__":
-    folder = '_test'
-    P1 = tga_exp(folder=folder, name='P1',
-                  filenames=['MIS_1', 'MIS_2', 'MIS_3'],
-                  t_moist=38, t_VM=147, T_unit='Celsius')
-    P2 = tga_exp(folder=folder, name='P2', load_skiprows=0,
-                  filenames=['DIG10_1', 'DIG10_2', 'DIG10_3'],
-                  t_moist=22, t_VM=98, T_unit='Celsius')
-    Ox5 = tga_exp(folder=folder, name='Ox5',
-                     filenames=['CLSOx5_1', 'CLSOx5_2', 'CLSOx5_3'],
-                     t_moist=38, t_VM=None, T_unit='Celsius')
-    Ox10 = tga_exp(folder=folder, name='Ox10', load_skiprows=8,
+    TGAExp.folder = '_test'
+    TGAExp.plot_grid = False
+    P1 = TGAExp(name='P1', filenames=['MIS_1', 'MIS_2', 'MIS_3'],
+                time_moist=38, time_vm=147)
+    P2 = TGAExp(name='P2', load_skiprows=0,
+                filenames=['DIG10_1', 'DIG10_2', 'DIG10_3'],
+                  time_moist=22, time_vm=98)
+    Ox5 = TGAExp(name='Ox5',
+                 filenames=['CLSOx5_1', 'CLSOx5_2', 'CLSOx5_3'],
+                     time_moist=38, time_vm=None)
+    Ox10 = TGAExp(name='Ox10', load_skiprows=8,
                       filenames=['CLSOx10_2', 'CLSOx10_3'],
-                      t_moist=38, t_VM=None, T_unit='Celsius')
-    Ox50 = tga_exp(folder=folder, name='Ox50', load_skiprows=8,
+                      time_moist=38, time_vm=None)
+    Ox50 = TGAExp(name='Ox50', load_skiprows=8,
                       filenames=['CLSOx50_4', 'CLSOx50_5'],
-                      t_moist=38, t_VM=None, T_unit='Celsius')
-    SD1 = tga_exp(folder=folder, name='SDa',
+                      time_moist=38, time_vm=None)
+    SD1 = TGAExp(name='SDa',
                   filenames=['SDa_1', 'SDa_2', 'SDa_3'],
-                  t_moist=38, t_VM=None, T_unit='Celsius')
-    SD2 = tga_exp(folder=folder, name='SDb',
+                  time_moist=38, time_vm=None)
+    SD2 = TGAExp(name='SDb',
                   filenames=['SDb_1', 'SDb_2', 'SDb_3'],
-                  t_moist=38, t_VM=None, T_unit='Celsius')
+                  time_moist=38, time_vm=None)
     #%% si
     a = P1.proximate_report()
     b = P2.proximate_report()
