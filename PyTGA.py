@@ -2044,10 +2044,12 @@ def KAS_plot_Ea(exps, kas_names=None, filename='KASEa',
 if __name__ == "__main__":
     
     folder = '_test'
+    # class methods need to be called at the beginning to influence all instances
     TGAExp.set_folder(folder)
-    TGAExp.plot_grid = True
-    TGAExp.set_ = False
+    TGAExp.set_plot_grid(True)
     TGAExp.set_plot_font('Times New Roman')
+    TGAExp.set_T_unit('Kelvin')
+    # objects are created with the new default values
     P1 = TGAExp(name='P1', filenames=['MIS_1', 'MIS_2', 'MIS_3'],
                 time_moist=38, time_vm=147)
     P2 = TGAExp(name='P2', load_skiprows=0,
