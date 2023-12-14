@@ -141,7 +141,7 @@ def fig_create(rows=1, cols=1, plot_type=0, paper_col=1,
     """
   
     sns.set_palette("deep")
-    if font == 'Times':  # set Times New Roman as the plot font fot text
+    if font == 'Times' or font == 'Times New Roman':  # set Times New Roman as the plot font fot text
         # this may require the installation of the font package
         sns.set_style(sns_style, {'font.family': 'Times New Roman'})
     else:  # leave Dejavu Sans (default) as the plot font fot text
@@ -500,9 +500,38 @@ class TGAExp:
     
     @classmethod
     def set_folder(cls, new_folder):
-        cls.folder = new_folder
         # Update paths based on new folder
+        cls.folder = new_folder
         cls.in_path, cls.out_path = paths_create(cls.folder)
+
+    @classmethod
+    def set_T_unit(cls, new_T_unit):
+        # Update paths based on new folder
+        cls.T_unit = new_T_unit
+        if cls.T_unit == 'Celsius':
+            cls.T_symbol = '°C'
+        elif cls.T_unit == 'Kelvin':
+            cls.T_symbol = 'K'
+
+    @classmethod
+    def set_plot_font(cls, new_plot_font):
+        cls.plot_font = new_plot_font   
+    
+    @classmethod
+    def set_plot_grid(cls, new_plot_grid):
+        cls.plot_grid = new_plot_grid
+    
+    @classmethod   
+    def set_dtg_basis(cls, new_dtg_basis):
+        cls.dtg_basis = new_dtg_basis
+    
+    @classmethod
+    def set_resolution_T_dtg(cls, new_resolution_T_dtg):
+        cls.resolution_T_dtg = new_resolution_T_dtg
+
+    @classmethod
+    def set_dtg_w_SavFil(cls, new_dtg_w_SavFil):
+        cls.dtg_w_SavFil = new_dtg_w_SavFil
 
 
     def __init__(self, name, filenames, load_skiprows=0,
@@ -1200,8 +1229,8 @@ class TGAExp:
             out_path.mkdir(parents=True, exist_ok=True)
             filename = self.name
             fig, ax, axt, fig_par = fig_create(rows=2, cols=1, plot_type=0,
-                                              paper_col=paper_col,
-                                              hgt_mltp=hgt_mltp)
+                                                paper_col=paper_col, 
+                                               hgt_mltp=hgt_mltp, font=TGAExp.plot_font)
 
             ax[0].plot(self.time, self.T)
             ax[0].fill_between(self.time, self.T - self.T_std, self.T + self.T_std,
@@ -1248,7 +1277,7 @@ class TGAExp:
             filename = self.name
             fig, ax, axt, fig_par = fig_create(rows=1, cols=1, plot_type=0,
                                               paper_col=0.78, hgt_mltp=1.25,
-                                              )
+                                              font=TGAExp.plot_font)
             # Plot DTG data
             ax[0].plot(self.T_dtg, self.dtg_db, color='black', label='DTG')
             ax[0].fill_between(self.T_dtg, self.dtg_db - self.dtg_db_std,
@@ -1399,7 +1428,7 @@ def tg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
     out_path_TGs.mkdir(parents=True, exist_ok=True)
     fig, ax, axt, fig_par = fig_create(rows=1, cols=1, plot_type=0,
                                       paper_col=paper_col,
-                                      hgt_mltp=hgt_mltp)
+                                      hgt_mltp=hgt_mltp, font=TGAExp.plot_font)
     for i, exp in enumerate(exps):
         ax[0].plot(exp.T, exp.mp_db, color=clrs[i], linestyle=lnstls[i],
                    label=exp.label if exp.label else exp.name)
@@ -1450,7 +1479,7 @@ def dtg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
 
     fig, ax, axt, fig_par = fig_create(rows=1, cols=1, plot_type=0,
                                       paper_col=paper_col,
-                                      hgt_mltp=hgt_mltp)
+                                      hgt_mltp=hgt_mltp, font=TGAExp.plot_font)
     for i, exp in enumerate(exps):
         ax[0].plot(exp.T_dtg, exp.dtg_db, color=clrs[i], linestyle=lnstls[i],
                    label=exp.label if exp.label else exp.name)
@@ -1521,7 +1550,7 @@ def proximate_multi_plot(exps, filename="Prox",
 
     S_combs = [exp.AveTGstd_p for exp in exps]
     fig, ax, axt, fig_par = fig_create(1, 1, 1, paper_col=paper_col,
-                                      hgt_mltp=hgt_mltp)
+                                      hgt_mltp=hgt_mltp, font=TGAExp.plot_font)
     df_ave.plot(kind='bar', ax=ax[0], yerr=df_std, capsize=2, width=.85,
                 ecolor='k', edgecolor='black', rot=xlab_rot)
     bars = ax[0].patches
@@ -1605,7 +1634,7 @@ def oxidation_multi_plot(exps, filename="Oxidations",
     S_combs = [exp.S for exp in exps]
     S_combs_std = [exp.S_std for exp in exps]
     fig, ax, axt, fig_par = fig_create(1, 1, 1, paper_col=paper_col,
-                                      hgt_mltp=hgt_mltp)
+                                      hgt_mltp=hgt_mltp, font=TGAExp.plot_font)
     df_ave.plot(kind='bar', ax=ax[0], yerr=df_std, capsize=2, width=.85,
                 ecolor='k', edgecolor='black', rot=xlab_rot)
     bars = ax[0].patches
@@ -1670,8 +1699,8 @@ def soliddist_multi_plot(exps, filename="Dist",
     if not labels:  # try with labels and use name if no label is given
         labels = [exp.label if exp.label else exp.name for exp in exps]
     fig, ax, axt, fig_par = fig_create(rows=2, cols=1, plot_type=0,
-                                      paper_col=paper_col,
-                                      hgt_mltp=hgt_mltp)
+                                        paper_col=paper_col,
+                                      hgt_mltp=hgt_mltp, font=TGAExp.plot_font)
     for i, exp in enumerate(exps):
         ax[0].plot(exp.time, exp.T, color=clrs[i],
                    linestyle=lnstls[i], label=labels[i])
@@ -1742,7 +1771,7 @@ def cscd_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
     yLim_cscd = [yLim0_cscd, np.sum(shifts_cscd)]
     dh = np.cumsum(shifts_cscd)
     fig, ax, axt, fig_par = fig_create(1, 1, paper_col=.78,
-                                      hgt_mltp=hgt_mltp_cscd)
+                                      hgt_mltp=hgt_mltp_cscd, font=TGAExp.plot_font)
     for n, exp in enumerate(exps):
         if clrs_cscd:
             ax[0].plot(exp.T_dtg, exp.dtg_db + dh[n], color=clrs[n],
@@ -1904,7 +1933,8 @@ def KAS_plot_isolines(exps, kas_names=None, filename='KAsIso',
         paper_col *= 1.5
         ax_for_legend += 1
     fig, ax, axt, fig_par = fig_create(rows=rows, cols=cols, plot_type=0,
-                                      paper_col=paper_col, hgt_mltp=hgt_mltp)
+                                      paper_col=paper_col, hgt_mltp=hgt_mltp,
+                                      font=TGAExp.plot_font)
     for k, kas in enumerate(kass):
         ymaxiso = np.max(kas['ymatr'])
         yminiso = np.min(kas['ymatr'])
@@ -1984,7 +2014,8 @@ def KAS_plot_Ea(exps, kas_names=None, filename='KASEa',
     print(kas_names)
     # plot activation energy
     fig, ax, axt, fig_par = fig_create(rows=1, cols=1, plot_type=0,
-                                      paper_col=paper_col, hgt_mltp=hgt_mltp)
+                                      paper_col=paper_col, hgt_mltp=hgt_mltp,
+                                      font=TGAExp.plot_font)
     for k, kas in enumerate(kass):
         if plot_type == 'scatter':
             ax[0].errorbar(alpha, kas['Ea'], kas['Ea_std'], color='k',
@@ -2014,7 +2045,9 @@ if __name__ == "__main__":
     
     folder = '_test'
     TGAExp.set_folder(folder)
-    TGAExp.plot_grid = False
+    TGAExp.plot_grid = True
+    TGAExp.set_ = False
+    TGAExp.set_plot_font('Times New Roman')
     P1 = TGAExp(name='P1', filenames=['MIS_1', 'MIS_2', 'MIS_3'],
                 time_moist=38, time_vm=147)
     P2 = TGAExp(name='P2', load_skiprows=0,
