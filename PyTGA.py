@@ -1838,6 +1838,8 @@ def KAS_analysis(exps, ramps, alpha=np.arange(0.05, .9, 0.05)):
         name = exps[0].name.split('-Ox')[0]
     else:
         name = exps[0].name.split('Ox')[0]
+    if name == '':
+        name = 'SampleNameN.A.'
     kas = {'Ea': Ea, 'Ea_std': Ea_std, 'alpha': alpha, 'ramps': ramps,
            'xmatr': xmatr, 'ymatr': ymatr, 'v_fit': v_fit, 'name': name}
     for e, exp in enumerate(exps):
@@ -1924,7 +1926,7 @@ def KAS_plot_isolines(exps, kas_names=None, filename='KAsIso',
         if annt_names:
             ax[k].annotate(kas_names[k], xycoords="axes fraction",
                            xy=(0, 0), rotation=0, size="small",
-                           xytext=(0.05, 0.93))
+                           xytext=(0.02, 1.02))
     if bboxtoanchor:  # legend goes outside of plot area
 
         ax[ax_for_legend].legend(ncol=leg_cols, loc='upper left',
@@ -1940,9 +1942,9 @@ def KAS_plot_isolines(exps, kas_names=None, filename='KAsIso',
 def KAS_plot_Ea(exps, kas_names=None, filename='KASEa',
                 paper_col=.78, hgt_mltp=1.25, xLim=[.1, .8], yLim=[0, 300],
                 yTicks=None, annt_names=True, annotate_lttrs=False, leg_cols=1,
-                bboxtoanchor=True, x_anchor=1.13, y_anchor=2.02,
+                bboxtoanchor=True, x_anchor=1.13, y_anchor=1.02,
                 plot_type='scatter',
-                legend_loc='best'):
+                legend='best'):
     """
     Plot the activation energy (Ea) for multiple experiments.
 
@@ -1979,6 +1981,7 @@ def KAS_plot_Ea(exps, kas_names=None, filename='KASEa',
 
     else:
         alpha = alphas[0]
+    print(kas_names)
     # plot activation energy
     fig, ax, axt, fig_par = fig_create(rows=1, cols=1, plot_type=0,
                                       paper_col=paper_col, hgt_mltp=hgt_mltp)
@@ -1995,18 +1998,15 @@ def KAS_plot_Ea(exps, kas_names=None, filename='KASEa',
             ax[0].fill_between(alpha, kas['Ea'] - kas['Ea_std'],
                                kas['Ea'] + kas['Ea_std'], color=clrs[k],
                                alpha=.3)
-    if len(exps) == 1:
-        legend_loc = False
-    else:
+    if legend is not None:
         if bboxtoanchor:  # legend goes outside of plot area
             ax[0].legend(ncol=leg_cols, loc='upper left',
                          bbox_to_anchor=(x_anchor, y_anchor))
         else:  # legend is inside of plot area
-            ax[0].legend(ncol=leg_cols,
-                         loc=legend_loc)
+            ax[0].legend(ncol=leg_cols, loc=legend)
     fig_save(filename + '_Ea', out_path, fig, ax, axt, fig_par,
-            xLim=xLim, yLim=yLim,
-            legend=legend_loc, yTicks=yTicks, xLab=r'$\alpha$ [-]',
+            xLim=xLim, yLim=yLim, 
+            yTicks=yTicks, xLab=r'$\alpha$ [-]', tight_layout=False,
             yLab=r'$E_{a}$ [kJ/mol]', grid=TGAExp.plot_grid)
 
 # %%
@@ -2035,7 +2035,7 @@ if __name__ == "__main__":
     SD2 = TGAExp(name='SDb',
                   filenames=['SDb_1', 'SDb_2', 'SDb_3'],
                   time_moist=38, time_vm=None)
-    #%% si
+    #%% 
     a = P1.proximate_report()
     b = P2.proximate_report()
     c = Ox5.oxidation_report()
@@ -2061,6 +2061,8 @@ if __name__ == "__main__":
     #%%
     k = KAS_analysis([Ox5, Ox10, Ox50], [5, 10, 50])
     KAS_plot_isolines([Ox5], filename='Ox5Ox10Ox50')
-    KAS_plot_Ea([Ox5], filename='Ox5Ox10Ox50')
+    KAS_plot_Ea([Ox5, Ox5], filename='Ox5Ox10Ox50', 
+                bboxtoanchor=False,
+                leg_cols=2)
 
 
