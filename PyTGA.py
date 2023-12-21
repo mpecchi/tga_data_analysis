@@ -2099,5 +2099,3 @@ if __name__ == "__main__":
     KAS_plot_Ea([Ox5, Ox5], filename='Ox5Ox10Ox50', 
                 bboxtoanchor=False,
                 leg_cols=2)
-
-
