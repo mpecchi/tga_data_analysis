@@ -495,8 +495,13 @@ class TGAExp:
     plot_font='Dejavu Sans'
     plot_grid=False
     dtg_basis='temperature'
+    if dtg_basis == 'temperature':
+        DTG_lab = 'DTG [wt%/' + T_symbol + ']'
+    elif dtg_basis == 'time':
+        DTG_lab='DTG [wt%/min]'
     resolution_T_dtg=5
     dtg_w_SavFil=101
+    TG_lab='TG [wt%]'
     
     @classmethod
     def set_folder(cls, new_folder):
@@ -524,6 +529,10 @@ class TGAExp:
     @classmethod   
     def set_dtg_basis(cls, new_dtg_basis):
         cls.dtg_basis = new_dtg_basis
+        if new_dtg_basis == 'temperature':
+            cls.DTG_lab = 'DTG [wt%/' + cls.T_symbol + ']'
+        elif new_dtg_basis == 'time':
+            cls.DTG_lab='DTG [wt%/min]'
     
     @classmethod
     def set_resolution_T_dtg(cls, new_resolution_T_dtg):
@@ -536,7 +545,7 @@ class TGAExp:
 
     def __init__(self, name, filenames, load_skiprows=0,
                  label=None, time_moist=38, 
-                 time_vm=147, T_initial_C=40, Tlims_dtg_C=[120, 800], 
+                 time_vm=147, T_initial_C=40, Tlims_dtg_C=[120, 880], 
                  correct_ash_mg=None, correct_ash_fr=None,
                  oxid_Tb_thresh=1):
         """
@@ -1118,12 +1127,10 @@ class TGAExp:
         return self.soliddist
 
     # methods to plot results for a single sample
-    def tg_plot(self, TG_lab='TG [wt%]'):
+    def tg_plot(self):
         """
         Plot the TGA data.
 
-        Args:
-            TG_lab (str, optional): Label for the TG axis. Defaults to 'TG [wt%]'.
         """
         if not self.proximate_computed:
             self.proximate_analysis()
@@ -1160,27 +1167,19 @@ class TGAExp:
         fig_save(filename + '_tg', out_path, fig, ax, axt, fig_par,
                 xLab='time [min]',
                 yLab=['T ['+TGAExp.T_symbol+']',
-                      TG_lab+'(stb)', TG_lab+'(db)'], grid=TGAExp.plot_grid)
+                      TGAExp.TG_lab+'(stb)', TGAExp.TG_lab +'(db)'], grid=TGAExp.plot_grid)
 
-    def dtg_plot(self, TG_lab='TG [wt%]', DTG_lab=None):
+    def dtg_plot(self):
             """
             Plot the DTG (Derivative Thermogravimetric) data.
 
-            Args:
-                TG_lab (str, optional): Label for TG data. Defaults to 'TG [wt%]'.
-                DTG_lab (str, optional): Label for DTG data. Defaults to None.
             """
             
             if not self.proximate_computed:
                 self.proximate_analysis()
             out_path = plib.Path(TGAExp.out_path, 'SingleSamplePlots')
             out_path.mkdir(parents=True, exist_ok=True)
-
-            if DTG_lab is None:
-                if TGAExp.dtg_basis == 'temperature':
-                    DTG_lab = 'DTG [wt%/' + TGAExp.T_symbol + ']'
-                elif TGAExp.dtg_basis == 'time':
-                    DTG_lab='DTG [wt%/min]'
+            
             filename = self.name
 
             fig, ax, axt, fig_par = fig_create(rows=3, cols=1, plot_type=0,
@@ -1206,17 +1205,16 @@ class TGAExp:
             ax[0].legend(loc='best')
             fig_save(filename + '_dtg', out_path, fig, ax, axt, fig_par,
                     xLab='time [min]',
-                    yLab=['T ['+TGAExp.T_symbol+']', TG_lab + '(db)',
-                          DTG_lab + '(db)'], grid=TGAExp.plot_grid)
+                    yLab=['T ['+TGAExp.T_symbol+']', TGAExp.TG_lab + '(db)',
+                          TGAExp.DTG_lab + '(db)'], grid=TGAExp.plot_grid)
 
-    def soliddist_plot(self, paper_col=1, hgt_mltp=1.25, TG_lab='TG [wt%]'):
+    def soliddist_plot(self, paper_col=1, hgt_mltp=1.25):
             """
             Plot the solid distribution analysis.
 
             Args:
                 paper_col (int): Number of columns in the plot for paper publication (default is 1).
                 hgt_mltp (float): Height multiplier for the plot (default is 1.25).
-                TG_lab (str): Label for the TG axis (default is 'TG [wt%]').
 
             Returns:
                 None
@@ -1246,11 +1244,11 @@ class TGAExp:
                                xy=(tm - 10, mp+1), fontsize=9)
             fig_save(filename + '_soliddist', out_path, fig, ax, axt, fig_par,
                     xLab='time [min]',
-                    yLab=['T ['+TGAExp.T_symbol+']', TG_lab+'(db)'],
+                    yLab=['T ['+TGAExp.T_symbol+']', TGAExp.TG_lab+'(db)'],
                     grid=TGAExp.plot_grid)
 
     def deconv_plot(self, filename='Deconv',
-                    xLim=None, yLim=None, DTG_lab=None,
+                    xLim=None, yLim=None,
                     pdf=False, svg=False, legend='best'):
             """
             Plot the deconvolution results.
@@ -1259,7 +1257,6 @@ class TGAExp:
                 filename (str, optional): The filename to save the plot. Defaults to 'Deconv'.
                 xLim (tuple, optional): The x-axis limits of the plot. Defaults to None.
                 yLim (tuple, optional): The y-axis limits of the plot. Defaults to None.
-                DTG_lab (str, optional): The label for the y-axis. Defaults to None.
                 pdf (bool, optional): Whether to save the plot as a PDF file. Defaults to False.
                 svg (bool, optional): Whether to save the plot as an SVG file. Defaults to False.
                 legend (str, optional): The position of the legend in the plot. Defaults to 'best'.
@@ -1269,11 +1266,6 @@ class TGAExp:
                 raise Exception('Deconvolution analysis not computed')
             out_path_dcv = plib.Path(TGAExp.out_path, 'SingleSampleDeconvs')
             out_path_dcv.mkdir(parents=True, exist_ok=True)
-            if DTG_lab is None:
-                if TGAExp.dtg_basis == 'temperature':
-                    DTG_lab = 'DTG [wt%/' + TGAExp.T_symbol + ']'
-                elif TGAExp.dtg_basis == 'time':
-                    DTG_lab='DTG [wt%/min]'
             filename = self.name
             fig, ax, axt, fig_par = fig_create(rows=1, cols=1, plot_type=0,
                                               paper_col=0.78, hgt_mltp=1.25,
@@ -1307,9 +1299,9 @@ class TGAExp:
 
             # Save figure using fig_save
             fig_save(filename, out_path_dcv, fig, ax, axt, fig_par,
-                    xLab='T ['+TGAExp.T_symbol+']', yLab=DTG_lab,
-                    xLim=xLim, yLim=yLim, legend=legend, grid=TGAExp.plot_grid,
-                    pdf=pdf, svg=svg)  # Set additional parameters as needed
+                xLab='T ['+TGAExp.T_symbol+']', yLab=TGAExp.DTG_lab,
+                xLim=xLim, yLim=yLim, legend=legend, grid=TGAExp.plot_grid,
+                pdf=pdf, svg=svg)  # Set additional parameters as needed
 
 
 # =============================================================================
@@ -1400,7 +1392,7 @@ def soliddist_multi_report(exps, filename='Rep'):
 # =============================================================================
 def tg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
                   xLim=None, yLim=[0, 100], yTicks=None, 
-                  TG_lab='TG [wt%]', lttrs=False, pdf=False, svg=False):
+                  lttrs=False, pdf=False, svg=False):
     """
     Plot multiple thermogravimetric (TG) curves.
 
@@ -1412,7 +1404,6 @@ def tg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
         xLim (tuple, optional): Limits of the x-axis. Defaults to None.
         yLim (list, optional): Limits of the y-axis. Defaults to [0, 100].
         yTicks (list, optional): Custom y-axis tick locations. Defaults to None.
-        TG_lab (str, optional): Label for the y-axis. Defaults to 'TG [wt%]'.
         lttrs (bool, optional): Whether to annotate letters on the plot. Defaults to False.
         pdf (bool, optional): Whether to save the figure as a PDF file. Defaults to False.
         svg (bool, optional): Whether to save the figure as an SVG file. Defaults to False.
@@ -1439,12 +1430,12 @@ def tg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
             xLim=xLim, yLim=yLim,
             yTicks=yTicks,
             xLab='T [' + TGAExp.T_symbol + ']', legend='upper right',
-            yLab=TG_lab, annotate_lttrs=lttrs, grid=TGAExp.plot_grid, pdf=pdf, svg=svg)
+            yLab=TGAExp.TG_lab, annotate_lttrs=lttrs, grid=TGAExp.plot_grid, pdf=pdf, svg=svg)
 
 
 def dtg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
                    xLim=None, yLim=None, yTicks=None,
-                   DTG_lab=None, lttrs=False, plt_gc=False, gc_Tlim=300,
+                   lttrs=False, plt_gc=False, gc_Tlim=300,
                    pdf=False, svg=False):
     """
     Plot multiple DTG curves for a list of experiments.
@@ -1457,7 +1448,6 @@ def dtg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
         xLim (tuple, optional): Limits of the x-axis. Defaults to None.
         yLim (tuple, optional): Limits of the y-axis. Defaults to None.
         yTicks (list, optional): Custom y-axis tick labels. Defaults to None.
-        DTG_lab (str, optional): Label for the y-axis. Defaults to None.
         lttrs (bool, optional): Whether to annotate letters on the plot. Defaults to False.
         plt_gc (bool, optional): Whether to plot the GC-MS maximum temperature line. Defaults to False.
         gc_Tlim (int, optional): Maximum temperature for the GC-MS line. Defaults to 300.
@@ -1473,9 +1463,6 @@ def dtg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
             exp.proximate_analysis()
     out_path = plib.Path(exps[0].out_path, 'MultiSamplePlots')
     out_path.mkdir(parents=True, exist_ok=True)
-
-    if not DTG_lab:
-        DTG_lab = 'DTG [wt%/' + TGAExp.T_symbol + ']'
 
     fig, ax, axt, fig_par = fig_create(rows=1, cols=1, plot_type=0,
                                       paper_col=paper_col,
@@ -1494,7 +1481,7 @@ def dtg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
     fig_save(filename + '_dtg', out_path, fig, ax, axt, fig_par,
             xLim=xLim, yLim=yLim,
             yTicks=yTicks,
-            yLab=DTG_lab, xLab='T [' + TGAExp.T_symbol + ']',
+            yLab=TGAExp.DTG_lab, xLab='T [' + TGAExp.T_symbol + ']',
             pdf=pdf, svg=svg, annotate_lttrs=lttrs, grid=TGAExp.plot_grid)
 
 
@@ -1669,7 +1656,6 @@ def oxidation_multi_plot(exps, filename="Oxidations",
 
 
 def soliddist_multi_plot(exps, filename="Dist",
-                         TG_lab='TG [wt%]', DTG_lab='DTG [wt%/min]',
                          hgt_mltp=1.25, paper_col=.78, labels=None, lttrs=False,
                          xLim=None, yLim=[[0, 1000], [0, 100]], yTicks=None,
                          print_dfs=True):
@@ -1679,8 +1665,6 @@ def soliddist_multi_plot(exps, filename="Dist",
     Args:
         exps (list): List of Experiment objects.
         filename (str, optional): Name of the output file. Defaults to "Dist".
-        TG_lab (str, optional): Label for the TG axis. Defaults to 'TG [wt%]'.
-        DTG_lab (str, optional): Label for the DTG axis. Defaults to 'DTG [wt%/min]'.
         hgt_mltp (float, optional): Height multiplier for the plot. Defaults to 1.25.
         paper_col (float, optional): Color of the plot background. Defaults to .78.
         labels (list, optional): List of labels for the experiments. Defaults to None.
@@ -1721,7 +1705,7 @@ def soliddist_multi_plot(exps, filename="Dist",
         # ax[1].legend(loc='center left')
     fig_save(filename + '_soliddist', out_path, fig, ax, axt, fig_par,
             xLim=xLim, yLim=yLim, yTicks=yTicks, xLab='time [min]',
-            yLab=['T [' + TGAExp.T_symbol + ']', TG_lab+'(db)'],
+            yLab=['T [' + TGAExp.T_symbol + ']', TGAExp.TG_lab+'(db)'],
             annotate_lttrs=lttrs, grid=TGAExp.plot_grid)
 
 
@@ -1732,7 +1716,7 @@ def cscd_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
                loc_names_cscd=130,
                hgt_mltp_cscd=1.5, legend_cscd='lower right',
                y_values_cscd=[-10, 0],
-               lttrs=False, DTG_lab=None, pdf=False, svg=False):
+               lttrs=False, pdf=False, svg=False):
     """
     Generate a cascaded multi-plot for a list of experiments.
 
@@ -1753,7 +1737,6 @@ def cscd_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
         legend_cscd (str, optional): Location of the legend. Defaults to 'lower right'.
         y_values_cscd (list, optional): List of y-axis tick values. Defaults to [-10, 0].
         lttrs (bool, optional): Flag to annotate letters for each experiment. Defaults to False.
-        DTG_lab (str, optional): Label for the y-axis. Defaults to None.
         pdf (bool, optional): Flag to save the plot as a PDF file. Defaults to False.
         svg (bool, optional): Flag to save the plot as an SVG file. Defaults to False.
 
@@ -1766,8 +1749,6 @@ def cscd_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
     out_path = plib.Path(exps[0].out_path, 'MultiSamplePlots')
     out_path.mkdir(parents=True, exist_ok=True)
     labels = [exp.label if exp.label else exp.name for exp in exps]
-    if not DTG_lab:
-        DTG_lab = 'DTG [wt%/' + TGAExp.T_symbol + ']'
     yLim_cscd = [yLim0_cscd, np.sum(shifts_cscd)]
     dh = np.cumsum(shifts_cscd)
     fig, ax, axt, fig_par = fig_create(1, 1, paper_col=.78,
@@ -1800,7 +1781,7 @@ def cscd_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
         ax[0].set_yticks([])
     fig_save(filename + '_cscd', out_path, fig, ax, axt, fig_par,
             legend=legend_cscd, annotate_lttrs=lttrs,
-            xLab='T [' + TGAExp.T_symbol + ']', yLab=DTG_lab,
+            xLab='T [' + TGAExp.T_symbol + ']', yLab=TGAExp.DTG_lab,
             xLim=xLim, yLim=yLim_cscd, svg=svg, pdf=pdf, grid=TGAExp.plot_grid)
 
 
@@ -2088,7 +2069,7 @@ if __name__ == "__main__":
     proximate_multi_plot([P1, P2, Ox5, SD1], filename='P1P2Ox5SD1',
                          bboxtoanchor=False)
     i = oxidation_multi_report([Ox5, Ox10, Ox50], filename='Ox5Ox10Ox50')
-    oxidation_multi_plot([Ox5, Ox10, Ox50], yLim=[250, 400],
+    oxidation_multi_plot([Ox5, Ox10, Ox50], #yLim=[250, 400],
                          filename='Ox5Ox10Ox50')
     j = soliddist_multi_report([SD1, SD2], filename='SD1SD2')
     soliddist_multi_plot([SD1, SD2], filename='SD1SD2')
