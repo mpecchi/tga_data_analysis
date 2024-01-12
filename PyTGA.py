@@ -499,6 +499,7 @@ class TGAExp:
         DTG_lab = 'DTG [wt%/' + T_symbol + ']'
     elif dtg_basis == 'time':
         DTG_lab='DTG [wt%/min]'
+    TiTb_threshold = 0.01  # % of the peak that is used for Ti and Tb
     resolution_T_dtg=5
     dtg_w_SavFil=101
     TG_lab='TG [wt%]'
@@ -547,7 +548,7 @@ class TGAExp:
                  label=None, time_moist=38, 
                  time_vm=147, T_initial_C=40, Tlims_dtg_C=[120, 880], 
                  correct_ash_mg=None, correct_ash_fr=None,
-                 oxid_Tb_thresh=1):
+                 oxid_Tb_thresh=None):
         """
         Initializes a TGAExp object with the specified parameters.
 
@@ -589,7 +590,6 @@ class TGAExp:
             self.Tlims_dtg = Tlims_dtg_C
         elif TGAExp.T_unit == 'Kelvin':
             self.Tlims_dtg = [T + 273.15 for T in Tlims_dtg_C]
-        self.oxid_Tb_thresh = oxid_Tb_thresh
         # for variables and computations
         self.data_loaded = False  # Flag to track if data is loaded
         self.proximate_computed = False
@@ -826,8 +826,10 @@ class TGAExp:
         self.dwdT_mean_stk = np.zeros(self.n_repl)
         self.S_stk = np.zeros(self.n_repl)
         for f, file in enumerate(self.files):
-            # Ti = T at which dtg >1 wt%/min after moisture removal
-            self.Ti_idx_stk[f] = int(np.argmax(np.abs(self.dtg_db_stk[:, f]) > 1))
+            threshold = np.max(np.abs(self.dtg_db_stk[:, f]))*TGAExp.TiTb_threshold
+            # Ti = T at which dtg > Ti_thresh wt%/min after moisture removal
+            self.Ti_idx_stk[f] = int(np.argmax(np.abs(self.dtg_db_stk[:, f]) > 
+                                               threshold))
             self.Ti_stk[f] = self.T_dtg[self.Ti_idx_stk[f]]
             # Tp is the T of max abs(dtg)
             self.Tp_idx_stk[f] = int(np.argmax(np.abs(self.dtg_db_stk[:, f])))
@@ -836,7 +838,7 @@ class TGAExp:
             try:
                 self.Tb_idx_stk[f] = \
                     int(np.flatnonzero(self.dtg_db_stk[:, f] < -
-                                       self.oxid_Tb_thresh)[-1])
+                                       threshold)[-1])
             except IndexError:  # the curve nevers goes above 1%
                 self.Tb_idx_stk[f] = 0
             self.Tb_stk[f] = self.T_dtg[self.Tb_idx_stk[f]]
@@ -1391,8 +1393,8 @@ def soliddist_multi_report(exps, filename='Rep'):
 # # functions for plotting ave and std of multiple samples
 # =============================================================================
 def tg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
-                  xLim=None, yLim=[0, 100], yTicks=None, 
-                  lttrs=False, pdf=False, svg=False):
+                  xLim=None, yLim=[0, 100], xTicks=None, yTicks=None, 
+                  annotate_lttrs=False, pdf=False, svg=False):
     """
     Plot multiple thermogravimetric (TG) curves.
 
@@ -1427,16 +1429,16 @@ def tg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
                            exp.mp_db + exp.mp_db_std, color=clrs[i],
                            alpha=.3)
     fig_save(filename + '_tg', out_path_TGs, fig, ax, axt, fig_par,
-            xLim=xLim, yLim=yLim,
-            yTicks=yTicks,
-            xLab='T [' + TGAExp.T_symbol + ']', legend='upper right',
-            yLab=TGAExp.TG_lab, annotate_lttrs=lttrs, grid=TGAExp.plot_grid, pdf=pdf, svg=svg)
+        legend='upper right', xLab='T [' + TGAExp.T_symbol + ']', 
+        yLab=TGAExp.TG_lab, grid=TGAExp.plot_grid, 
+        xLim=xLim, yLim=yLim, xTicks=xTicks, yTicks=yTicks,
+        annotate_lttrs=annotate_lttrs, pdf=pdf, svg=svg)
 
 
 def dtg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
-                   xLim=None, yLim=None, yTicks=None,
-                   lttrs=False, plt_gc=False, gc_Tlim=300,
-                   pdf=False, svg=False):
+                   xLim=None, yLim=None, xTicks=None, yTicks=None, 
+                   plt_gc=False, gc_Tlim=300,
+                   annotate_lttrs=False, pdf=False, svg=False):
     """
     Plot multiple DTG curves for a list of experiments.
 
@@ -1479,10 +1481,10 @@ def dtg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
                      label='T$_{max GC-MS}$')
     ax[0].legend(loc='lower right')
     fig_save(filename + '_dtg', out_path, fig, ax, axt, fig_par,
-            xLim=xLim, yLim=yLim,
-            yTicks=yTicks,
-            yLab=TGAExp.DTG_lab, xLab='T [' + TGAExp.T_symbol + ']',
-            pdf=pdf, svg=svg, annotate_lttrs=lttrs, grid=TGAExp.plot_grid)
+        yLab=TGAExp.DTG_lab, xLab='T [' + TGAExp.T_symbol + ']', 
+        grid=TGAExp.plot_grid,
+        xLim=xLim, yLim=yLim, xTicks=xTicks, yTicks=yTicks,
+        annotate_lttrs=annotate_lttrs, pdf=pdf, svg=svg)
 
 
 def proximate_multi_plot(exps, filename="Prox",
@@ -1490,7 +1492,8 @@ def proximate_multi_plot(exps, filename="Prox",
                          paper_col=.8, hgt_mltp=1.5,
                          bboxtoanchor=True, x_anchor=1.13, y_anchor=1.02,
                          legend_loc='best', yLim=[0, 100], ytLim=[0, 1],
-                         yTicks=None, ytTicks=None):
+                         yTicks=None, ytTicks=None,
+                         annotate_lttrs=False, pdf=False, svg=False):
     """
     Generate a multi-plot for proximate analysis.
 
@@ -1564,9 +1567,10 @@ def proximate_multi_plot(exps, filename="Prox",
         ax[0].set_xticklabels(df_ave.index, rotation=xlab_rot, ha='right',
                               rotation_mode='anchor')
     fig_save(filename + '_prox', out_path, fig, ax, axt, fig_par, tight_layout=True,
-            legend=None,
-            yLab='mass fraction [wt%]', ytLab='Mean TG deviation [%]',
-            yLim=yLim, ytLim=ytLim, yTicks=yTicks, ytTicks=ytTicks, grid=TGAExp.plot_grid)
+        yLab='mass fraction [wt%]', ytLab='Mean TG deviation [%]',
+        grid=TGAExp.plot_grid, legend=None, 
+        yLim=yLim, ytLim=ytLim, yTicks=yTicks, ytTicks=ytTicks, 
+        annotate_lttrs=annotate_lttrs, pdf=pdf, svg=svg)
 
 
 def oxidation_multi_plot(exps, filename="Oxidations",
@@ -1574,7 +1578,8 @@ def oxidation_multi_plot(exps, filename="Oxidations",
                          paper_col=.8, hgt_mltp=1.5,
                          bboxtoanchor=True, x_anchor=1.13, y_anchor=1.02,
                          legend_loc='best',
-                         yLim=None, ytLim=None, yTicks=None, ytTicks=None):
+                         yLim=None, ytLim=None, yTicks=None, ytTicks=None,
+                         annotate_lttrs=False, pdf=False, svg=False):
     """
     Generate a multi-plot for oxidation analysis.
 
@@ -1651,14 +1656,15 @@ def oxidation_multi_plot(exps, filename="Oxidations",
     fig_save(filename + '_oxidation', out_path, fig, ax, axt, fig_par,
             tight_layout=True,
             legend=None, ytLab='S (combustion index) [-]',
-            yLab='T [' + TGAExp.T_symbol + ']',
-            yLim=yLim, ytLim=ytLim, yTicks=yTicks, ytTicks=ytTicks, grid=TGAExp.plot_grid)
-
+            yLab='T [' + TGAExp.T_symbol + ']', grid=TGAExp.plot_grid,
+            yLim=yLim, ytLim=ytLim, yTicks=yTicks, ytTicks=ytTicks,
+            annotate_lttrs=annotate_lttrs, pdf=pdf, svg=svg)
 
 def soliddist_multi_plot(exps, filename="Dist",
-                         hgt_mltp=1.25, paper_col=.78, labels=None, lttrs=False,
-                         xLim=None, yLim=[[0, 1000], [0, 100]], yTicks=None,
-                         print_dfs=True):
+                         hgt_mltp=1.25, paper_col=.78, labels=None,
+                         xLim=None, yLim=[[0, 1000], [0, 100]], xTicks=None,
+                         yTicks=None, print_dfs=True,
+                         annotate_lttrs=False, pdf=False, svg=False):
     """
     Plot the solid distribution for multiple experiments.
 
@@ -1704,9 +1710,11 @@ def soliddist_multi_plot(exps, filename="Dist",
         ax[0].legend(loc='upper left')
         # ax[1].legend(loc='center left')
     fig_save(filename + '_soliddist', out_path, fig, ax, axt, fig_par,
-            xLim=xLim, yLim=yLim, yTicks=yTicks, xLab='time [min]',
-            yLab=['T [' + TGAExp.T_symbol + ']', TGAExp.TG_lab+'(db)'],
-            annotate_lttrs=lttrs, grid=TGAExp.plot_grid)
+        xLab='time [min]', 
+        yLab=['T [' + TGAExp.T_symbol + ']', TGAExp.TG_lab+'(db)'],
+        grid=TGAExp.plot_grid,
+        xLim=xLim, yLim=yLim, xTicks=xTicks, yTicks=yTicks, 
+        annotate_lttrs=annotate_lttrs, pdf=pdf, svg=svg)
 
 
 def cscd_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
@@ -1716,7 +1724,7 @@ def cscd_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
                loc_names_cscd=130,
                hgt_mltp_cscd=1.5, legend_cscd='lower right',
                y_values_cscd=[-10, 0],
-               lttrs=False, pdf=False, svg=False):
+               annotate_lttrs=False, pdf=False, svg=False):
     """
     Generate a cascaded multi-plot for a list of experiments.
 
@@ -1780,9 +1788,10 @@ def cscd_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
     else:
         ax[0].set_yticks([])
     fig_save(filename + '_cscd', out_path, fig, ax, axt, fig_par,
-            legend=legend_cscd, annotate_lttrs=lttrs,
+            legend=legend_cscd, 
             xLab='T [' + TGAExp.T_symbol + ']', yLab=TGAExp.DTG_lab,
-            xLim=xLim, yLim=yLim_cscd, svg=svg, pdf=pdf, grid=TGAExp.plot_grid)
+            xLim=xLim, yLim=yLim_cscd, grid=TGAExp.plot_grid,
+            annotate_lttrs=annotate_lttrs, pdf=pdf, svg=svg)
 
 
 def KAS_analysis(exps, ramps, alpha=np.arange(0.05, .9, 0.05)):
@@ -1860,9 +1869,10 @@ def KAS_analysis(exps, ramps, alpha=np.arange(0.05, .9, 0.05)):
 
 def KAS_plot_isolines(exps, kas_names=None, filename='KAsIso',
                       paper_col=.78, hgt_mltp=1.25, xLim=None, yLim=None,
-                      annt_names=True, annotate_lttrs=False, leg_cols=1,
+                      annt_names=True, leg_cols=1,
                       bboxtoanchor=True, x_anchor=1.13, y_anchor=1.02,
-                      legend_loc='best'):
+                      legend_loc='best',
+                      annotate_lttrs=False, pdf=False, svg=False):
     """
     Plot isolines for KAS analysis.
 
@@ -1952,10 +1962,10 @@ def KAS_plot_isolines(exps, kas_names=None, filename='KAsIso',
 
 def KAS_plot_Ea(exps, kas_names=None, filename='KASEa',
                 paper_col=.78, hgt_mltp=1.25, xLim=[.1, .8], yLim=[0, 300],
-                yTicks=None, annt_names=True, annotate_lttrs=False, leg_cols=1,
+                yTicks=None, leg_cols=1,
                 bboxtoanchor=True, x_anchor=1.13, y_anchor=1.02,
                 plot_type='scatter',
-                legend='best'):
+                legend='best', annotate_lttrs=False, pdf=False, svg=False):
     """
     Plot the activation energy (Ea) for multiple experiments.
 
