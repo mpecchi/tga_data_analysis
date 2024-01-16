@@ -1394,7 +1394,8 @@ def soliddist_multi_report(exps, filename='Rep'):
 # =============================================================================
 def tg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
                   xLim=None, yLim=[0, 100], xTicks=None, yTicks=None, 
-                  annotate_lttrs=False, pdf=False, svg=False):
+                  annotate_lttrs=False, pdf=False, svg=False,
+                  legend_loc='upper right'):
     """
     Plot multiple thermogravimetric (TG) curves.
 
@@ -1429,8 +1430,8 @@ def tg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
                            exp.mp_db + exp.mp_db_std, color=clrs[i],
                            alpha=.3)
     fig_save(filename + '_tg', out_path_TGs, fig, ax, axt, fig_par,
-        legend='upper right', xLab='T [' + TGAExp.T_symbol + ']', 
-        yLab=TGAExp.TG_lab, grid=TGAExp.plot_grid, 
+        legend=legend_loc, xLab='T [' + TGAExp.T_symbol + ']', 
+        yLab=TGAExp.TG_lab, grid=TGAExp.plot_grid, tight_layout=True,
         xLim=xLim, yLim=yLim, xTicks=xTicks, yTicks=yTicks,
         annotate_lttrs=annotate_lttrs, pdf=pdf, svg=svg)
 
@@ -1482,7 +1483,7 @@ def dtg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
     ax[0].legend(loc='lower right')
     fig_save(filename + '_dtg', out_path, fig, ax, axt, fig_par,
         yLab=TGAExp.DTG_lab, xLab='T [' + TGAExp.T_symbol + ']', 
-        grid=TGAExp.plot_grid,
+        grid=TGAExp.plot_grid, tight_layout=True,
         xLim=xLim, yLim=yLim, xTicks=xTicks, yTicks=yTicks,
         annotate_lttrs=annotate_lttrs, pdf=pdf, svg=svg)
 
@@ -2027,8 +2028,8 @@ def KAS_plot_Ea(exps, kas_names=None, filename='KASEa',
         else:  # legend is inside of plot area
             ax[0].legend(ncol=leg_cols, loc=legend)
     fig_save(filename + '_Ea', out_path, fig, ax, axt, fig_par,
-            xLim=xLim, yLim=yLim, 
-            yTicks=yTicks, xLab=r'$\alpha$ [-]', tight_layout=False,
+            xLim=xLim, yLim=yLim, annotate_lttrs=annotate_lttrs,
+            yTicks=yTicks, xLab=r'$\alpha$ [-]', tight_layout=True,
             yLab=r'$E_{a}$ [kJ/mol]', grid=TGAExp.plot_grid)
 
 # %%
