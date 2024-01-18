@@ -1489,12 +1489,13 @@ def dtg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
 
 
 def proximate_multi_plot(exps, filename="Prox",
-                         smpl_labs=None, xlab_rot=0,
-                         paper_col=.8, hgt_mltp=1.5,
-                         bboxtoanchor=True, x_anchor=1.13, y_anchor=1.02,
-                         legend_loc='best', yLim=[0, 100], ytLim=[0, 1],
-                         yTicks=None, ytTicks=None,
-                         annotate_lttrs=False, pdf=False, svg=False):
+    smpl_labs=None, xlab_rot=0,
+    paper_col=.8, hgt_mltp=1.5,
+    bboxtoanchor=True, x_anchor=1.13, y_anchor=1.02,
+    legend_loc='best', yLim=[0, 100], ytLim=[0, 1],
+    yTicks=None, ytTicks=None, yLab='mass fraction [wt%]',
+    ytLab='mean TG deviation [%]',
+    annotate_lttrs=False, pdf=False, svg=False):
     """
     Generate a multi-plot for proximate analysis.
 
@@ -1539,7 +1540,7 @@ def proximate_multi_plot(exps, filename="Prox",
     df_std['FC (db)'] = [exp.fc_db_std for exp in exps]
     df_std['Ash (db)'] = [exp.ash_db_std for exp in exps]
 
-    S_combs = [exp.AveTGstd_p for exp in exps]
+    aveTG = [exp.AveTGstd_p for exp in exps]
     fig, ax, axt, fig_par = fig_create(1, 1, 1, paper_col=paper_col,
                                       hgt_mltp=hgt_mltp, font=TGAExp.plot_font)
     df_ave.plot(kind='bar', ax=ax[0], yerr=df_std, capsize=2, width=.85,
@@ -1553,7 +1554,7 @@ def proximate_multi_plot(exps, filename="Prox",
     # loop over bars and hatches to set hatches in correct order
     for bar, hatch in zip(bars, hatches):
         bar.set_hatch(hatch)
-    axt[0].errorbar(x=df_ave.index, y=S_combs, linestyle='None',
+    axt[0].errorbar(x=df_ave.index, y=aveTG, linestyle='None',
                     marker=mrkrs[0], color=clrs[4], markersize=10,
                     markeredgecolor='k', label='Mean TG dev.')
     hnd_ax, lab_ax = ax[0].get_legend_handles_labels()
@@ -1568,7 +1569,7 @@ def proximate_multi_plot(exps, filename="Prox",
         ax[0].set_xticklabels(df_ave.index, rotation=xlab_rot, ha='right',
                               rotation_mode='anchor')
     fig_save(filename + '_prox', out_path, fig, ax, axt, fig_par, tight_layout=True,
-        yLab='mass fraction [wt%]', ytLab='Mean TG deviation [%]',
+        yLab=yLab, ytLab=ytLab,
         grid=TGAExp.plot_grid, legend=None, 
         yLim=yLim, ytLim=ytLim, yTicks=yTicks, ytTicks=ytTicks, 
         annotate_lttrs=annotate_lttrs, pdf=pdf, svg=svg)
