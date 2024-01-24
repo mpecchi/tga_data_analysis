@@ -139,7 +139,7 @@ def fig_create(rows=1, cols=1, plot_type=0, paper_col=1,
         If cols > 2, which is not supported.
 
     """
-  
+
     sns.set_palette("deep")
     if font == 'Times' or font == 'Times New Roman':  # set Times New Roman as the plot font fot text
         # this may require the installation of the font package
@@ -149,7 +149,7 @@ def fig_create(rows=1, cols=1, plot_type=0, paper_col=1,
     # single or double column in paperthat the figure will occupy
     if cols > 2:  # numer of columns (thus of plots in the figure)
         raise ValueError('\n fig_create: cols>2 not supported')
-    
+
     # width of the figure in inches, it's fixed to keep the same text size
     # is 6, 9, 12 for 1, 1.5, and 3 paper_col (columns in paper)
     fig_wdt = 6*paper_col  # width of the plot in inches
@@ -474,13 +474,13 @@ class TGAExp:
     Methods:
         __init__(... (see below)):
             Initializes a TGAExp object with the specified parameters.
-        
+
         load_single_file(self, filename):
             Loads a single file for the experiment.
-        
+
         load_files(self):
             Loads all the files for the experiment.
-        
+
         proximate_analysis(self):
             Performs proximate analysis on the loaded data.
     """
@@ -503,7 +503,7 @@ class TGAExp:
     resolution_T_dtg=5
     dtg_w_SavFil=101
     TG_lab='TG [wt%]'
-    
+
     @classmethod
     def set_folder(cls, new_folder):
         # Update paths based on new folder
@@ -521,20 +521,20 @@ class TGAExp:
 
     @classmethod
     def set_plot_font(cls, new_plot_font):
-        cls.plot_font = new_plot_font   
-    
+        cls.plot_font = new_plot_font
+
     @classmethod
     def set_plot_grid(cls, new_plot_grid):
         cls.plot_grid = new_plot_grid
-    
-    @classmethod   
+
+    @classmethod
     def set_dtg_basis(cls, new_dtg_basis):
         cls.dtg_basis = new_dtg_basis
         if new_dtg_basis == 'temperature':
             cls.DTG_lab = 'DTG [wt%/' + cls.T_symbol + ']'
         elif new_dtg_basis == 'time':
             cls.DTG_lab='DTG [wt%/min]'
-    
+
     @classmethod
     def set_resolution_T_dtg(cls, new_resolution_T_dtg):
         cls.resolution_T_dtg = new_resolution_T_dtg
@@ -545,8 +545,8 @@ class TGAExp:
 
 
     def __init__(self, name, filenames, load_skiprows=0,
-                 label=None, time_moist=38, 
-                 time_vm=147, T_initial_C=40, Tlims_dtg_C=[120, 880], 
+                 label=None, time_moist=38,
+                 time_vm=147, T_initial_C=40, Tlims_dtg_C=[120, 880],
                  correct_ash_mg=None, correct_ash_fr=None,
                  oxid_Tb_thresh=None):
         """
@@ -828,7 +828,7 @@ class TGAExp:
         for f, file in enumerate(self.files):
             threshold = np.max(np.abs(self.dtg_db_stk[:, f]))*TGAExp.TiTb_threshold
             # Ti = T at which dtg > Ti_thresh wt%/min after moisture removal
-            self.Ti_idx_stk[f] = int(np.argmax(np.abs(self.dtg_db_stk[:, f]) > 
+            self.Ti_idx_stk[f] = int(np.argmax(np.abs(self.dtg_db_stk[:, f]) >
                                                threshold))
             self.Ti_stk[f] = self.T_dtg[self.Ti_idx_stk[f]]
             # Tp is the T of max abs(dtg)
@@ -1028,7 +1028,7 @@ class TGAExp:
             Returns:
                 pandas.DataFrame: The proximate report with the calculated values for each sample.
             """
-            
+
             if not self.proximate_computed:
                 self.proximate_analysis()
 
@@ -1068,7 +1068,7 @@ class TGAExp:
             Returns:
                 pandas.DataFrame: The oxidation report containing the calculated parameters for each sample.
             """
-            
+
             if not self.oxidation_computed:
                 self.oxidation_analysis()
             out_path = plib.Path(TGAExp.out_path, 'SingleSampleReports')
@@ -1176,12 +1176,12 @@ class TGAExp:
             Plot the DTG (Derivative Thermogravimetric) data.
 
             """
-            
+
             if not self.proximate_computed:
                 self.proximate_analysis()
             out_path = plib.Path(TGAExp.out_path, 'SingleSamplePlots')
             out_path.mkdir(parents=True, exist_ok=True)
-            
+
             filename = self.name
 
             fig, ax, axt, fig_par = fig_create(rows=3, cols=1, plot_type=0,
@@ -1221,7 +1221,7 @@ class TGAExp:
             Returns:
                 None
             """
-            
+
             # slightly different plotting behaviour (uses averages)
             if not self.soliddist_computed:
                 self.soliddist_analysis()
@@ -1229,7 +1229,7 @@ class TGAExp:
             out_path.mkdir(parents=True, exist_ok=True)
             filename = self.name
             fig, ax, axt, fig_par = fig_create(rows=2, cols=1, plot_type=0,
-                                                paper_col=paper_col, 
+                                                paper_col=paper_col,
                                                hgt_mltp=hgt_mltp, font=TGAExp.plot_font)
 
             ax[0].plot(self.time, self.T)
@@ -1263,7 +1263,7 @@ class TGAExp:
                 svg (bool, optional): Whether to save the plot as an SVG file. Defaults to False.
                 legend (str, optional): The position of the legend in the plot. Defaults to 'best'.
             """
-            
+
             if not self.deconv_computed:
                 raise Exception('Deconvolution analysis not computed')
             out_path_dcv = plib.Path(TGAExp.out_path, 'SingleSampleDeconvs')
@@ -1393,7 +1393,7 @@ def soliddist_multi_report(exps, filename='Rep'):
 # # functions for plotting ave and std of multiple samples
 # =============================================================================
 def tg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
-                  xLim=None, yLim=[0, 100], xTicks=None, yTicks=None, 
+                  xLim=None, yLim=[0, 100], xTicks=None, yTicks=None,
                   annotate_lttrs=False, pdf=False, svg=False,
                   legend_loc='upper right'):
     """
@@ -1414,7 +1414,7 @@ def tg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
     Returns:
         None
     """
-    
+
     for exp in exps:
         if not exp.proximate_computed:
             exp.proximate_analysis()
@@ -1430,14 +1430,14 @@ def tg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
                            exp.mp_db + exp.mp_db_std, color=clrs[i],
                            alpha=.3)
     fig_save(filename + '_tg', out_path_TGs, fig, ax, axt, fig_par,
-        legend=legend_loc, xLab='T [' + TGAExp.T_symbol + ']', 
+        legend=legend_loc, xLab='T [' + TGAExp.T_symbol + ']',
         yLab=TGAExp.TG_lab, grid=TGAExp.plot_grid, tight_layout=True,
         xLim=xLim, yLim=yLim, xTicks=xTicks, yTicks=yTicks,
         annotate_lttrs=annotate_lttrs, pdf=pdf, svg=svg)
 
 
 def dtg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
-                   xLim=None, yLim=None, xTicks=None, yTicks=None, 
+                   xLim=None, yLim=None, xTicks=None, yTicks=None,
                    plt_gc=False, gc_Tlim=300,
                    annotate_lttrs=False, pdf=False, svg=False):
     """
@@ -1460,7 +1460,7 @@ def dtg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
     Returns:
         None
     """
-    
+
     for exp in exps:
         if not exp.proximate_computed:
             exp.proximate_analysis()
@@ -1482,7 +1482,7 @@ def dtg_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
                      label='T$_{max GC-MS}$')
     ax[0].legend(loc='lower right')
     fig_save(filename + '_dtg', out_path, fig, ax, axt, fig_par,
-        yLab=TGAExp.DTG_lab, xLab='T [' + TGAExp.T_symbol + ']', 
+        yLab=TGAExp.DTG_lab, xLab='T [' + TGAExp.T_symbol + ']',
         grid=TGAExp.plot_grid, tight_layout=True,
         xLim=xLim, yLim=yLim, xTicks=xTicks, yTicks=yTicks,
         annotate_lttrs=annotate_lttrs, pdf=pdf, svg=svg)
@@ -1570,8 +1570,8 @@ def proximate_multi_plot(exps, filename="Prox",
                               rotation_mode='anchor')
     fig_save(filename + '_prox', out_path, fig, ax, axt, fig_par, tight_layout=True,
         yLab=yLab, ytLab=ytLab,
-        grid=TGAExp.plot_grid, legend=None, 
-        yLim=yLim, ytLim=ytLim, yTicks=yTicks, ytTicks=ytTicks, 
+        grid=TGAExp.plot_grid, legend=None,
+        yLim=yLim, ytLim=ytLim, yTicks=yTicks, ytTicks=ytTicks,
         annotate_lttrs=annotate_lttrs, pdf=pdf, svg=svg)
 
 
@@ -1682,7 +1682,7 @@ def soliddist_multi_plot(exps, filename="Dist",
         yTicks (list, optional): Custom tick locations for the y-axis. Defaults to None.
         print_dfs (bool, optional): Whether to print the dataframes. Defaults to True.
     """
-    
+
     for exp in exps:
         if not exp.soliddist_computed:
             exp.soliddist_analysis()
@@ -1712,10 +1712,10 @@ def soliddist_multi_plot(exps, filename="Dist",
         ax[0].legend(loc='upper left')
         # ax[1].legend(loc='center left')
     fig_save(filename + '_soliddist', out_path, fig, ax, axt, fig_par,
-        xLab='time [min]', 
+        xLab='time [min]',
         yLab=['T [' + TGAExp.T_symbol + ']', TGAExp.TG_lab+'(db)'],
         grid=TGAExp.plot_grid,
-        xLim=xLim, yLim=yLim, xTicks=xTicks, yTicks=yTicks, 
+        xLim=xLim, yLim=yLim, xTicks=xTicks, yTicks=yTicks,
         annotate_lttrs=annotate_lttrs, pdf=pdf, svg=svg)
 
 
@@ -1790,7 +1790,7 @@ def cscd_multi_plot(exps, filename='Fig', paper_col=.78, hgt_mltp=1.25,
     else:
         ax[0].set_yticks([])
     fig_save(filename + '_cscd', out_path, fig, ax, axt, fig_par,
-            legend=legend_cscd, 
+            legend=legend_cscd,
             xLab='T [' + TGAExp.T_symbol + ']', yLab=TGAExp.DTG_lab,
             xLim=xLim, yLim=yLim_cscd, grid=TGAExp.plot_grid,
             annotate_lttrs=annotate_lttrs, pdf=pdf, svg=svg)
@@ -1813,7 +1813,7 @@ def KAS_analysis(exps, ramps, alpha=np.arange(0.05, .9, 0.05)):
     Raises:
         None
     """
-    
+
     for exp in exps:
         if not exp.proximate_computed:
             exp.proximate_analysis()
@@ -1894,7 +1894,7 @@ def KAS_plot_isolines(exps, kas_names=None, filename='KAsIso',
     - y_anchor (float, optional): Y-coordinate for the legend anchor. Default is 1.02.
     - legend_loc (str, optional): Location of the legend. Default is 'best'.
     """
-    
+
     for exp in exps:
         if not exp.KAS_computed:
             print('need KAS analysis')
@@ -1989,7 +1989,7 @@ def KAS_plot_Ea(exps, kas_names=None, filename='KASEa',
     - plot_type (str, optional): Type of plot. Can be 'scatter' or 'line'. Default is 'scatter'.
     - legend_loc (str, optional): Location of the legend. Default is 'best'.
     """
-    
+
     for exp in exps:
         if not exp.KAS_computed:
             exp.KAS_analysis()
@@ -2035,7 +2035,7 @@ def KAS_plot_Ea(exps, kas_names=None, filename='KASEa',
 
 # %%
 if __name__ == "__main__":
-    
+
     folder = '_test'
     # class methods need to be called at the beginning to influence all instances
     TGAExp.set_folder(folder)
@@ -2063,7 +2063,7 @@ if __name__ == "__main__":
     SD2 = TGAExp(name='SDb',
                   filenames=['SDb_1', 'SDb_2', 'SDb_3'],
                   time_moist=38, time_vm=None)
-    #%% 
+    #%%
     a = P1.proximate_report()
     b = P2.proximate_report()
     c = Ox5.oxidation_report()
@@ -2089,6 +2089,6 @@ if __name__ == "__main__":
     #%%
     k = KAS_analysis([Ox5, Ox10, Ox50], [5, 10, 50])
     KAS_plot_isolines([Ox5], filename='Ox5Ox10Ox50')
-    KAS_plot_Ea([Ox5, Ox5], filename='Ox5Ox10Ox50', 
+    KAS_plot_Ea([Ox5, Ox5], filename='Ox5Ox10Ox50',
                 bboxtoanchor=False,
                 leg_cols=2)
