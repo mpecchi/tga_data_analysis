@@ -40,50 +40,13 @@ lnstls = [(0, ()),  # solid
           (0, (1, 10)),  # 'loosely dotted'
           (0, (5, 10)),  # 'loosely dashed'
           (0, (3, 10, 1, 10)),  # 'loosely dashdotted'
-          (0, (3, 10, 1, 10, 1, 10)),
-          (0, ()),  # solid
-          (0, (1, 1)),  # 'densely dotted'
-          (0, (5, 1)),  # 'densely dashed'
-            (0, (3, 1, 1, 1)),  # 'densely dashdotted'
-            (0, (3, 1, 1, 1, 1, 1)),  # 'densely dashdotdotted'
-            (0, (5, 5)),  # 'dashed'
-            (0, (3, 5, 1, 5)),  # 'dashdotted'
-            (0, (1, 5)),  # dotted
-            (0, (3, 5, 1, 5, 1, 5)),  # 'dashdotdotted'
-            (0, (1, 10)),  # 'loosely dotted'
-            (0, (5, 10)),  # 'loosely dashed'
-            (0, (3, 10, 1, 10)),  # 'loosely dashdotted'
-            (0, (3, 10, 1, 10, 1, 10)),]  # 'loosely dashdotdotted'
+          (0, (3, 10, 1, 10, 1, 10))]  # 'loosely dashdotdotted'
 # list with letters for plotting
 lttrs = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
          'o', 'p', 'q', 'r']
 # list with markers for plotting
 mrkrs = ["o", "v", "X", "s", "p", "^", "P", "<", ">", "*", "d", "1", "2", "3",
          "o", "v", "X", "s", "p", "^", "P", "<", ">", "*", "d", "1", "2", "3"]
-
-def paths_create(subfolder=''):
-    ''' This function creates 2 folder paths (independently of the os). \
-        For each path checks the folder existence, if False it creates it.
-    in_path : pathlib object
-        path to the Input folder.
-    out_path : pathlib object
-        path to the Output folder.'''
-    try:  # start from script folder
-        script_path = plib.Path(__file__).parents[0]  # script folder path
-    except NameError:  # if a cell is run alone and the __file__ is not available
-        script_path = plib.Path.cwd()  # the current working directory
-    # create all necessary paths to subfolders starting from the script one
-    if subfolder == '_test':  # only for the _test work in the _test folder
-        in_path = plib.Path(script_path, "_test")
-        out_path = plib.Path(script_path, "_test", 'Output')
-    else:  # in all other cases
-        in_path = plib.Path(script_path, "Input", subfolder)
-        out_path = plib.Path(script_path, "Input", subfolder, 'Output')
-    # check existence of each folders and create them if missing
-    plib.Path(in_path).mkdir(parents=True, exist_ok=True)
-    plib.Path(out_path).mkdir(parents=True, exist_ok=True)
-
-    return in_path, out_path  # returns the two object-paths
 
 
 def fig_create(rows=1, cols=1, plot_type=0, paper_col=1,
@@ -504,12 +467,6 @@ class TGAExp:
     resolution_T_dtg=5
     dtg_w_SavFil=101
     TG_lab='TG [wt%]'
-
-    # @classmethod
-    # def set_folder(cls, new_folder):
-    #     # Update paths based on new folder
-    #     cls.folder = new_folder
-    #     cls.in_path, cls.out_path = paths_create(cls.folder)
 
     @classmethod
     def set_folder_path(cls, path):
