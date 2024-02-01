@@ -12,4 +12,4 @@ PyTGA is a Python module designed for conducting and analyzing Thermogravimetric
 - **Plotting and Visualization**: Functions for TGA data visualization.
 
 ## Example
-The example is available in the example folder (with necessary data) and demonstrates how to use the tga_data_analysis package for basic TGA data analysis and visualization.
+The example is available in the example folder that can be found using the project link homepage. Necessary data are provided. The example demonstrates how to use the tga_data_analysis package for basic TGA data analysis and visualization, the example requires downloading the data, installing the package, and setting the folder path to the example data folder.
