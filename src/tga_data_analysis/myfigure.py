@@ -1,6 +1,6 @@
 import string
 import pathlib as plib
-from typing import Any, Dict
+from typing import Any, Dict, Literal
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
@@ -136,14 +136,16 @@ class MyFigure:
             "y_ticks": None,
             "x_ticklabels": None,
             "y_ticklabels": None,
+            "x_labels_rotation": 0,
             "twinx": False,
             "yt_lab": None,
             "yt_lim": None,
             "yt_ticks": None,
             "yt_ticklabels": None,
             "legend": True,
-            "legend_loc": "best",
+            "legend_loc": "best", # Literal["best", "outside", "upper left", "etc"],
             "legend_ncols": 1,
+            "legend_bbox_xy": (1, 1),
             "annotate_lttrs": False,
             "annotate_lttrs_xy": None,
             "grid": False,
@@ -264,25 +266,42 @@ class MyFigure:
         """
         for sprop in ["legend", "legend_loc", "legend_ncols"]:
             self.broad_props[sprop] = self._broadcast_value_prop(self.kwargs[sprop])
+        self.broad_props['legend_bbox_xy'] = self._broadcast_list_prop(self.kwargs["legend_bbox_xy"])
 
         if self.kwargs["twinx"] is False:
             for i, ax in enumerate(self.axs):
                 if self.broad_props["legend"][i]:
-                    ax.legend(
-                        loc=self.broad_props["legend_loc"][i],
-                        ncol=self.broad_props["legend_ncols"][i],
-                    )
+                    if self.broad_props["legend_loc"][i] != 'outside':
+                        ax.legend(
+                            loc=self.broad_props["legend_loc"][i],
+                            ncol=self.broad_props["legend_ncols"][i],
+                        )
+                    else:
+                        ax.legend(
+                            ncol=self.broad_props["legend_ncols"][i],
+                            loc="upper left",
+                            bbox_to_anchor=self.broad_props['legend_bbox_xy'][i],
+                        )
         else:
             for i, (ax, axt) in enumerate(zip(self.axs, self.axts)):
                 if self.broad_props["legend"][i]:
                     hnd_ax, lab_ax = ax.get_legend_handles_labels()
                     hnd_axt, lab_axt = axt.get_legend_handles_labels()
-                    ax.legend(
-                        hnd_ax + hnd_axt,
-                        lab_ax + lab_axt,
-                        loc=self.broad_props["legend_loc"][i],
-                        ncol=self.broad_props["legend_ncols"][i],
-                    )
+                    if self.broad_props["legend_loc"][i] != 'outside':
+                        ax.legend(
+                            hnd_ax + hnd_axt,
+                            lab_ax + lab_axt,
+                            loc=self.broad_props["legend_loc"][i],
+                            ncol=self.broad_props["legend_ncols"][i],
+                        )
+                    else:
+                        ax.legend(
+                            hnd_ax + hnd_axt,
+                            lab_ax + lab_axt,
+                            ncol=self.broad_props["legend_ncols"][i],
+                            loc="upper left",
+                            bbox_to_anchor=self.broad_props['legend_bbox_xy'][i],
+                        )
 
     def annotate_letters(self) -> None:
         """_summary_
@@ -336,7 +355,7 @@ class MyFigure:
     def update_axes_single_props(self):
         """_summary_
         """
-        for sprop in ["x_lab", "y_lab", "yt_lab", "grid"]:
+        for sprop in ["x_lab", "y_lab", "yt_lab", "grid", "x_labels_rotation"]:
             self.broad_props[sprop] = self._broadcast_value_prop(self.kwargs[sprop])
 
         # Update each axis with the respective properties
@@ -345,10 +364,17 @@ class MyFigure:
             ax.set_ylabel(self.broad_props["y_lab"][i])
             if self.broad_props["grid"][i] is not None:
                 ax.grid(self.broad_props["grid"][i])
-
+            if self.broad_props["x_labels_rotation"][i] != 0:
+                ax.tick_params(
+                    axis='x',
+                    labelrotation=self.broad_props["x_labels_rotation"][i]
+                )
         if self.kwargs["twinx"]:
             for i, axt in enumerate(self.axts):
                 axt.set_ylabel(self.broad_props["yt_lab"][i])
+
+
+
 
     def update_axes_list_props(self):
         """_summary_
