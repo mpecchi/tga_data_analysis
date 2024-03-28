@@ -11,6 +11,7 @@ from .myfigure import MyFigure
 
 # this should be single
 
+
 def KAS_plot_isolines(
     exp: TGAExp,
     filename: str = "plot",
@@ -76,9 +77,7 @@ def KAS_plot_isolines(
         except IndexError:
             xmax = 0
         newx = x[xmin:xmax]
-        myfig.axs[0].plot(
-            newx, exp.kas["v_fit"][i](newx), color=clrs[i], linestyle=lnstls[i]
-        )
+        myfig.axs[0].plot(newx, exp.kas["v_fit"][i](newx), color=clrs[i], linestyle=lnstls[i])
         myfig.axs[0].plot(
             exp.kas["xmatr"][i, :],
             exp.kas["ymatr"][i, :],
@@ -86,9 +85,7 @@ def KAS_plot_isolines(
             linestyle="None",
             marker=mrkrs[i],
         )
-        myfig.axs[0].plot(
-            [], [], color=clrs[i], linestyle=lnstls[i], marker=mrkrs[i], label=lab
-        )
+        myfig.axs[0].plot([], [], color=clrs[i], linestyle=lnstls[i], marker=mrkrs[i], label=lab)
     myfig.save_figure(filename, out_path)
     return myfig
 
@@ -168,9 +165,7 @@ def KAS_plot_Ea(
                 label=labels[k],
             )
         elif plot_type == "line":
-            myfig.axs[0].plot(
-                alpha, kas["Ea"], color=clrs[k], linestyle=lnstls[k], label=labels[k]
-            )
+            myfig.axs[0].plot(alpha, kas["Ea"], color=clrs[k], linestyle=lnstls[k], label=labels[k])
             myfig.axs[0].fill_between(
                 alpha,
                 kas["Ea"] - kas["Ea_std"],
