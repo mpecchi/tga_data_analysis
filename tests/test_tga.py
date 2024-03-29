@@ -1,3 +1,4 @@
+# %%
 import pytest
 import pathlib as plib
 import pandas as pd
@@ -28,6 +29,10 @@ print(m2.std())
 # %%
 p = Project(test_dir)
 # %%
-mis = Sample("MIS", ["MIS_1", "MIS_2", "MIS_3"], p, p.folder_path)
-
+mis = Sample(
+    name="MIS", filenames=["MIS_1", "MIS_2", "MIS_3"], project=p, folder_path=p.folder_path
+)
+mis.load_files()
+mis.proximate_analysis()
+mis.ash_ar.ave()
 # %%

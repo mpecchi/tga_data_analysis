@@ -107,6 +107,7 @@ class Sample:
         self.resolution_sec_deg_dtg = project.resolution_sec_deg_dtg
         self.dtg_window_filter = project.dtg_window_filter
         self.temp_initial_celsius = project.temp_initial_celsius
+        self.dtg_window_filter = project.dtg_window_filter
         if folder_path is None:
             self.folder_path = project.folder_path
         else:
@@ -182,6 +183,15 @@ class Sample:
         self.mp_db_dtg: Measure = Measure()
         self.dtg_db: Measure = Measure()
         self.ave_dev_tga_perc: float | None = None
+        self.temp_i_idx: Measure = Measure()
+        self.temp_i: Measure = Measure()
+        self.temp_p_idx: Measure = Measure()
+        self.temp_p: Measure = Measure()
+        self.temp_b_idx: Measure = Measure()
+        self.temp_b: Measure = Measure()
+        self.dwdtemp_max: Measure = Measure()
+        self.dwdtemp_mean: Measure = Measure()
+        self.S_stk: Measure = Measure()
         # Flag to track if data is loaded
         self.proximate_computed = False
         self.files_loaded = False
@@ -303,7 +313,7 @@ class Sample:
         """
         Performs proximate analysis on the loaded data.
         """
-        if not self.data_loaded:
+        if not self.files_loaded:
             self.load_files()
 
         for f, file in enumerate(self.files.values()):
@@ -371,14 +381,10 @@ class Sample:
                 dtg = np.gradient(self.mp_db_dtg.stk(f), self.temp_dtg)
             if self.dtg_basis == "time":
                 dtg = np.gradient(self.mp_db_dtg.stk(f), self.time_dtg.stk(f))
-            self.dtg_db.add(f, savgol_filter(dtg, self.dtg_w_savgol_filter, 1))
+            self.dtg_db.add(f, savgol_filter(dtg, self.dtg_window_filter, 1))
         # average
         self.ave_dev_tga_perc = np.average(self.mp_db_dtg.std())
-        print(
-            f"Average TG [%] St. Dev. for replicates: {self.mp_db_dtg.std():0.2f}"
-            + str(round(np.average(), 2))
-            + " %"
-        )
+        print(f"Average TG [%] St. Dev. for replicates: {self.mp_db_dtg.std()}")
         self.proximate_computed = True
 
     def oxidation_analysis(self):
@@ -394,54 +400,36 @@ class Sample:
         """
         if not self.proximate_computed:
             self.proximate_analysis()
-        self.Ti_idx_stk = np.zeros(self.n_repl, dtype=int)
-        self.Ti_stk = np.zeros(self.n_repl)
-        self.Tp_idx_stk = np.zeros(self.n_repl, dtype=int)
-        self.Tp_stk = np.zeros(self.n_repl)
-        self.Tb_idx_stk = np.zeros(self.n_repl, dtype=int)
-        self.Tb_stk = np.zeros(self.n_repl)
-        self.dwdT_max_stk = np.zeros(self.n_repl)
-        self.dwdT_mean_stk = np.zeros(self.n_repl)
-        self.S_stk = np.zeros(self.n_repl)
+
         for f, file in enumerate(self.files):
-            threshold = np.max(np.abs(self.dtg_db.stk(f))) * TGAExp.TiTb_threshold
+            threshold: float = np.max(np.abs(self.dtg_db.stk(f))) * self.temp_i_temp_b_threshold
             # Ti = T at which dtg > Ti_thresh wt%/min after moisture removal
-            self.Ti_idx_stk[f] = int(np.argmax(np.abs(self.dtg_db.stk(f)) > threshold))
-            self.Ti_stk[f] = self.T_dtg[self.Ti_idx_stk[f]]
+            self.temp_i_idx.add(f, int(np.argmax(np.abs(self.dtg_db.stk(f)) > threshold)))
+            self.temp_i.add(f, self.temp_dtg[self.temp_i_idx.add(f)])
             # Tp is the T of max abs(dtg)
-            self.Tp_idx_stk[f] = int(np.argmax(np.abs(self.dtg_db.stk(f))))
-            self.Tp_stk[f] = self.T_dtg[self.Tp_idx_stk[f]]
+            self.temp_p_idx.add(f, int(np.argmax(np.abs(self.dtg_db.stk(f)))))
+            self.temp_p.add(f, self.temp__dtg[self.temp_p_idx.add(f)])
             # Tb reaches < 1 wt%/min at end of curve
             try:
-                self.Tb_idx_stk[f] = int(np.flatnonzero(self.dtg_db.stk(f) < -threshold)[-1])
+                self.temp_b_idx.add(f, int(np.flatnonzero(self.dtg_db.stk(f) < -threshold)[-1]))
             except IndexError:  # the curve nevers goes above 1%
-                self.Tb_idx_stk[f] = 0
-            self.Tb_stk[f] = self.T_dtg[self.Tb_idx_stk[f]]
+                self.temp_b_idx.add(f, 0)
+            self.temp_b.add(f, self.temp__dtg[self.temp_b_idx.add(f)])
 
-            self.dwdT_max_stk[f] = np.max(np.abs(self.dtg_db.stk(f)))
-            self.dwdT_mean_stk[f] = np.average(np.abs(self.dtg_db.stk(f)))
+            self.dwdtemp_max.add(f, np.max(np.abs(self.dtg_db.stk(f))))
+            self.dwdtemp_mean.add(f, np.average(np.abs(self.dtg_db.stk(f))))
             # combustion index
-            self.S_stk[f] = (
-                self.dwdT_max_stk[f]
-                * self.dwdT_mean_stk[f]
-                / self.Ti_stk[f]
-                / self.Ti_stk[f]
-                / self.Tb_stk[f]
+            self.S.add(
+                f,
+                (
+                    self.dwdtemp_max.add(f)
+                    * self.dwdtemp_mean.add(f)
+                    / self.temp_i.add(f)
+                    / self.temp_i.add(f)
+                    / self.temp_b.add(f)
+                ),
             )
         # # average
-        self.Ti = np.average(self.Ti_stk)
-        self.Ti_std = np.std(self.Ti_stk)
-        self.Tb = np.average(self.Tb_stk)
-        self.Tb_std = np.std(self.Tb_stk)
-
-        self.dwdT_max = np.average(self.dwdT_max_stk)
-        self.dwdT_max_std = np.std(self.dwdT_max_stk)
-        self.Tp = np.average(self.Tp_stk)
-        self.Tp_std = np.std(self.Tp_stk)
-        self.dwdT_mean = np.average(self.dwdT_mean_stk)
-        self.dwdT_mean_std = np.std(self.dwdT_mean_stk)
-        self.S = np.average(self.S_stk)
-        self.S_std = np.std(self.S_stk)
         self.oxidation_computed = True
 
 
@@ -452,6 +440,21 @@ class Measure:
     Attributes:
         _stk (dict): A dictionary to store the data points or numpy arrays with integer keys.
     """
+
+    std_type: Literal["population", "sample"] = "population"
+    if std_type == "population":
+        np_ddof: int = 0
+    elif std_type == "sample":
+        np_ddof: int = 1
+
+    @classmethod
+    def set_std_type(cls, new_std_type: Literal["population", "sample"]):
+        """"""
+        cls.std_type = new_std_type
+        if new_std_type == "population":
+            cls.np_ddof: int = 0
+        elif new_std_type == "sample":
+            cls.np_ddof: int = 1
 
     def __init__(self):
         """
@@ -508,10 +511,12 @@ class Measure:
         :return: The standard deviation value(s) across all data points or arrays.
         """
         if all(isinstance(v, np.ndarray) for v in self._stk.values()):
-            self._std = np.std(np.column_stack(list(self._stk.values())), axis=1)
+            self._std = np.std(
+                np.column_stack(list(self._stk.values())), axis=1, ddof=Measure.np_ddof
+            )
             return self._std
         else:
-            self._std = np.std(list(self._stk.values()))
+            self._std = np.std(list(self._stk.values()), ddof=Measure.np_ddof)
             return self._std
 
 
