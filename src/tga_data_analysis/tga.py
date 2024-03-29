@@ -21,6 +21,7 @@ class Project:
     def __init__(
         self,
         folder_path: plib.Path,
+        name: str | None = None,
         temp_unit: Literal["Celsius", "Kelvin"] = "Celsius",
         plot_font: Literal["Dejavu Sans", "Times New Roman"] = "Dejavu Sans",
         dtg_basis: Literal["temperature", "time"] = "temperature",
@@ -36,6 +37,10 @@ class Project:
     ):
         self.folder_path = folder_path
         self.out_path = plib.Path(folder_path, "output")
+        if name is None:
+            self.name = self.folder_path.parts[-1]
+        else:
+            self.name = name
         self.temp_unit = temp_unit
         self.plot_font = plot_font
         self.plot_grid = plot_grid
@@ -83,10 +88,10 @@ class Sample:
 
     def __init__(
         self,
+        project: Project,
         name: str,
         filenames: list[str],
-        project: Project,
-        folder_path: plib.Path | None,
+        folder_path: plib.Path | None = None,
         label: str | None = None,
         correct_ash_mg: list[float] | None = None,
         correct_ash_fr: list[float] | None = None,
@@ -96,6 +101,9 @@ class Sample:
         time_vm: float = 147,
         temp_lim_dtg_celsius: tuple[float] | None = None,
     ):
+        # store the sample in the project
+        self.project_name = project.name
+        project.samples[name] = self
         # prject defaults unless specified
 
         self.out_path = project.out_path
@@ -161,7 +169,7 @@ class Sample:
         self.len_files: dict[str : pd.DataFrame] = {}
         self.len_sample: int = 0
 
-        #
+        # proximate
         self.temp: Measure = Measure()
         self.time: Measure = Measure()
         self.m_ar: Measure = Measure()
@@ -183,6 +191,7 @@ class Sample:
         self.mp_db_dtg: Measure = Measure()
         self.dtg_db: Measure = Measure()
         self.ave_dev_tga_perc: float | None = None
+        # oxidation
         self.temp_i_idx: Measure = Measure()
         self.temp_i: Measure = Measure()
         self.temp_p_idx: Measure = Measure()
@@ -191,7 +200,12 @@ class Sample:
         self.temp_b: Measure = Measure()
         self.dwdtemp_max: Measure = Measure()
         self.dwdtemp_mean: Measure = Measure()
-        self.S_stk: Measure = Measure()
+        self.s_combustion_index: Measure = Measure()
+        # soliddist
+        self.temp_dist: Measure = Measure()
+        self.time_dist: Measure = Measure()
+        self.dmp_dist: Measure = Measure()
+        self.loc_dist: Measure = Measure()
         # Flag to track if data is loaded
         self.proximate_computed = False
         self.files_loaded = False
@@ -207,6 +221,7 @@ class Sample:
         self.KAS_report_computed = False
 
         self.load_files()
+        self.proximate_analysis()
 
     def _broadcast_value_prop(self, prop: list | str | float | int | bool) -> list:
         """_summary_
@@ -405,32 +420,66 @@ class Sample:
             threshold: float = np.max(np.abs(self.dtg_db.stk(f))) * self.temp_i_temp_b_threshold
             # Ti = T at which dtg > Ti_thresh wt%/min after moisture removal
             self.temp_i_idx.add(f, int(np.argmax(np.abs(self.dtg_db.stk(f)) > threshold)))
-            self.temp_i.add(f, self.temp_dtg[self.temp_i_idx.add(f)])
+            self.temp_i.add(f, self.temp_dtg[self.temp_i_idx.stk(f)])
             # Tp is the T of max abs(dtg)
             self.temp_p_idx.add(f, int(np.argmax(np.abs(self.dtg_db.stk(f)))))
-            self.temp_p.add(f, self.temp__dtg[self.temp_p_idx.add(f)])
+            self.temp_p.add(f, self.temp_dtg[self.temp_p_idx.stk(f)])
             # Tb reaches < 1 wt%/min at end of curve
             try:
                 self.temp_b_idx.add(f, int(np.flatnonzero(self.dtg_db.stk(f) < -threshold)[-1]))
             except IndexError:  # the curve nevers goes above 1%
                 self.temp_b_idx.add(f, 0)
-            self.temp_b.add(f, self.temp__dtg[self.temp_b_idx.add(f)])
+            self.temp_b.add(f, self.temp_dtg[self.temp_b_idx.stk(f)])
 
             self.dwdtemp_max.add(f, np.max(np.abs(self.dtg_db.stk(f))))
             self.dwdtemp_mean.add(f, np.average(np.abs(self.dtg_db.stk(f))))
             # combustion index
-            self.S.add(
+            self.s_combustion_index.add(
                 f,
                 (
-                    self.dwdtemp_max.add(f)
-                    * self.dwdtemp_mean.add(f)
-                    / self.temp_i.add(f)
-                    / self.temp_i.add(f)
-                    / self.temp_b.add(f)
+                    self.dwdtemp_max.stk(f)
+                    * self.dwdtemp_mean.stk(f)
+                    / self.temp_i.stk(f)
+                    / self.temp_i.stk(f)
+                    / self.temp_b.stk(f)
                 ),
             )
         # # average
         self.oxidation_computed = True
+
+    def soliddist_analysis(self, steps_min: list[float] | None = None):
+        """
+        Perform solid distance analysis.
+
+        Args:
+            steps_min (list, optional): List of minimum steps for analysis.
+              Defaults to [40, 70, 100, 130, 160, 190].
+
+        Returns:
+            None
+        """
+        if steps_min is None:
+            steps_min = [40, 70, 100, 130, 160, 190]
+        if not self.proximate_computed:
+            self.proximate_analysis()
+        self.dist_steps_min = steps_min + ["end"]
+        len_dist_step = len(self.dist_steps_min)
+
+        for f, file in enumerate(self.files):
+            idxs = []
+            for step in steps_min:
+                idxs.append(np.argmax(self.time.stk(f) > step))
+            idxs.append(len(self.time.stk(f)) - 1)
+            self.temp_dist.add(f, self.temp.stk(f)[idxs])
+            self.time_dist.add(f, self.time.stk(f)[idxs])
+
+            self.dmp_dist.add(f, -np.diff(self.mp_db.stk(f)[idxs], prepend=100))
+
+            self.loc_dist.add(
+                f, np.convolve(np.insert(self.mp_db.stk(f)[idxs], 0, 100), [0.5, 0.5], mode="valid")
+            )
+
+        self.soliddist_computed = True
 
 
 class Measure:
@@ -463,6 +512,9 @@ class Measure:
         self._stk: dict[int : np.ndarray | float] = {}
         self._ave: np.ndarray | float | None = None
         self._std: np.ndarray | float | None = None
+
+    def __call__(self):
+        return self.ave()
 
     def add(self, replicate: int, value: np.ndarray | pd.Series | float | int) -> None:
         """
@@ -521,29 +573,36 @@ class Measure:
 
 
 # %%
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    a = Measure()
-    a.add(1, np.array([1, 2, 3]))
-    a.add(2, np.array([2, 3, 4]))
-    a.add(3, np.array([3, 4, 5]))
-    assert np.allclose(a.ave(), np.array([2, 3, 4]))
-    assert np.allclose(a.std(), np.array([0.81649658, 0.81649658, 0.81649658]))
 
-    path: plib.Path = plib.Path(
-        r"C:\Users\mp933\OneDrive - Cornell University\Python\tga_data_analysis\example\data"
-    )
-    mis: "Sample" = Sample(
-        folder_path=path,
-        name="P1",
-        filenames=["MIS_1", "MIS_2", "MIS_3"],
-        time_moist=38,
-        time_vm=147,
-    )
-    mis.load_files()
-    m1: pd.DataFrame = mis.files["MIS_1"]
-    m1["T_C"]
-    # %%
-    mis.proximate_analysis()
-    # def test_Measure()
+test_dir: plib.Path = plib.Path(
+    r"C:\Users\mp933\OneDrive - Cornell University\Python\tga_data_analysis\tests\data"
+)
+print(test_dir)
+
+# %%
+m1 = Measure()
+values = [1, 4, 7]
+for repl, value in enumerate(values):
+    m1.add(repl, value)
+assert m1.ave() == np.average(values)
+assert m1.std() == np.std(values)
+# %%
+m2 = Measure()
+values = [[1, 4, 5], [2, 6, 7], [3, 8, 9]]
+ave = [2, 6, 7]
+std = 0
+for repl, value in enumerate(values):
+    m2.add(repl, value)
+print(m2.ave())
+print(m2.std())
+
+# %%
+p = Project(test_dir, name="test", temp_unit="Kelvin")
+# %%
+# cell = Sample(project=p, name="cell", filenames=["CLSOx5_1", "CLSOx5_2", "CLSOx5_3"])
+# misc = Sample(project=p, name="misc", filenames=["MIS_1", "MIS_2", "MIS_3"])
+sda = Sample(project=p, name="misc", filenames=["SDa_1", "SDa_2", "SDa_3"])
+sda.soliddist_analysis()
 # %%

@@ -6,7 +6,9 @@ import numpy as np
 from tga_data_analysis.tga import Measure, Sample, Project
 
 # %%
-test_dir: plib.Path = plib.Path(plib.Path(__file__).parent, "data")
+test_dir: plib.Path = plib.Path(
+    r"C:\Users\mp933\OneDrive - Cornell University\Python\tga_data_analysis\tests\data"
+)
 print(test_dir)
 
 # %%
@@ -34,5 +36,7 @@ mis = Sample(
 )
 mis.load_files()
 mis.proximate_analysis()
-mis.ash_ar.ave()
+mis.oxidation_analysis()
+# %%
+mis.temp()
 # %%
