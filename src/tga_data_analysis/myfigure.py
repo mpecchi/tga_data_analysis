@@ -1,3 +1,4 @@
+from __future__ import annotations
 import string
 import pathlib as plib
 from typing import Any, Dict, Literal
@@ -75,11 +76,77 @@ mrkrs: list[str] = [
     "3",
 ]
 
+htchs: list[str] = [
+    None,
+    "//",
+    "...",
+    "--",
+    "O",
+    "\\\\",
+    "oo",
+    "\\\\\\",
+    "/////",
+    ".....",
+    "//",
+    "...",
+    "--",
+    "O",
+    "\\\\",
+    "oo",
+    "\\\\\\",
+    "/////",
+    ".....",
+    "//",
+    "...",
+    "--",
+    "O",
+    "\\\\",
+    "oo",
+    "\\\\\\",
+    "/////",
+    ".....",
+    "//",
+    "...",
+    "--",
+    "O",
+    "\\\\",
+    "oo",
+    "\\\\\\",
+    "/////",
+    ".....",
+]
+
 class MyFigure:
+    """
+    A class for creating and customizing figures using matplotlib and seaborn.
+
+    MyFigure provides a structured way to create figures with multiple subplots,
+    allowing for detailed customization of each subplot. It supports features like
+    adjusting axis limits, adding legends, annotating, and creating inset plots,
+    all with an emphasis on easy configurability through keyword arguments.
+
+    :ivar broad_props: A dictionary to store properties that are broadcasted across all axes.
+    :type broad_props: dict
+    :ivar kwargs: A dictionary to store all the configuration keyword arguments.
+    :type kwargs: dict
+    :ivar fig: The main figure object from matplotlib.
+    :type fig: matplotlib.figure.Figure
+    :ivar axs: A list of axes objects corresponding to the subplots in the figure.
+    :type axs: list[matplotlib.axes.Axes]
+    :ivar axts: A list of twin axes objects if 'twinx' is enabled, otherwise None.
+    :type axts: list[matplotlib.axes.Axes] or None
+    :ivar n_axs: The number of axes/subplots in the figure.
+    :type n_axs: int
+
+    The class is designed to work seamlessly with seaborn's styling features,
+    making it suitable for creating publication-quality figures with minimal code.
+    """
 
     @staticmethod
     def _adjust_lims(lims: tuple[float] | None, gap=0.05) -> tuple[float] | None:
-        """_summary_
+        """
+        Adjusts the provided axis limits by a specified gap percentage to add padding
+        around the data.
 
         :param lims: _description_
         :type lims: tuple[float] | None
@@ -98,16 +165,16 @@ class MyFigure:
             return new_lims
 
     def __init__(self, **kwargs: Any) -> None:
-        """_summary_
         """
-        # Default parameters with type hinting for figure creation and saving
+        Initializes a MyFigure object with custom or default settings for creating plots.
+
+        :param kwargs: Keyword arguments to override default figure settings.
+        """
         self.broad_props: dict[str, list] = {}  # broadcasted properties for each axis
         self.kwargs = self.default_kwargs()
         self.kwargs.update(kwargs)  # Override defaults with any kwargs provided
         self.process_kwargs()
 
-
-        # Update defaults with any provided keyword arguments
         sns.set_palette(self.kwargs["color_palette"])
         sns.set_style(self.kwargs["sns_style"], {"font.family": self.kwargs["text_font"]})
 
@@ -118,10 +185,10 @@ class MyFigure:
         self.update_axes_list_props()
 
     def default_kwargs(self) -> Dict[str, Any]:
-        """ Define the default kwargs for the figure.
+        """
+        Defines the default settings for the figure.
 
-        :return: _description_
-        :rtype: Dict[str, Any]
+        :return: A dictionary of default settings.
         """
         defaults = {
             "rows": 1,
@@ -136,16 +203,15 @@ class MyFigure:
             "y_ticks": None,
             "x_ticklabels": None,
             "y_ticklabels": None,
-            "x_labels_rotation": 0,
             "twinx": False,
             "yt_lab": None,
             "yt_lim": None,
             "yt_ticks": None,
             "yt_ticklabels": None,
             "legend": True,
-            "legend_loc": "best", # Literal["best", "outside", "upper left", "etc"],
+            "legend_loc": "best",
             "legend_ncols": 1,
-            "legend_bbox_xy": (1, 1),
+            "legend_title": None,
             "annotate_lttrs": False,
             "annotate_lttrs_xy": None,
             "grid": False,
@@ -156,7 +222,9 @@ class MyFigure:
         return defaults
 
     def process_kwargs(self) -> None:
-        """_summary_
+        """
+        Validates and processes the provided keyword arguments for figure configuration.
+
 
         :raises ValueError: _description_
         :raises ValueError: _description_
@@ -164,25 +232,32 @@ class MyFigure:
         :raises ValueError: _description_
         :raises ValueError: _description_
         """
-        self.kwargs['rows'] = int(self.kwargs['rows'])
-        self.kwargs['cols'] = int(self.kwargs['cols'])
-        self.kwargs['width'] = float(self.kwargs['width'])
-        self.kwargs['height'] = float(self.kwargs['height'])
-        self.kwargs['legend_ncols'] = int(self.kwargs['legend_ncols'])
+        valid_kwargs = set(self.default_kwargs().keys())
 
-        if self.kwargs['rows'] <= 0:
+        # Check for any invalid keyword arguments
+        for kwarg in self.kwargs:
+            if kwarg not in valid_kwargs:
+                raise ValueError(f"Invalid keyword argument: '{kwarg}'")
+        self.kwargs["rows"] = int(self.kwargs["rows"])
+        self.kwargs["cols"] = int(self.kwargs["cols"])
+        self.kwargs["width"] = float(self.kwargs["width"])
+        self.kwargs["height"] = float(self.kwargs["height"])
+        self.kwargs["legend_ncols"] = int(self.kwargs["legend_ncols"])
+
+        if self.kwargs["rows"] <= 0:
             raise ValueError("Number of rows must be positive.")
-        if self.kwargs['cols'] <= 0:
+        if self.kwargs["cols"] <= 0:
             raise ValueError("Number of cols must be positive.")
-        if self.kwargs['width'] <= 0:
+        if self.kwargs["width"] <= 0:
             raise ValueError("Width must be positive.")
-        if self.kwargs['height'] <= 0:
+        if self.kwargs["height"] <= 0:
             raise ValueError("Height must be positive.")
-        if self.kwargs['legend_ncols'] <= 0:
+        if self.kwargs["legend_ncols"] <= 0:
             raise ValueError("Number of legend columns must be positive.")
 
-    def create_figure(self) -> "MyFigure":
-        """_summary_
+    def create_figure(self) -> MyFigure:
+        """
+        Creates the figure and its axes.
 
         :return: _description_
         :rtype: MyFigure
@@ -204,15 +279,16 @@ class MyFigure:
         self.n_axs = len(self.axs)
         return self
 
-    def save_figure(self,
-            filename: str = "figure",
-            out_path: plib.Path | None = plib.Path("."),
-            tight_layout: bool = True,
-            save_as_png: bool = True,
-            save_as_pdf: bool = False,
-            save_as_svg: bool = False,
-            save_as_eps: bool = False,
-            png_transparency: bool = False,
+    def save_figure(
+        self,
+        filename: str = "figure",
+        out_path: plib.Path | None = plib.Path("."),
+        tight_layout: bool = True,
+        save_as_png: bool = True,
+        save_as_pdf: bool = False,
+        save_as_svg: bool = False,
+        save_as_eps: bool = False,
+        png_transparency: bool = False,
     ) -> None:
         """_summary_
 
@@ -262,73 +338,68 @@ class MyFigure:
                 )
 
     def add_legend(self) -> None:
-        """_summary_
-        """
-        for sprop in ["legend", "legend_loc", "legend_ncols"]:
-            self.broad_props[sprop] = self._broadcast_value_prop(self.kwargs[sprop])
-        self.broad_props['legend_bbox_xy'] = self._broadcast_list_prop(self.kwargs["legend_bbox_xy"])
+        """_summary_"""
+        for sprop in ["legend", "legend_loc", "legend_ncols", "legend_title"]:
+            self.broad_props[sprop] = self._broadcast_value_prop(self.kwargs[sprop], sprop)
 
         if self.kwargs["twinx"] is False:
+
             for i, ax in enumerate(self.axs):
                 if self.broad_props["legend"][i]:
-                    if self.broad_props["legend_loc"][i] != 'outside':
-                        ax.legend(
-                            loc=self.broad_props["legend_loc"][i],
-                            ncol=self.broad_props["legend_ncols"][i],
-                        )
-                    else:
-                        ax.legend(
-                            ncol=self.broad_props["legend_ncols"][i],
-                            loc="upper left",
-                            bbox_to_anchor=self.broad_props['legend_bbox_xy'][i],
-                        )
+                    ax.legend(
+                        loc=self.broad_props["legend_loc"][i],
+                        ncol=self.broad_props["legend_ncols"][i],
+                        title=self.broad_props["legend_title"][i],
+                    )
         else:
             for i, (ax, axt) in enumerate(zip(self.axs, self.axts)):
                 if self.broad_props["legend"][i]:
                     hnd_ax, lab_ax = ax.get_legend_handles_labels()
                     hnd_axt, lab_axt = axt.get_legend_handles_labels()
-                    if self.broad_props["legend_loc"][i] != 'outside':
-                        ax.legend(
-                            hnd_ax + hnd_axt,
-                            lab_ax + lab_axt,
-                            loc=self.broad_props["legend_loc"][i],
-                            ncol=self.broad_props["legend_ncols"][i],
-                        )
-                    else:
-                        ax.legend(
-                            hnd_ax + hnd_axt,
-                            lab_ax + lab_axt,
-                            ncol=self.broad_props["legend_ncols"][i],
-                            loc="upper left",
-                            bbox_to_anchor=self.broad_props['legend_bbox_xy'][i],
-                        )
+                    ax.legend(
+                        hnd_ax + hnd_axt,
+                        lab_ax + lab_axt,
+                        loc=self.broad_props["legend_loc"][i],
+                        ncol=self.broad_props["legend_ncols"][i],
+                        title=self.broad_props["legend_title"][i],
+                    )
 
     def annotate_letters(self) -> None:
-        """_summary_
-        """
-        if self.kwargs["annotate_lttrs_xy"] is not None:
-            x_lttrs = self.kwargs["annotate_lttrs_xy"][0]
-            y_lttrs = self.kwargs["annotate_lttrs_xy"][1]
+        """_summary_"""
+        if (
+            self.kwargs["annotate_lttrs_xy"] is not None
+            and isinstance(self.kwargs["annotate_lttrs_xy"], (list, tuple))
+            and len(self.kwargs["annotate_lttrs_xy"]) >= 2
+        ):
+            xylttrs: list | tuple = self.kwargs["annotate_lttrs_xy"]
+            x_lttrs = xylttrs[0]  # pylint: disable=unsubscriptable-object
+            y_lttrs = xylttrs[1]  # pylint: disable=unsubscriptable-object
         else:
             x_lttrs = -0.15
             y_lttrs = -0.15
         if self.kwargs["annotate_lttrs"] is not False:
+            if isinstance(self.kwargs["annotate_lttrs"], str):
+                letters_list = [self.kwargs["annotate_lttrs"]]
+            elif isinstance(self.kwargs["annotate_lttrs"], list, tuple):
+                letters_list = self.kwargs["annotate_lttrs"]
             for i, ax in enumerate(self.axs):
                 ax.annotate(
-                    f"({self.kwargs["annotate_lttrs"][i]})",
+                    f"({letters_list[i]})",
                     xycoords="axes fraction",
                     xy=(0, 0),
                     xytext=(x_lttrs, y_lttrs),
+                    size="large",
                     weight="bold",
                 )
 
     def create_inset(
-        self, ax: Axes,
+        self,
+        ax: Axes,
         ins_x_loc: list[float, float],
         ins_y_loc: list[float, float],
         ins_x_lim: list[float, float],
-        ins_y_lim: list[float, float]
-        ) -> Axes:
+        ins_y_lim: list[float, float],
+    ) -> Axes:
         """_summary_
 
         :param ax: _description_
@@ -353,10 +424,9 @@ class MyFigure:
         return inset
 
     def update_axes_single_props(self):
-        """_summary_
-        """
-        for sprop in ["x_lab", "y_lab", "yt_lab", "grid", "x_labels_rotation"]:
-            self.broad_props[sprop] = self._broadcast_value_prop(self.kwargs[sprop])
+        """_summary_"""
+        for sprop in ["x_lab", "y_lab", "yt_lab", "grid"]:
+            self.broad_props[sprop] = self._broadcast_value_prop(self.kwargs[sprop], sprop)
 
         # Update each axis with the respective properties
         for i, ax in enumerate(self.axs):
@@ -364,22 +434,14 @@ class MyFigure:
             ax.set_ylabel(self.broad_props["y_lab"][i])
             if self.broad_props["grid"][i] is not None:
                 ax.grid(self.broad_props["grid"][i])
-            if self.broad_props["x_labels_rotation"][i] != 0:
-                ax.tick_params(
-                    axis='x',
-                    labelrotation=self.broad_props["x_labels_rotation"][i]
-                )
+
         if self.kwargs["twinx"]:
             for i, axt in enumerate(self.axts):
                 axt.set_ylabel(self.broad_props["yt_lab"][i])
 
-
-
-
     def update_axes_list_props(self):
-        """_summary_
-        """
-        for dprop in [
+        """_summary_"""
+        for lprop in [
             "x_lim",
             "y_lim",
             "yt_lim",
@@ -390,7 +452,7 @@ class MyFigure:
             "y_ticklabels",
             "yt_ticklabels",
         ]:
-            self.broad_props[dprop] = self._broadcast_list_prop(self.kwargs[dprop])
+            self.broad_props[lprop] = self._broadcast_list_prop(self.kwargs[lprop], lprop)
 
         # Update each axis with the respective properties
         for i, ax in enumerate(self.axs):
@@ -416,13 +478,13 @@ class MyFigure:
                 if self.broad_props["yt_ticklabels"][i] is not None:
                     axt.set_yticklabels(self.broad_props["yt_ticklabels"][i])
 
-
-
-    def _broadcast_value_prop(self, prop: list | str | float | int | bool) -> list:
+    def _broadcast_value_prop(self, prop: list | str | float | int | bool, prop_name: str) -> list:
         """_summary_
 
         :param prop: _description_
         :type prop: list | str | float | int | bool
+        :param prop_name: The name of the property for error messages.
+        :type prop_name: str
         :raises ValueError: _description_
         :return: _description_
         :rtype: list
@@ -430,21 +492,22 @@ class MyFigure:
         if prop is None:
             return [None] * self.n_axs
         if isinstance(prop, (list, tuple)):
-            # If it's a list or tuple, but we're not expecting pairs, it's a single value per axis.
             if len(prop) == self.n_axs:
                 return prop
             else:
                 raise ValueError(
-                    f"The size of the property '{prop}' does not match the number of axes."
+                    f"The size of the property '{prop_name}' does not match the number of axes."
                 )
         if isinstance(prop, (str, float, int, bool)):
             return [prop] * self.n_axs
 
-    def _broadcast_list_prop(self, prop: list | None):
+    def _broadcast_list_prop(self, prop: list | None, prop_name: str):
         """_summary_
 
         :param prop: _description_
         :type prop: list | None
+        :param prop_name: The name of the property for error messages.
+        :type prop_name: str
         :raises ValueError: _description_
         :return: _description_
         :rtype: _type_
@@ -452,19 +515,16 @@ class MyFigure:
         if prop is None:
             return [None] * self.n_axs
 
-        # If we're expecting pairs, we need to check for a list of lists or tuples.
         if all(isinstance(item, (list, tuple)) for item in prop) and len(prop) == self.n_axs:
             return prop
         elif isinstance(prop, (list, tuple)) and all(
             isinstance(item, (int, float, str)) for item in prop
         ):
-            # Single pair provided, apply to all axes
             return [prop] * self.n_axs
         else:
             raise ValueError(
-                f"The structure of the property '{prop}' does not match expected pair-wise input."
+                f"The structure of '{prop_name = }' does not match expected pair-wise input."
             )
-
 
 
 if __name__ == "__main__":
@@ -484,13 +544,13 @@ if __name__ == "__main__":
         # x_ticklabels=["a", "c", "d"],
         grid=True,
         annotate_lttrs=["a", "b", "a", "b"],
-        annotate_lttrs_xy=[-.11, -.15]
+        annotate_lttrs_xy=[-0.11, -0.15],
     )
 
-    f.axs[0].plot([0, 1], [0, 3], label='a')
-    f.axts[0].plot([0, 2], [0, 4], label='b')
-    f.axts[0].plot([0, 2], [0, 5], label='ccc')
-    f.axs[1].plot([0, 1], [0, 3], label='aaa')
-    ins = f.create_insex(f.axs[0], [0.6, 0.8], [0.4, 0.6], [0, 0.2], [0,0.2])
-    ins.plot([0, 1], [0, 3], label='a')
+    f.axs[0].plot([0, 1], [0, 3], label="a")
+    f.axts[0].plot([0, 2], [0, 4], label="b")
+    f.axts[0].plot([0, 2], [0, 5], label="ccc")
+    f.axs[1].plot([0, 1], [0, 3], label="aaa")
+    ins = f.create_insex(f.axs[0], [0.6, 0.8], [0.4, 0.6], [0, 0.2], [0, 0.2])
+    ins.plot([0, 1], [0, 3], label="a")
     f.save_figure(filename="my_plot", out_path=plib.Path(r"C:\Users\mp933\Desktop\New folder"))

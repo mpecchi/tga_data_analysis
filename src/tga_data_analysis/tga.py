@@ -13,7 +13,7 @@ from typing import Any
 from scipy.signal import savgol_filter
 from lmfit.models import GaussianModel, LinearModel
 from typing import Literal
-from tga_data_analysis.myfigure import MyFigure  # !!!!
+from tga_data_analysis.myfigure import MyFigure, clrs, lnstls, htchs, mrkrs
 
 
 class Project:
@@ -22,7 +22,7 @@ class Project:
         self,
         folder_path: plib.Path,
         name: str | None = None,
-        temp_unit: Literal["Celsius", "Kelvin"] = "Celsius",
+        temp_unit: Literal["C", "K"] = "C",
         plot_font: Literal["Dejavu Sans", "Times New Roman"] = "Dejavu Sans",
         dtg_basis: Literal["temperature", "time"] = "temperature",
         temp_i_temp_b_threshold: float = 0.01,  # % of the peak that is used for Ti and Tb
@@ -34,6 +34,7 @@ class Project:
         time_moist: float = 38.0,
         time_vm: float = 147.0,
         temp_initial_celsius: float = 40,
+        auto_save_reports: bool = True,
     ):
         self.folder_path = folder_path
         self.out_path = plib.Path(folder_path, "output")
@@ -52,12 +53,14 @@ class Project:
         self.time_moist = time_moist
         self.time_vm = time_vm
         self.temp_initial_celsius = temp_initial_celsius
+        self.auto_save_reports = auto_save_reports
 
-        if self.temp_unit == "Celsius":
+        if self.temp_unit == "C":
             self.temp_symbol = "°C"
-        elif self.temp_unit == "Kelvin":
+        elif self.temp_unit == "K":
             self.temp_symbol = "K"
 
+        self.tg_label = "TG [wt%]"
         if self.dtg_basis == "temperature":
             self.dtg_label = "DTG [wt%/" + self.temp_symbol + "]"
         elif self.dtg_basis == "time":
@@ -108,9 +111,13 @@ class Sample:
 
         self.out_path = project.out_path
         self.temp_unit = project.temp_unit
+        self.temp_symbol = project.temp_symbol
+        self.tg_label = project.tg_label
+        self.dtg_label = project.dtg_label
         self.plot_font = project.plot_font
         self.plot_grid = project.plot_grid
         self.dtg_basis = project.dtg_basis
+        self.auto_save_reports = project.auto_save_reports
         self.temp_i_temp_b_threshold = project.temp_i_temp_b_threshold
         self.resolution_sec_deg_dtg = project.resolution_sec_deg_dtg
         self.dtg_window_filter = project.dtg_window_filter
@@ -151,9 +158,9 @@ class Sample:
             self.temp_lim_dtg_celsius = [120, 880]
         else:
             self.temp_lim_dtg_celsius = temp_lim_dtg_celsius
-        if self.temp_unit == "Celsius":
+        if self.temp_unit == "C":
             self.temp_lim_dtg = self.temp_lim_dtg_celsius
-        elif self.temp_unit == "Kelvin":
+        elif self.temp_unit == "K":
             self.temp_lim_dtg = [t + 273.15 for t in self.temp_lim_dtg_celsius]
         else:
             raise ValueError(f"{self.temp_unit = } is not acceptable")
@@ -170,42 +177,46 @@ class Sample:
         self.len_sample: int = 0
 
         # proximate
-        self.temp: Measure = Measure()
-        self.time: Measure = Measure()
-        self.m_ar: Measure = Measure()
-        self.mp_ar: Measure = Measure()
-        self.idx_moist: Measure = Measure()
-        self.idx_vm: Measure = Measure()
-        self.moist_ar: Measure = Measure()
-        self.ash_ar: Measure = Measure()
-        self.fc_ar: Measure = Measure()
-        self.vm_ar: Measure = Measure()
-        self.mp_db: Measure = Measure()
-        self.ash_db: Measure = Measure()
-        self.fc_db: Measure = Measure()
-        self.vm_db: Measure = Measure()
-        self.mp_daf: Measure = Measure()
-        self.fc_daf: Measure = Measure()
-        self.vm_daf: Measure = Measure()
-        self.time_dtg: Measure = Measure()
-        self.mp_db_dtg: Measure = Measure()
-        self.dtg_db: Measure = Measure()
+        self.temp: Measure = Measure(name="temp_" + self.temp_unit)
+        self.time: Measure = Measure(name="time")
+        self.m_ar: Measure = Measure(name="m_ar")
+        self.mp_ar: Measure = Measure(name="mp_ar")
+        self.idx_moist: Measure = Measure(name="idx_moist")
+        self.idx_vm: Measure = Measure(name="idx_vm")
+        self.moist_ar: Measure = Measure(name="moist_ar")
+        self.ash_ar: Measure = Measure(name="ash_ar")
+        self.fc_ar: Measure = Measure(name="fc_ar")
+        self.vm_ar: Measure = Measure(name="vm_ar")
+        self.mp_db: Measure = Measure(name="mp_db")
+        self.ash_db: Measure = Measure(name="ash_db")
+        self.fc_db: Measure = Measure(name="fc_db")
+        self.vm_db: Measure = Measure(name="vm_db")
+        self.mp_daf: Measure = Measure(name="mp_daf")
+        self.fc_daf: Measure = Measure(name="fc_daf")
+        self.vm_daf: Measure = Measure(name="vm_daf")
+        self.time_dtg: Measure = Measure(name="time_dtg")
+        self.mp_db_dtg: Measure = Measure(name="mp_db_dtg")
+        self.dtg_db: Measure = Measure(name="dtg_db")
         self.ave_dev_tga_perc: float | None = None
         # oxidation
-        self.temp_i_idx: Measure = Measure()
-        self.temp_i: Measure = Measure()
-        self.temp_p_idx: Measure = Measure()
-        self.temp_p: Measure = Measure()
-        self.temp_b_idx: Measure = Measure()
-        self.temp_b: Measure = Measure()
-        self.dwdtemp_max: Measure = Measure()
-        self.dwdtemp_mean: Measure = Measure()
-        self.s_combustion_index: Measure = Measure()
+        self.temp_i_idx: Measure = Measure(name="temp_i_idx")
+        self.temp_i: Measure = Measure(name="temp_i_" + self.temp_unit)
+        self.temp_p_idx: Measure = Measure(name="temp_p_idx")
+        self.temp_p: Measure = Measure(name="temp_p_" + self.temp_unit)
+        self.temp_b_idx: Measure = Measure(name="temp_b_idx")
+        self.temp_b: Measure = Measure(name="temp_b_" + self.temp_unit)
+        self.dwdtemp_max: Measure = Measure(name="dwdtemp_max")
+        self.dwdtemp_mean: Measure = Measure(name="dwdtemp_mean")
+        self.s_combustion_index: Measure = Measure(name="s_combustion_index")
         # soliddist
-        self.temp_dist: Measure = Measure()
-        self.time_dist: Measure = Measure()
-        self.dmp_dist: Measure = Measure()
-        self.loc_dist: Measure = Measure()
+        self.temp_dist: Measure = Measure(name="temp_dist_" + self.temp_unit)
+        self.time_dist: Measure = Measure(name="time_dist")
+        self.dmp_dist: Measure = Measure(name="dmp_dist")
+        self.loc_dist: Measure = Measure(name="loc_dist")
+        # deconvolution
+        self.dcv_best_fit: Measure = Measure(name="dcv_best_fit")
+        self.dcv_r2: Measure = Measure(name="dcv_r2")
+        self.dcv_peaks: list[Measure] = []
         # Flag to track if data is loaded
         self.proximate_computed = False
         self.files_loaded = False
@@ -332,9 +343,9 @@ class Sample:
             self.load_files()
 
         for f, file in enumerate(self.files.values()):
-            if self.temp_unit == "Celsius":
+            if self.temp_unit == "C":
                 self.temp.add(f, file["T_C"])
-            elif self.temp_unit == "Kelvin":
+            elif self.temp_unit == "K":
                 self.temp.add(f, file["T_K"])
             self.time.add(f, file["t_min"])
 
@@ -399,7 +410,7 @@ class Sample:
             self.dtg_db.add(f, savgol_filter(dtg, self.dtg_window_filter, 1))
         # average
         self.ave_dev_tga_perc = np.average(self.mp_db_dtg.std())
-        print(f"Average TG [%] St. Dev. for replicates: {self.mp_db_dtg.std()}")
+        print(f"Average TG [%] St. Dev. for replicates: {self.ave_dev_tga_perc:0.2f} %")
         self.proximate_computed = True
 
     def oxidation_analysis(self):
@@ -416,7 +427,7 @@ class Sample:
         if not self.proximate_computed:
             self.proximate_analysis()
 
-        for f, file in enumerate(self.files):
+        for f in range(self.n_repl):
             threshold: float = np.max(np.abs(self.dtg_db.stk(f))) * self.temp_i_temp_b_threshold
             # Ti = T at which dtg > Ti_thresh wt%/min after moisture removal
             self.temp_i_idx.add(f, int(np.argmax(np.abs(self.dtg_db.stk(f)) > threshold)))
@@ -462,10 +473,8 @@ class Sample:
             steps_min = [40, 70, 100, 130, 160, 190]
         if not self.proximate_computed:
             self.proximate_analysis()
-        self.dist_steps_min = steps_min + ["end"]
-        len_dist_step = len(self.dist_steps_min)
 
-        for f, file in enumerate(self.files):
+        for f in range(self.n_repl):
             idxs = []
             for step in steps_min:
                 idxs.append(np.argmax(self.time.stk(f) > step))
@@ -480,6 +489,421 @@ class Sample:
             )
 
         self.soliddist_computed = True
+
+    def deconv_analysis(
+        self,
+        centers: list[float],
+        sigmas: list[float] | None = None,
+        amplitudes: list[float] | None = None,
+        center_mins: list[float] | None = None,
+        center_maxs: list[float] | None = None,
+        sigma_mins: list[float] | None = None,
+        sigma_maxs: list[float] | None = None,
+        amplitude_mins: list[float] | None = None,
+        amplitude_maxs: list[float] | None = None,
+    ):
+        """
+        Perform deconvolution analysis on the data.
+
+        Args:
+            centers (list): List of peak centers.
+            sigmas (list, optional): List of peak sigmas. Defaults to None.
+            amplitudes (list, optional): List of peak amplitudes. Defaults to None.
+            center_mins (list, optional): List of minimum values for peak centers. Defaults to None.
+            center_maxs (list, optional): List of maximum values for peak centers. Defaults to None.
+            s_mins (list, optional): List of minimum values for peak sigmas. Defaults to None.
+            s_maxs (list, optional): List of maximum values for peak sigmas. Defaults to None.
+            a_mins (list, optional): List of minimum values for peak amplitudes. Defaults to None.
+            a_maxs (list, optional): List of maximum values for peak amplitudes. Defaults to None.
+            TLim (tuple, optional): Tuple specifying the time range for analysis. Defaults to None.
+
+        Returns:
+            None
+        """
+        if not self.proximate_computed:
+            self.proximate_analysis()
+        n_peaks = len(centers)
+        # self.dcv_best_fit_stk = np.zeros((self.len_dtg_db, self.n_repl))
+        # self.dcv_r2_stk = np.zeros(self.n_repl)
+
+        # self.dcv_peaks_stk = np.zeros((self.len_dtg_db, self.n_repl, n_peaks))
+        if sigmas is None:
+            sigmas = [1] * n_peaks
+        if amplitudes is None:
+            amplitudes = [10] * n_peaks
+        if center_mins is None:
+            center_mins = [None] * n_peaks
+        if center_maxs is None:
+            center_maxs = [None] * n_peaks
+        if sigma_mins is None:
+            sigma_mins = [None] * n_peaks
+        if sigma_maxs is None:
+            sigma_maxs = [None] * n_peaks
+        if amplitude_mins is None:
+            amplitude_mins = [0] * n_peaks
+        if amplitude_maxs is None:
+            amplitude_maxs = [None] * n_peaks
+
+        for f in range(self.n_repl):
+            y = np.abs(self.dtg_db.stk(f))
+            model = LinearModel(prefix="bkg_")
+            params = model.make_params(intercept=0, slope=0, vary=False)
+
+            for p in range(n_peaks):
+                prefix = f"peak_{p}"
+                self.dcv_peaks.append(Measure(name=prefix))
+                peak_model = GaussianModel(prefix=prefix)
+                pars = peak_model.make_params()
+                pars[prefix + "center"].set(
+                    value=centers[p], min=center_mins[p], max=center_maxs[p]
+                )
+                pars[prefix + "sigma"].set(value=sigmas[p], min=sigma_mins[p], max=sigma_maxs[p])
+                pars[prefix + "amplitude"].set(
+                    value=amplitudes[p], min=amplitude_mins[p], max=amplitude_maxs[p]
+                )
+                model += peak_model
+                params.update(pars)
+
+            result = model.fit(y, params=params, x=self.temp_dtg)
+            self.dcv_best_fit.add(f, -result.best_fit)
+            self.dcv_r2.add(f, 1 - result.residual.var() / np.var(y))
+            components = result.eval_components(x=self.temp_dtg)
+
+            for p in range(n_peaks):
+                prefix = f"peak_{p}"
+                if prefix in components:
+                    self.dcv_peaks[p].add(f, -components[prefix])
+                else:
+                    self.dcv_peaks[p].add(f, 0)
+
+        self.deconv_computed = True
+
+    def report(
+        self,
+        report_type: Literal[
+            "proximate", "oxidation", "oxidation_extended", "soliddist", "soliddist_extended"
+        ] = "proximate",
+    ):
+        if report_type == "proximate":
+            if not self.proximate_computed:
+                self.proximate_analysis()
+            variables = [self.moist_ar, self.ash_db, self.vm_db, self.fc_db]
+        elif report_type == "oxidation" or report_type == "oxidation_extended":
+            if not self.oxidation_computed:
+                self.oxidation_analysis()
+            variables = [self.temp_i, self.temp_p, self.temp_b, self.s_combustion_index]
+            if report_type == "oxidation_extended":
+                variables += [self.dwdtemp_max, self.dwdtemp_mean]
+
+        elif report_type == "soliddist" or report_type == "soliddist_extended":
+            if not self.soliddist_computed:
+                self.soliddist_analysis()
+            if report_type == "soliddist":
+                variables = []
+                for p in self.temp_dist.ave():
+                    variables.append(Measure(name=f"{p:0.0f} {self.temp_unit}"))
+                for f in range(self.n_repl):
+                    for t, dmp in enumerate(self.dmp_dist.stk(f)):
+                        variables[t].add(f, dmp)
+            elif report_type == "soliddist_extended":
+                variables = [self.temp_dist, self.time_dist, self.dmp_dist]
+        else:
+            raise ValueError(f"{report_type = } is not a valid option")
+
+        var_names = [var.name for var in variables]
+        index = [f"repl_{f}" for f in range(self.n_repl)] + ["ave", "std"]
+        rep_data = []
+
+        for f in range(self.n_repl):
+            rep_data.append([var.stk(f) for var in variables])
+        rep_data.append([var.ave() for var in variables])
+        rep_data.append([var.std() for var in variables])
+
+        report = pd.DataFrame(data=rep_data, columns=var_names, index=index)
+        report.index.name = self.name
+        if self.auto_save_reports:
+            out_path = plib.Path(self.out_path, "single_sample_reports")
+            out_path.mkdir(parents=True, exist_ok=True)
+            report.to_excel(plib.Path(out_path, f"{self.name}_{report_type}.xlsx"))
+        return report
+
+    def plot_tg_dtg(self, **kwargs: dict[str, Any]) -> MyFigure:
+        """
+        Plot the TGA data.
+
+        """
+        if not self.proximate_computed:
+            self.proximate_analysis()
+        out_path = plib.Path(self.out_path, "single_sample_plots")
+        out_path.mkdir(parents=True, exist_ok=True)
+
+        keys = ["height", "width", "grid", "text_font", "x_lab", "y_lab"]
+        values = [
+            8,
+            6,
+            self.plot_grid,
+            self.plot_font,
+            "time [min]",
+            [
+                f"T [{self.temp_symbol}]",
+                f"{self.tg_label} (stb)",
+                f"{self.tg_label} (db)",
+                f"T [{self.temp_symbol}]",
+                f"{self.tg_label} (db)",
+                f"{self.dtg_label} (db)",
+            ],
+        ]
+        for kwk, kwd in zip(keys, values):
+            if kwk not in kwargs.keys():
+                kwargs[kwk] = kwd
+
+        mf = MyFigure(
+            rows=3,
+            cols=2,
+            **kwargs,
+        )
+        # tg plot 0, 2, 4 on the left
+        for f in range(self.n_repl):
+            mf.axs[0].plot(
+                self.time.stk(f),
+                self.temp.stk(f),
+                color=clrs[f],
+                linestyle=lnstls[f],
+                label=self.filenames[f],
+            )
+            mf.axs[2].plot(
+                self.time.stk(f),
+                self.mp_ar.stk(f),
+                color=clrs[f],
+                linestyle=lnstls[f],
+                label=self.filenames[f],
+            )
+            mf.axs[4].plot(
+                self.time.stk(f),
+                self.mp_db.stk(f),
+                color=clrs[f],
+                linestyle=lnstls[f],
+                label=self.filenames[f],
+            )
+            mf.axs[0].vlines(
+                self.time.stk(f)[self.idx_moist.stk(f)],
+                self.temp.stk(f)[self.idx_moist.stk(f)] - 50,
+                self.temp.stk(f)[self.idx_moist.stk(f)] + 50,
+                linestyle=lnstls[f],
+                color=clrs[f],
+            )
+            mf.axs[2].vlines(
+                self.time.stk(f)[self.idx_moist.stk(f)],
+                self.mp_ar.stk(f)[self.idx_moist.stk(f)] - 5,
+                self.mp_ar.stk(f)[self.idx_moist.stk(f)] + 5,
+                linestyle=lnstls[f],
+                color=clrs[f],
+            )
+
+            if self.vm_db() < 99:
+                mf.axs[0].vlines(
+                    self.time.stk(f)[self.idx_vm.stk(f)],
+                    self.temp.stk(f)[self.idx_vm.stk(f)] - 50,
+                    self.temp.stk(f)[self.idx_vm.stk(f)] + 50,
+                    linestyle=lnstls[f],
+                    color=clrs[f],
+                )
+                mf.axs[4].vlines(
+                    self.time.stk(f)[self.idx_vm.stk(f)],
+                    self.mp_db.stk(f)[self.idx_vm.stk(f)] - 5,
+                    self.mp_db.stk(f)[self.idx_vm.stk(f)] + 5,
+                    linestyle=lnstls[f],
+                    color=clrs[f],
+                )
+            # tg plot 1, 3, 5 on the right
+            mf.axs[1].plot(
+                self.time_dtg.stk(f),
+                self.temp_dtg,
+                color=clrs[f],
+                linestyle=lnstls[f],
+                label=self.filenames[f],
+            )
+            mf.axs[3].plot(
+                self.time_dtg.stk(f),
+                self.mp_db_dtg.stk(f),
+                color=clrs[f],
+                linestyle=lnstls[f],
+                label=self.filenames[f],
+            )
+            mf.axs[5].plot(
+                self.time_dtg.stk(f),
+                self.dtg_db.stk(f),
+                color=clrs[f],
+                linestyle=lnstls[f],
+                label=self.filenames[f],
+            )
+            #
+            if self.oxidation_computed:
+                mf.axs[5].vlines(
+                    self.time_dtg.stk(f)[self.temp_i_idx.stk(f)],
+                    ymin=-1.5,
+                    ymax=0,
+                    linestyle=lnstls[f],
+                    color=clrs[f],
+                    label=r"$T_{i}$",
+                )
+                mf.axs[5].vlines(
+                    self.time_dtg.stk(f)[self.temp_p_idx.stk(f)],
+                    ymin=np.min(self.dtg_db.stk(f)),
+                    ymax=np.min(self.dtg_db.stk(f)) / 5,
+                    linestyle=lnstls[f],
+                    color=clrs[f],
+                    label=r"$T_{p}$",
+                )
+                mf.axs[5].vlines(
+                    self.time_dtg[self.temp_b_idx.stk(f)],
+                    ymin=-1.5,
+                    ymax=0,
+                    linestyle=lnstls[f],
+                    color=clrs[f],
+                    label=r"$T_{b}$",
+                )
+        mf.save_figure(self.name + "_tg_dtg", out_path)
+        return mf
+
+    def plot_soliddist(self, **kwargs: dict[str, Any]) -> MyFigure:
+        """
+        Plot the solid distribution analysis.
+
+        Args:
+            paper_col (int): Number of columns in the plot for paper publication (default is 1).
+            hgt_mltp (float): Height multiplier for the plot (default is 1.25).
+
+        Returns:
+            None
+        """
+
+        # slightly different plotting behaviour (uses averages)
+        if not self.soliddist_computed:
+            self.soliddist_analysis()
+        out_path = plib.Path(self.out_path, "single_sample_plots")
+        out_path.mkdir(parents=True, exist_ok=True)
+
+        keys = [
+            "height",
+            "width",
+            "grid",
+            "text_font",
+            "x_lab",
+            "y_lab",
+            "yt_lab",
+            "legend_loc",
+        ]
+        values = [
+            5,
+            6,
+            self.plot_grid,
+            self.plot_font,
+            "time [min]",
+            f"{self.tg_label} (db)",
+            f"T [{self.temp_symbol}]",
+            "center left",
+        ]
+        for kwk, kwd in zip(keys, values):
+            if kwk not in kwargs.keys():
+                kwargs[kwk] = kwd
+
+        mf = MyFigure(
+            rows=1,
+            cols=1,
+            twinx=True,
+            **kwargs,
+        )
+        for f in range(self.n_repl):
+
+            mf.axs[0].plot(
+                self.time.stk(f),
+                self.mp_db.stk(f),
+                color=clrs[f],
+                linestyle=lnstls[f],
+                label=self.filenames[f],
+            )
+            mf.axts[0].plot(self.time.stk(f), self.temp.stk(f))
+
+        for tm, mp, dmp in zip(self.time_dist(), self.loc_dist(), self.dmp_dist()):
+            mf.axs[0].annotate(
+                f"{dmp:0.0f}%", ha="center", va="top", xy=(tm - 10, mp + 1), fontsize=9
+            )
+        mf.save_figure(self.name + "_soliddist", out_path)
+        return mf
+
+    def plot_deconv(self, **kwargs: dict[str, Any]) -> MyFigure:
+        """
+        Plot the deconvolution results.
+
+        Args:
+            filename (str, optional): The filename to save the plot. Defaults to 'Deconv'.
+            x_lim (tuple, optional): The x-axis limits of the plot. Defaults to None.
+            y_lim (tuple, optional): The y-axis limits of the plot. Defaults to None.
+            save_as_pdf (bool, optional): Whether to save the plot as a PDF file. Defaults to False.
+            save_as_svg (bool, optional): Whether to save the plot as an SVG file. Defaults to False.
+            legend (str, optional): The position of the legend in the plot. Defaults to 'best'.
+        """
+
+        if not self.deconv_computed:
+            raise Exception("Deconvolution analysis not computed")
+        out_path = plib.Path(self.out_path, "single_sample_plots")
+        out_path.mkdir(parents=True, exist_ok=True)
+        keys = [
+            "height",
+            "width",
+            "grid",
+            "text_font",
+            "x_lab",
+            "y_lab",
+        ]
+        values = [
+            8,
+            6,
+            self.plot_grid,
+            self.plot_font,
+            f"T [{self.temp_symbol}]",
+            f"{self.dtg_label} (db)",
+        ]
+        for kwk, kwd in zip(keys, values):
+            if kwk not in kwargs.keys():
+                kwargs[kwk] = kwd
+
+        mf = MyFigure(
+            rows=self.n_repl,
+            cols=1,
+            **kwargs,
+        )
+
+        # Plot DTG data
+        for f in range(self.n_repl):
+            mf.axs[f].plot(self.temp_dtg, self.dtg_db.stk(f), color="black", label="DTG")
+            # Plot best fit and individual peaks
+            mf.axs[f].plot(
+                self.temp_dtg,
+                self.dcv_best_fit.stk(f),
+                label="best fit",
+                color="red",
+                linestyle="--",
+            )
+            clrs_p = clrs[:3] + clrs[5:]  # avoid using red
+            for p, peak in enumerate(self.dcv_peaks):
+                if peak.stk(f) is not None:
+                    mf.axs[f].plot(
+                        self.temp_dtg,
+                        peak.stk(f),
+                        label=peak.name,
+                        color=clrs_p[p],
+                        linestyle=lnstls[p],
+                    )
+            mf.axs[f].annotate(
+                f"r$^2$={self.dcv_r2.stk(f):.2f}",
+                xycoords="axes fraction",
+                xy=(0.85, 0.96),
+                size="x-small",
+            )
+        mf.save_figure(self.name + "_deconv", out_path)
+        return mf
 
 
 class Measure:
@@ -505,10 +929,11 @@ class Measure:
         elif new_std_type == "sample":
             cls.np_ddof: int = 1
 
-    def __init__(self):
+    def __init__(self, name: str | None = None):
         """
         Initializes the Measure class with an empty dictionary for _stk.
         """
+        self.name = name
         self._stk: dict[int : np.ndarray | float] = {}
         self._ave: np.ndarray | float | None = None
         self._std: np.ndarray | float | None = None
@@ -599,10 +1024,51 @@ print(m2.ave())
 print(m2.std())
 
 # %%
-p = Project(test_dir, name="test", temp_unit="Kelvin")
+proj = Project(test_dir, name="test", temp_unit="K")
 # %%
-# cell = Sample(project=p, name="cell", filenames=["CLSOx5_1", "CLSOx5_2", "CLSOx5_3"])
-# misc = Sample(project=p, name="misc", filenames=["MIS_1", "MIS_2", "MIS_3"])
-sda = Sample(project=p, name="misc", filenames=["SDa_1", "SDa_2", "SDa_3"])
-sda.soliddist_analysis()
+cell = Sample(
+    project=proj,
+    name="cell",
+    filenames=["CLSOx5_1", "CLSOx5_2", "CLSOx5_3"],
+    time_moist=38,
+    time_vm=None,
+)
+misc = Sample(
+    project=proj, name="misc", filenames=["MIS_1", "MIS_2", "MIS_3"], time_moist=38, time_vm=147
+)
+sda = Sample(
+    project=proj, name="sda", filenames=["SDa_1", "SDa_2", "SDa_3"], time_moist=38, time_vm=None
+)
+sdb = Sample(
+    project=proj, name="sdb", filenames=["SDb_1", "SDb_2", "SDb_3"], time_moist=38, time_vm=None
+)
+dig = Sample(
+    project=proj, name="dig", filenames=["DIG10_1", "DIG10_2", "DIG10_3"], time_moist=22, time_vm=98
+)
+# dig.plot_tg()
+# sda.soliddist_analysis()
+# sda.deconv_analysis(centers=[10, 20])
+# %%
+# for sample in [cell, misc, sda]:
+#     for report_type in [
+#         "proximate",
+#         "oxidation",
+#         "oxidation_extended",
+#         "soliddist",
+#         "soliddist_extended",
+#     ]:
+#         sample.report(report_type)
+
+# %%
+# for sample in [cell, misc, sda]:
+#     sample.plot_tg_dtg()
+
+# %%
+# sda.plot_soliddist()
+# sdb.plot_soliddist()
+# %%
+misc.deconv_analysis([280 + 273, 380 + 273])
+cell.deconv_analysis([310 + 273, 450 + 273, 500 + 273])
+misc.plot_deconv()
+cell.plot_deconv()
 # %%
