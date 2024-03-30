@@ -81,10 +81,307 @@ class Project:
         else:
             self.column_name_mapping = column_name_mapping
         #
-        self.samples: dict[str:Sample] = {}
+        self.samples: dict[str, Sample] = {}
+        self.samplenames: list[str] = []
+
+        self.multireports: dict[str, pd.DataFrame] = {}
+        self.multireport_types_computed: list[str] = []
 
     def add_sample(self, samplename: str, sample: Sample):
-        self.samples[samplename] = sample
+        if samplename not in self.samplenames:
+            self.samplenames.append(samplename)
+            self.samples[samplename] = sample
+        else:
+            raise ValueError(f"{samplename = } already used")
+
+    def multi_report(
+        self,
+        samplenames: list[str] | None = None,
+        labels: list[str] | None = None,
+        report_type: Literal[
+            "proximate", "oxidation", "oxidation_extended", "soliddist", "soliddist_extended"
+        ] = "proximate",
+        report_style: Literal["repl_ave_std", "ave_std", "ave_pm_std"] = "ave_std",
+        decimals_in_ave_pm_std: int = 2,
+        filename: str | None = None,
+    ) -> pd.DataFrame:
+        """
+        Generate a multi-sample proximate report.
+
+        Args:
+            exps (list): List of experiments.
+            filename (str, optional): Name of the output file. Defaults to 'Rep'.
+
+        Returns:
+            pandas.DataFrame: DataFrame containing the multi-sample proximate report.
+        """
+        if samplenames is None:
+            samplenames = self.samplenames
+
+        samples = [self.samples[samplename] for samplename in samplenames]
+
+        if labels is None:
+            labels = samplenames
+        for sample in samples:
+            if report_type not in sample.report_types_computed:
+                sample.report(report_type)
+
+        if report_type == "soliddist":
+            reports = [sample.reports[report_type] for sample in samples]
+            reports = self._reformat_ave_std_columns(reports)
+        elif report_type == "soliddist_extended":
+            raise ValueError(
+                f"{report_type = } not allowed for multireport, use 'soliddist' instead"
+            )
+        else:
+            reports = [sample.reports[report_type] for sample in samples]
+
+        if report_style == "repl_ave_std":
+            # Concatenate all individual reports
+            report = pd.concat(reports, keys=labels)
+            report.index.names = [None, None]  # Remove index names
+
+        elif report_style == "ave_std":
+            # Keep only the average and standard deviation
+            ave_std_dfs = []
+            for label, report in zip(labels, reports):
+                ave_std_dfs.append(report.loc[["ave", "std"]])
+            report = pd.concat(ave_std_dfs, keys=labels)
+            report.index.names = [None, None]  # Remove index names
+
+        elif report_style == "ave_pm_std":
+            # Format as "ave ± std" and use sample name as the index
+            rows = []
+            for label, report in zip(labels, reports):
+                row = {
+                    col: f"{report.at['ave', col]:.{decimals_in_ave_pm_std}f} ± {report.at['std', col]:.{decimals_in_ave_pm_std}f}"
+                    for col in report.columns
+                }
+                rows.append(pd.Series(row, name=label))
+            report = pd.DataFrame(rows)
+
+        else:
+            raise ValueError("Invalid report style provided")
+        self.multireport_types_computed.append(report_type)
+        self.multireports[report_type] = report
+        if self.auto_save_reports:
+            out_path = plib.Path(self.out_path, "multireports")
+            out_path.mkdir(parents=True, exist_ok=True)
+
+            report.to_excel(plib.Path(out_path, f"{self.name}_{report_type}_{report_style}.xlsx"))
+        return report
+
+    def kas_analysis(
+        self,
+        samplenames: list[str] | None = None,
+        ramps: list[float] | None = None,
+        alpha: list[float] | None = None,
+    ):
+        """
+        Perform KAS (Kissinger-Akahira-Sunose) analysis on a set of experiments.
+
+        Args:
+            samplenames (list[str]): List of sample names to analyze.
+            ramps (list[float]): List of ramp values used for each experiment.
+            alpha (list[float]): List of alpha values to investigate. Defaults to np.arange(0.05, .9, 0.05).
+
+        Returns:
+            dict: Results of the KAS analysis.
+        """
+        if samplenames is None:
+            samplenames = self.samplenames
+
+        samples = [self.samples[name] for name in samplenames if name in self.samples]
+        if ramps is None:
+            ramps = [sample.heating_rate_deg_min for sample in samples]
+        if alpha is None:
+            alpha = np.arange(0.05, 0.9, 0.05)
+
+        r_gas_constant = 8.314462618  # Universal gas constant in J/(mol*K)
+        c_to_k = 273.15
+        activation_energies = np.zeros(len(alpha))
+        std_devs = np.zeros(len(alpha))
+        fits = []
+        x_matrix = np.zeros((len(alpha), len(ramps)))
+        y_matrix = np.zeros((len(alpha), len(ramps)))
+
+        for idx, sample in enumerate(samples):
+            temp = sample.temp_dtg + c_to_k if sample.temp_unit == "C" else sample.temp_dtg
+            converted_mass = (sample.mp_db_dtg() - np.min(sample.mp_db_dtg())) / (
+                np.max(sample.mp_db_dtg()) - np.min(sample.mp_db_dtg())
+            )
+            alpha_mass = 1 - converted_mass
+
+            for alpha_idx, alpha_val in enumerate(alpha):
+                conversion_index = np.argmax(alpha_mass > alpha_val)
+                x_matrix[alpha_idx, idx] = 1 / temp[conversion_index] * 1000
+                y_matrix[alpha_idx, idx] = np.log(ramps[idx] / temp[conversion_index] ** 2)
+
+        for i in range(len(alpha)):
+            p, cov = np.polyfit(x_matrix[i, :], y_matrix[i, :], 1, cov=True)
+            fits.append(np.poly1d(p))
+            activation_energies[i] = -p[1] * r_gas_constant
+            std_devs[i] = np.sqrt(cov[0][0]) * r_gas_constant
+
+        shared_kas_analysis_name = "".join(
+            [
+                char
+                for char in samplenames[0]
+                if all(char in samplename for samplename in samplenames)
+            ]
+        )
+        kas_result = {
+            "Ea": activation_energies,
+            "Ea_std": std_devs,
+            "alpha": alpha,
+            "ramps": ramps,
+            "x_matrix": x_matrix,
+            "y_matrix": y_matrix,
+            "fits": fits,
+            "name": shared_kas_analysis_name,
+        }
+
+        for sample in samples:
+            sample.kas = kas_result
+
+        return kas_result
+
+    def _reformat_ave_std_columns(self, reports):
+        """
+        Reformat column names based on the average and standard deviation.
+
+        Args:
+            reports (list of pd.DataFrame): List of reports to reformat column names.
+        """
+        # Check that all reports have the same number of columns
+        num_columns = len(reports[0].columns)
+        if not all(len(report.columns) == num_columns for report in reports):
+            raise ValueError("All reports must have the same number of columns.")
+
+        # Initialize a list to hold the new formatted column names
+        formatted_column_names = []
+
+        # Iterate over each column index
+        for i in range(num_columns):
+            # Extract the numeric part of the column name (assume it ends with ' K' or ' C')
+            column_values = [float(report.columns[i].split()[0]) for report in reports]
+            ave = np.mean(column_values)
+            std = np.std(column_values)
+
+            # Determine the unit (assuming all columns have the same unit)
+            unit = reports[0].columns[i].split()[-1]
+
+            # Create the new column name with the unit
+            formatted_column_name = f"{ave:.0f} ± {std:.0f} {unit}"
+            formatted_column_names.append(formatted_column_name)
+
+        # Rename the columns in each report using the new formatted names
+        for report in reports:
+            report.columns = formatted_column_names
+
+        return reports
+
+    def AAproximate_multi_plot(
+        exps: list[TGAExp],
+        filename: str = "plot",
+        labels: list[str] | None = None,
+        y_lab="mass fraction [wt%]",
+        yt_lab="mean TG deviation [%]",
+        x_labels_rotation: int = 0,
+        **kwargs,
+    ) -> MyFigure:
+        """
+        Generate a multi-plot for proximate analysis.
+
+        Parameters:
+        - exps (list): List of experiments.
+        - filename (str): Name of the output file (default: "Prox").
+        - smpl_labs (list): List of sample labels (default: None).
+        - xlab_rot (int): Rotation angle of x-axis labels (default: 0).
+        - paper_col (float): Color of the plot background (default: 0.8).
+        - hgt_mltp (float): Height multiplier of the plot (default: 1.5).
+        - bboxtoanchor (bool): Whether to place the legend outside the plot area (default: True).
+        - x_anchor (float): X-coordinate of the legend anchor point (default: 1.13).
+        - y_anchor (float): Y-coordinate of the legend anchor point (default: 1.02).
+        - legend_loc (str): Location of the legend (default: 'best').
+        - y_lim (list): Y-axis limits for the bar plot (default: [0, 100]).
+        - yt_lim (list): Y-axis limits for the scatter plot (default: [0, 1]).
+        - y_ticks (list): Y-axis tick positions for the bar plot (default: None).
+        - yt_ticks (list): Y-axis tick positions for the scatter plot (default: None).
+
+        Returns:
+        - None
+        """
+        for exp in exps:
+            if not exp.proximate_computed:
+                exp.proximate_analysis()
+        out_path = plib.Path(self.out_path, "proximate_multiplots")
+        out_path.mkdir(parents=True, exist_ok=True)
+        vars_bar = ["moisture (stb)", "VM (db)", "FC (db)", "ash (db)"]
+        vars_scat = "mean TG dev."
+        if not labels:  # try with labels and use name if no label is given
+            labels = [exp.label if exp.label else exp.name for exp in exps]
+        df_ave = pd.DataFrame(columns=vars_bar, index=labels)
+        df_std = pd.DataFrame(columns=vars_bar, index=labels)
+        df_ave["moisture (stb)"] = [exp.moist_ar for exp in exps]
+        df_ave["VM (db)"] = [exp.vm_db for exp in exps]
+        df_ave["FC (db)"] = [exp.fc_db for exp in exps]
+        df_ave["ash (db)"] = [exp.ash_db for exp in exps]
+        df_std["moisture (stb)"] = [exp.moist_ar_std for exp in exps]
+        df_std["VM (db)"] = [exp.vm_db_std for exp in exps]
+        df_std["FC (db)"] = [exp.fc_db_std for exp in exps]
+        df_std["ash (db)"] = [exp.ash_db_std for exp in exps]
+
+        aveTG = [exp.AveTGstd_p for exp in exps]
+        # remove x_labels_rotation form kwargs as it is dealt with in this fucntion
+        _ = kwargs.pop("x_labels_rotation", None)
+        myfig = MyFigure(
+            rows=1,
+            cols=1,
+            twinx=True,
+            text_font=TGAExp.plot_font,
+            y_lab=y_lab,
+            yt_lab=yt_lab,
+            grid=TGAExp.plot_grid,
+            **kwargs,
+        )
+        df_ave.plot(
+            ax=myfig.axs[0],
+            kind="bar",
+            yerr=df_std,
+            capsize=2,
+            width=0.85,
+            ecolor="k",
+            edgecolor="black",
+            # rot=xlab_rot,
+        )
+        bars = myfig.axs[0].patches
+        patterns = [None, "//", "...", "--"]  # set hatch patterns in correct order
+        hatches = []  # list for hatches in the order of the bars
+        for h in patterns:  # loop over patterns to create bar-ordered hatches
+            for i in range(int(len(bars) / len(patterns))):
+                hatches.append(h)
+        # loop over bars and hatches to set hatches in correct order
+        for bar, hatch in zip(bars, hatches):
+            bar.set_hatch(hatch)
+        myfig.axts[0].errorbar(
+            x=df_ave.index,
+            y=aveTG,
+            linestyle="None",
+            marker=mrkrs[0],
+            color=clrs[4],
+            markersize=10,
+            markeredgecolor="k",
+            label=vars_scat,
+        )
+        if x_labels_rotation == 0:
+            myfig.axs[0].set_xticklabels(df_ave.index, rotation=x_labels_rotation)
+        else:
+            myfig.axs[0].set_xticklabels(
+                df_ave.index, rotation=x_labels_rotation, ha="right", rotation_mode="anchor"
+            )
+        myfig.save_figure(filename, out_path)
+        return myfig
 
 
 class Sample:
@@ -103,10 +400,11 @@ class Sample:
         time_moist: float = 38.0,
         time_vm: float = 147,
         temp_lim_dtg_celsius: tuple[float] | None = None,
+        heating_rate_deg_min: float | None = None,
     ):
         # store the sample in the project
         self.project_name = project.name
-        project.samples[name] = self
+        project.add_sample(name, self)
         # prject defaults unless specified
 
         self.out_path = project.out_path
@@ -147,6 +445,7 @@ class Sample:
         self.name = name
         self.filenames = filenames
         self.n_repl = len(self.filenames)
+        self.heating_rate_deg_min = heating_rate_deg_min
         self.correct_ash_mg = self._broadcast_value_prop(correct_ash_mg)
         self.correct_ash_fr = self._broadcast_value_prop(correct_ash_fr)
         if not label:
@@ -225,11 +524,8 @@ class Sample:
         self.deconv_computed = False
         self.KAS_computed = False
         # for reports
-        self.proximate_report_computed = False
-        self.oxidation_report_computed = False
-        self.soliddist_report_computed = False
-        self.deconv_report_computed = False
-        self.KAS_report_computed = False
+        self.reports: dict[str, pd.DataFrame] = {}
+        self.report_types_computed: list[str] = []
 
         self.load_files()
         self.proximate_analysis()
@@ -583,7 +879,7 @@ class Sample:
         report_type: Literal[
             "proximate", "oxidation", "oxidation_extended", "soliddist", "soliddist_extended"
         ] = "proximate",
-    ):
+    ) -> pd.DataFrame:
         if report_type == "proximate":
             if not self.proximate_computed:
                 self.proximate_analysis()
@@ -621,6 +917,8 @@ class Sample:
 
         report = pd.DataFrame(data=rep_data, columns=var_names, index=index)
         report.index.name = self.name
+        self.report_types_computed.append(report_type)
+        self.reports[report_type] = report
         if self.auto_save_reports:
             out_path = plib.Path(self.out_path, "single_sample_reports")
             out_path.mkdir(parents=True, exist_ok=True)
@@ -756,7 +1054,7 @@ class Sample:
                     label=r"$T_{p}$",
                 )
                 mf.axs[5].vlines(
-                    self.time_dtg[self.temp_b_idx.stk(f)],
+                    self.time_dtg.stk(f)[self.temp_b_idx.stk(f)],
                     ymin=-1.5,
                     ymax=0,
                     linestyle=lnstls[f],
@@ -859,7 +1157,7 @@ class Sample:
         ]
         values = [
             8,
-            6,
+            3.5,
             self.plot_grid,
             self.plot_font,
             f"T [{self.temp_symbol}]",
@@ -1026,30 +1324,27 @@ print(m2.std())
 # %%
 proj = Project(test_dir, name="test", temp_unit="K")
 # %%
-cell = Sample(
-    project=proj,
-    name="cell",
-    filenames=["CLSOx5_1", "CLSOx5_2", "CLSOx5_3"],
-    time_moist=38,
-    time_vm=None,
-)
-misc = Sample(
-    project=proj, name="misc", filenames=["MIS_1", "MIS_2", "MIS_3"], time_moist=38, time_vm=147
-)
-sda = Sample(
-    project=proj, name="sda", filenames=["SDa_1", "SDa_2", "SDa_3"], time_moist=38, time_vm=None
-)
-sdb = Sample(
-    project=proj, name="sdb", filenames=["SDb_1", "SDb_2", "SDb_3"], time_moist=38, time_vm=None
-)
-dig = Sample(
-    project=proj, name="dig", filenames=["DIG10_1", "DIG10_2", "DIG10_3"], time_moist=22, time_vm=98
-)
-# dig.plot_tg()
-# sda.soliddist_analysis()
-# sda.deconv_analysis(centers=[10, 20])
-# %%
-# for sample in [cell, misc, sda]:
+# cell = Sample(
+#     project=proj,
+#     name="cell",
+#     filenames=["CLSOx5_1", "CLSOx5_2", "CLSOx5_3"],
+#     time_moist=38,
+#     time_vm=None,
+# )
+# misc = Sample(
+#     project=proj, name="misc", filenames=["MIS_1", "MIS_2", "MIS_3"], time_moist=38, time_vm=147
+# )
+# sda = Sample(
+#     project=proj, name="sda", filenames=["SDa_1", "SDa_2", "SDa_3"], time_moist=38, time_vm=None
+# )
+# sdb = Sample(
+#     project=proj, name="sdb", filenames=["SDb_1", "SDb_2", "SDb_3"], time_moist=38, time_vm=None
+# )
+# dig = Sample(
+#     project=proj, name="dig", filenames=["DIG10_1", "DIG10_2", "DIG10_3"], time_moist=22, time_vm=98
+# )
+# # %%
+# for sample in proj.samples.values():
 #     for report_type in [
 #         "proximate",
 #         "oxidation",
@@ -1058,17 +1353,56 @@ dig = Sample(
 #         "soliddist_extended",
 #     ]:
 #         sample.report(report_type)
+#     mf = sample.plot_tg_dtg()
+
+# # %%
+# mf = sda.plot_soliddist()
+
+# mf = sdb.plot_soliddist()
+# # %%
+# misc.deconv_analysis([280 + 273, 380 + 273])
+# cell.deconv_analysis([310 + 273, 450 + 273, 500 + 273])
+# mf = misc.plot_deconv()
+# mf = cell.plot_deconv()
+# # %%
+# for report_type in [
+#     "proximate",
+#     "oxidation",
+#     "oxidation_extended",
+#     "soliddist",
+#     # "soliddist_extended",  # not supported
+# ]:
+#     for report_style in ["repl_ave_std", "ave_std", "ave_pm_std"]:
+#         print(f"{report_type = }, {report_style = }")
+#         proj.multi_report(report_type=report_type, report_style=report_style)
 
 # %%
-# for sample in [cell, misc, sda]:
-#     sample.plot_tg_dtg()
-
+cell_ox5 = Sample(
+    project=proj,
+    name="cell_ox5",
+    filenames=["CLSOx5_1", "CLSOx5_2", "CLSOx5_3"],
+    time_moist=38,
+    time_vm=None,
+    heating_rate_deg_min=5,
+)
+cell_ox10 = Sample(
+    project=proj,
+    name="cell_ox10",
+    load_skiprows=8,
+    filenames=["CLSOx10_2", "CLSOx10_3"],
+    time_moist=38,
+    time_vm=None,
+    heating_rate_deg_min=10,
+)
+cell_ox50 = Sample(
+    project=proj,
+    name="cell_ox50",
+    load_skiprows=8,
+    filenames=["CLSOx50_4", "CLSOx50_5"],
+    time_moist=38,
+    time_vm=None,
+    heating_rate_deg_min=50,
+)
 # %%
-# sda.plot_soliddist()
-# sdb.plot_soliddist()
-# %%
-misc.deconv_analysis([280 + 273, 380 + 273])
-cell.deconv_analysis([310 + 273, 450 + 273, 500 + 273])
-misc.plot_deconv()
-cell.plot_deconv()
+kas_cell = proj.kas_analysis(samplenames=["cell_ox5", "cell_ox10", "cell_ox50"])
 # %%
