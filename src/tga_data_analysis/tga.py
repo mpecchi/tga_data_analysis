@@ -34,6 +34,7 @@ class Project:
         time_moist: float = 38.0,
         time_vm: float = 147.0,
         temp_initial_celsius: float = 40,
+        temp_lim_dtg_celsius: tuple[float] | None = None,
         auto_save_reports: bool = True,
     ):
         self.folder_path = folder_path
@@ -65,6 +66,24 @@ class Project:
             self.dtg_label = "DTG [wt%/" + self.temp_symbol + "]"
         elif self.dtg_basis == "time":
             self.dtg_label = "DTG [wt%/min]"
+
+        if temp_lim_dtg_celsius is None:
+            self.temp_lim_dtg_celsius = (120, 880)
+        else:
+            self.temp_lim_dtg_celsius = temp_lim_dtg_celsius
+        if self.temp_unit == "C":
+            self.temp_lim_dtg = self.temp_lim_dtg_celsius
+        elif self.temp_unit == "K":
+            self.temp_lim_dtg = [t + 273.15 for t in self.temp_lim_dtg_celsius]
+        else:
+            raise ValueError(f"{self.temp_unit = } is not acceptable")
+
+        self.len_dtg_db: int = int(
+            (self.temp_lim_dtg[1] - self.temp_lim_dtg[0]) * self.resolution_sec_deg_dtg
+        )
+        self.temp_dtg: np.ndarray = np.linspace(
+            self.temp_lim_dtg[0], self.temp_lim_dtg[1], self.len_dtg_db
+        )
 
         if column_name_mapping is None:
             self.column_name_mapping = {
@@ -205,16 +224,14 @@ class Project:
         Returns:
         - None
         """
-        kw_keys = ["height", "width", "grid", "text_font"]
-        kw_default_values = [
-            4,
-            4,
-            self.plot_grid,
-            self.plot_font,
-        ]
-        for kwk, kwd in zip(kw_keys, kw_default_values):
-            if kwk not in kwargs.keys():
-                kwargs[kwk] = kwd
+        default_kwargs = {
+            "height": 4,
+            "width": 4,
+            "grid": self.plot_grid,
+            "text_font": self.plot_font,
+        }
+        # Update kwargs with the default key-value pairs if the key is not present in kwargs
+        kwargs = {**default_kwargs, **kwargs}
 
         df = self.multireport(samplenames, labels, report_type, report_style="ave_std")
         df_ave = df.xs("ave", level=1, drop_level=False)
@@ -328,19 +345,17 @@ class Project:
             if not sample.proximate_computed:
                 sample.proximate_analysis()
 
-        keys = ["height", "width", "grid", "text_font", "x_lab", "y_lab"]
-        values = [
-            4,
-            4,
-            self.plot_grid,
-            self.plot_font,
-            f"T [{self.temp_symbol}]",
-            self.tg_label,
-        ]
-        for kwk, kwd in zip(keys, values):
-            if kwk not in kwargs.keys():
-                kwargs[kwk] = kwd
-
+        default_kwargs = {
+            "height": 4,
+            "width": 4,
+            "grid": self.plot_grid,
+            "text_font": self.plot_font,
+            "x_lab": f"T [{self.temp_symbol}]",
+            "y_lab": self.tg_label,
+            "x_lim": self.temp_lim_dtg,
+        }
+        # Update kwargs with the default key-value pairs if the key is not present in kwargs
+        kwargs = {**default_kwargs, **kwargs}
         out_path = plib.Path(self.out_path, "multisample_plots")
         out_path.mkdir(parents=True, exist_ok=True)
         myfig = MyFigure(
@@ -363,83 +378,159 @@ class Project:
                 color=clrs[i],
                 alpha=0.3,
             )
-        myfig.save_figure(filename, out_path)
+        myfig.save_figure(filename + "_tg", out_path)
         return myfig
 
-    def kas_analysis(
+    def plot_multi_dtg(
         self,
+        filename: str = "plot",
         samplenames: list[str] | None = None,
-        ramps: list[float] | None = None,
-        alpha: list[float] | None = None,
-    ):
+        labels: list[str] | None = None,
+        **kwargs,
+    ) -> MyFigure:
         """
-        Perform KAS (Kissinger-Akahira-Sunose) analysis on a set of experiments.
+        Plot multiple thermogravimetric (TG) curves.
 
         Args:
-            samplenames (list[str]): List of sample names to analyze.
-            ramps (list[float]): List of ramp values used for each experiment.
-            alpha (list[float]): List of alpha values to investigate. Defaults to np.arange(0.05, .9, 0.05).
+            exps (list): List of experimental data objects.
+            filename (str, optional): Name of the output file. Defaults to 'Fig'.
+            paper_col (float, optional): Width of the figure in inches. Defaults to 0.78.
+            hgt_mltp (float, optional): Height multiplier of the figure. Defaults to 1.25.
+            x_lim (tuple, optional): Limits of the x-axis. Defaults to None.
+            y_lim (list, optional): Limits of the y-axis. Defaults to [0, 100].
+            y_ticks (list, optional): Custom y-axis tick locations. Defaults to None.
+            lttrs (bool, optional): Whether to annotate letters on the plot. Defaults to False.
+            save_as_pdf (bool, optional): Whether to save the figure as a PDF file. Defaults to False.
+            save_as_svg (bool, optional): Whether to save the figure as an SVG file. Defaults to False.
 
         Returns:
-            dict: Results of the KAS analysis.
+            None
         """
         if samplenames is None:
             samplenames = self.samplenames
 
-        samples = [self.samples[name] for name in samplenames if name in self.samples]
-        if ramps is None:
-            ramps = [sample.heating_rate_deg_min for sample in samples]
-        if alpha is None:
-            alpha = np.arange(0.05, 0.9, 0.05)
+        samples = [self.samples[samplename] for samplename in samplenames]
 
-        r_gas_constant = 8.314462618  # Universal gas constant in J/(mol*K)
-        c_to_k = 273.15
-        activation_energies = np.zeros(len(alpha))
-        std_devs = np.zeros(len(alpha))
-        fits = []
-        x_matrix = np.zeros((len(alpha), len(ramps)))
-        y_matrix = np.zeros((len(alpha), len(ramps)))
-
-        for idx, sample in enumerate(samples):
-            temp = sample.temp_dtg + c_to_k if sample.temp_unit == "C" else sample.temp_dtg
-            converted_mass = (sample.mp_db_dtg() - np.min(sample.mp_db_dtg())) / (
-                np.max(sample.mp_db_dtg()) - np.min(sample.mp_db_dtg())
-            )
-            alpha_mass = 1 - converted_mass
-
-            for alpha_idx, alpha_val in enumerate(alpha):
-                conversion_index = np.argmax(alpha_mass > alpha_val)
-                x_matrix[alpha_idx, idx] = 1 / temp[conversion_index] * 1000
-                y_matrix[alpha_idx, idx] = np.log(ramps[idx] / temp[conversion_index] ** 2)
-
-        for i in range(len(alpha)):
-            p, cov = np.polyfit(x_matrix[i, :], y_matrix[i, :], 1, cov=True)
-            fits.append(np.poly1d(p))
-            activation_energies[i] = -p[1] * r_gas_constant
-            std_devs[i] = np.sqrt(cov[0][0]) * r_gas_constant
-
-        shared_kas_analysis_name = "".join(
-            [
-                char
-                for char in samplenames[0]
-                if all(char in samplename for samplename in samplenames)
-            ]
-        )
-        kas_result = {
-            "Ea": activation_energies,
-            "Ea_std": std_devs,
-            "alpha": alpha,
-            "ramps": ramps,
-            "x_matrix": x_matrix,
-            "y_matrix": y_matrix,
-            "fits": fits,
-            "name": shared_kas_analysis_name,
-        }
-
+        if labels is None:
+            labels = samplenames
         for sample in samples:
-            sample.kas = kas_result
+            if not sample.proximate_computed:
+                sample.proximate_analysis()
 
-        return kas_result
+        default_kwargs = {
+            "height": 4,
+            "width": 4,
+            "grid": self.plot_grid,
+            "text_font": self.plot_font,
+            "x_lab": f"T [{self.temp_symbol}]",
+            "y_lab": self.dtg_label,
+            "x_lim": self.temp_lim_dtg,
+        }
+        # Update kwargs with the default key-value pairs if the key is not present in kwargs
+        kwargs = {**default_kwargs, **kwargs}
+
+        out_path = plib.Path(self.out_path, "multisample_plots")
+        out_path.mkdir(parents=True, exist_ok=True)
+        myfig = MyFigure(
+            rows=1,
+            cols=1,
+            **kwargs,
+        )
+        for i, sample in enumerate(samples):
+            myfig.axs[0].plot(
+                sample.temp_dtg,
+                sample.dtg_db.ave(),
+                color=clrs[i],
+                linestyle=lnstls[i],
+                label=labels[i],
+            )
+            myfig.axs[0].fill_between(
+                sample.temp_dtg,
+                sample.dtg_db.ave() - sample.dtg_db.std(),
+                sample.dtg_db.ave() + sample.dtg_db.std(),
+                color=clrs[i],
+                alpha=0.3,
+            )
+        myfig.save_figure(filename + "_dtg", out_path)
+        return myfig
+
+    def plot_multi_soliddist(
+        self,
+        filename: str = "plot",
+        samplenames: list[str] | None = None,
+        labels: list[str] | None = None,
+        **kwargs,
+    ) -> MyFigure:
+        """
+        Plot multiple thermogravimetric (TG) curves.
+
+        Args:
+            exps (list): List of experimental data objects.
+            filename (str, optional): Name of the output file. Defaults to 'Fig'.
+            paper_col (float, optional): Width of the figure in inches. Defaults to 0.78.
+            hgt_mltp (float, optional): Height multiplier of the figure. Defaults to 1.25.
+            x_lim (tuple, optional): Limits of the x-axis. Defaults to None.
+            y_lim (list, optional): Limits of the y-axis. Defaults to [0, 100].
+            y_ticks (list, optional): Custom y-axis tick locations. Defaults to None.
+            lttrs (bool, optional): Whether to annotate letters on the plot. Defaults to False.
+            save_as_pdf (bool, optional): Whether to save the figure as a PDF file. Defaults to False.
+            save_as_svg (bool, optional): Whether to save the figure as an SVG file. Defaults to False.
+
+        Returns:
+            None
+        """
+        if samplenames is None:
+            samplenames = self.samplenames
+
+        samples = [self.samples[samplename] for samplename in samplenames]
+
+        if labels is None:
+            labels = samplenames
+        for sample in samples:
+            if not sample.proximate_computed:
+                sample.proximate_analysis()
+
+        default_kwargs = {
+            "height": 4,
+            "width": 5,
+            "grid": self.plot_grid,
+            "text_font": self.plot_font,
+            "x_lab": "time [min]",
+            "y_lab": self.tg_label,
+            "yt_lab": f"T [{self.temp_symbol}]",
+            "legend_loc": "center left",
+        }
+        # Update kwargs with the default key-value pairs if the key is not present in kwargs
+        kwargs = {**default_kwargs, **kwargs}
+
+        out_path = plib.Path(self.out_path, "multisample_plots")
+        out_path.mkdir(parents=True, exist_ok=True)
+        myfig = MyFigure(
+            rows=1,
+            twinx=True,
+            **kwargs,
+        )
+        myfig.axts[0].plot(
+            samples[0].time.ave(), samples[0].temp.ave(), color="k", linestyle=lnstls[1], label="T"
+        )
+        for i, sample in enumerate(samples):
+
+            myfig.axs[0].plot(
+                sample.time.ave(),
+                sample.mp_db.ave(),
+                color=clrs[i],
+                linestyle=lnstls[i],
+                label=labels[i],
+            )
+            myfig.axs[0].fill_between(
+                sample.time.ave(),
+                sample.mp_db.ave() - sample.mp_db.std(),
+                sample.mp_db.ave() + sample.mp_db.std(),
+                color=clrs[i],
+                alpha=0.3,
+            )
+        myfig.save_figure(filename + "_soliddist", out_path)
+        return myfig
 
     def _reformat_ave_std_columns(self, reports):
         """
@@ -492,7 +583,6 @@ class Sample:
         load_skiprows: int = 0,
         time_moist: float = 38.0,
         time_vm: float = 147,
-        temp_lim_dtg_celsius: tuple[float] | None = None,
         heating_rate_deg_min: float | None = None,
     ):
         # store the sample in the project
@@ -549,23 +639,6 @@ class Sample:
         else:
             self.label = label
 
-        if temp_lim_dtg_celsius is None:
-            self.temp_lim_dtg_celsius = [120, 880]
-        else:
-            self.temp_lim_dtg_celsius = temp_lim_dtg_celsius
-        if self.temp_unit == "C":
-            self.temp_lim_dtg = self.temp_lim_dtg_celsius
-        elif self.temp_unit == "K":
-            self.temp_lim_dtg = [t + 273.15 for t in self.temp_lim_dtg_celsius]
-        else:
-            raise ValueError(f"{self.temp_unit = } is not acceptable")
-
-        self.len_dtg_db: int = int(
-            (self.temp_lim_dtg[1] - self.temp_lim_dtg[0]) * project.resolution_sec_deg_dtg
-        )
-        self.temp_dtg: np.ndarray = np.linspace(
-            self.temp_lim_dtg[0], self.temp_lim_dtg[1], self.len_dtg_db
-        )
         # for variables and computations
         self.files: dict[str : pd.DataFrame] = {}
         self.len_files: dict[str : pd.DataFrame] = {}
@@ -1389,137 +1462,140 @@ class Measure:
 
 
 # %%
-# if __name__ == "__main__":
+if __name__ == "__main__":
 
+    test_dir: plib.Path = plib.Path(
+        r"C:\Users\mp933\OneDrive - Cornell University\Python\tga_data_analysis\tests\data"
+    )
 
-test_dir: plib.Path = plib.Path(
-    r"C:\Users\mp933\OneDrive - Cornell University\Python\tga_data_analysis\tests\data"
-)
+    # %%
+    m1 = Measure()
+    values = [1, 4, 7]
+    for repl, value in enumerate(values):
+        m1.add(repl, value)
+    assert m1.ave() == np.average(values)
+    assert m1.std() == np.std(values)
+    assert m1() == m1.ave()
+    # %%
+    m2 = Measure()
+    values = [[1, 4, 5], [2, 6, 7], [3, 8, 9]]
+    ave = [2, 6, 7]
+    std = 0
+    for repl, value in enumerate(values):
+        m2.add(repl, value)
+    print(m2.ave())
+    print(m2.std())
 
-# %%
-# m1 = Measure()
-# values = [1, 4, 7]
-# for repl, value in enumerate(values):
-#     m1.add(repl, value)
-# assert m1.ave() == np.average(values)
-# assert m1.std() == np.std(values)
-# # %%
-# m2 = Measure()
-# values = [[1, 4, 5], [2, 6, 7], [3, 8, 9]]
-# ave = [2, 6, 7]
-# std = 0
-# for repl, value in enumerate(values):
-#     m2.add(repl, value)
-# print(m2.ave())
-# print(m2.std())
+    # %%
+    proj = Project(test_dir, name="test", temp_unit="K")
+    # %%
+    cell = Sample(
+        project=proj,
+        name="cell",
+        filenames=["CLSOx5_1", "CLSOx5_2", "CLSOx5_3"],
+        time_moist=38,
+        time_vm=None,
+    )
+    mf = cell.plot_tg_dtg(x_ticklabels_rotation=0)
+    # %%
+    #
+    # %%
+    # misc = Sample(
+    #     project=proj, name="misc", filenames=["MIS_1", "MIS_2", "MIS_3"], time_moist=38, time_vm=147
+    # )
+    proj = Project(test_dir, name="test", temp_unit="C")
+    sda = Sample(
+        project=proj, name="sda", filenames=["SDa_1", "SDa_2", "SDa_3"], time_moist=38, time_vm=None
+    )
+    sdb = Sample(
+        project=proj, name="sdb", filenames=["SDb_1", "SDb_2", "SDb_3"], time_moist=38, time_vm=None
+    )
+    # %%
+    proj.plot_multi_soliddist(labels=["sample 1", "sample 2", "c"])
+    # %%
+    sda.plot_soliddist()
+    rep = proj.multireport(report_type="soliddist")
+    rep = proj.plot_multireport(
+        report_type="soliddist",
+        legend_loc="upper center",
+        color_palette="rocket",
+        color_palette_n_colors=7,
+    )
+    # %%
+    # dig = Sample(
+    #     project=proj, name="dig", filenames=["DIG10_1", "DIG10_2", "DIG10_3"], time_moist=22, time_vm=98
+    # )
+    # # %%
+    # for sample in proj.samples.values():
+    #     for report_type in [
+    #         "proximate",
+    #         "oxidation",
+    #         "oxidation_extended",
+    #         "soliddist",
+    #         "soliddist_extended",
+    #     ]:
+    #         sample.report(report_type)
+    #     mf = sample.plot_tg_dtg()
 
-# %%
-proj = Project(test_dir, name="test", temp_unit="K")
-# %%
-cell = Sample(
-    project=proj,
-    name="cell",
-    filenames=["CLSOx5_1", "CLSOx5_2", "CLSOx5_3"],
-    time_moist=38,
-    time_vm=None,
-)
-mf = cell.plot_tg_dtg(x_ticklabels_rotation=0)
-# %%
-#
-# %%
-# misc = Sample(
-#     project=proj, name="misc", filenames=["MIS_1", "MIS_2", "MIS_3"], time_moist=38, time_vm=147
-# )
-proj = Project(test_dir, name="test", temp_unit="C")
-sda = Sample(
-    project=proj, name="sda", filenames=["SDa_1", "SDa_2", "SDa_3"], time_moist=38, time_vm=None
-)
-sdb = Sample(
-    project=proj, name="sdb", filenames=["SDb_1", "SDb_2", "SDb_3"], time_moist=38, time_vm=None
-)
-proj.plot_multi_tg()
-# %%
-sda.plot_soliddist()
-rep = proj.multireport(report_type="soliddist")
-rep = proj.plot_multireport(
-    report_type="soliddist",
-    legend_loc="upper center",
-    color_palette="rocket",
-    color_palette_n_colors=7,
-)
-# %%
-# dig = Sample(
-#     project=proj, name="dig", filenames=["DIG10_1", "DIG10_2", "DIG10_3"], time_moist=22, time_vm=98
-# )
-# # %%
-# for sample in proj.samples.values():
-#     for report_type in [
-#         "proximate",
-#         "oxidation",
-#         "oxidation_extended",
-#         "soliddist",
-#         "soliddist_extended",
-#     ]:
-#         sample.report(report_type)
-#     mf = sample.plot_tg_dtg()
+    # # %%
+    # mf = sda.plot_soliddist()
 
-# # %%
-# mf = sda.plot_soliddist()
+    # mf = sdb.plot_soliddist()
+    # # %%
+    # misc.deconv_analysis([280 + 273, 380 + 273])
+    # cell.deconv_analysis([310 + 273, 450 + 273, 500 + 273])
+    # mf = misc.plot_deconv()
+    # mf = cell.plot_deconv()
+    # # %%
+    # for report_type in [
+    #     "proximate",
+    #     "oxidation",
+    #     "oxidation_extended",
+    #     "soliddist",
+    #     # "soliddist_extended",  # not supported
+    # ]:
+    #     for report_style in ["repl_ave_std", "ave_std", "ave_pm_std"]:
+    #         print(f"{report_type = }, {report_style = }")
+    #         proj.multi_report(report_type=report_type, report_style=report_style)
 
-# mf = sdb.plot_soliddist()
-# # %%
-# misc.deconv_analysis([280 + 273, 380 + 273])
-# cell.deconv_analysis([310 + 273, 450 + 273, 500 + 273])
-# mf = misc.plot_deconv()
-# mf = cell.plot_deconv()
-# # %%
-# for report_type in [
-#     "proximate",
-#     "oxidation",
-#     "oxidation_extended",
-#     "soliddist",
-#     # "soliddist_extended",  # not supported
-# ]:
-#     for report_style in ["repl_ave_std", "ave_std", "ave_pm_std"]:
-#         print(f"{report_type = }, {report_style = }")
-#         proj.multi_report(report_type=report_type, report_style=report_style)
+    # %%
+    cell_ox5 = Sample(
+        project=proj,
+        name="cell_ox5",
+        filenames=["CLSOx5_1", "CLSOx5_2", "CLSOx5_3"],
+        time_moist=38,
+        time_vm=None,
+        heating_rate_deg_min=5,
+    )
+    cell_ox10 = Sample(
+        project=proj,
+        name="cell_ox10",
+        load_skiprows=8,
+        filenames=["CLSOx10_2", "CLSOx10_3"],
+        time_moist=38,
+        time_vm=None,
+        heating_rate_deg_min=10,
+    )
+    cell_ox50 = Sample(
+        project=proj,
+        name="cell_ox50",
+        load_skiprows=8,
+        filenames=["CLSOx50_4", "CLSOx50_5"],
+        time_moist=38,
+        time_vm=None,
+        heating_rate_deg_min=50,
+    )
+    # %%
+    # kas_cell = proj.kas_analysis(samplenames=["cell_ox5", "cell_ox10", "cell_ox50"])
+    # %%
+    rep = proj.plot_multireport(
+        report_type="proximate",
+        x_ticklabels_rotation=30,
+        legend_loc="best",
+        legend_bbox_xy=(1, 1.01),
+    )
+    # %%
+    rep = proj.plot_multireport(report_type="oxidation", x_ticklabels_rotation=0)
+    # %%
 
-# %%
-cell_ox5 = Sample(
-    project=proj,
-    name="cell_ox5",
-    filenames=["CLSOx5_1", "CLSOx5_2", "CLSOx5_3"],
-    time_moist=38,
-    time_vm=None,
-    heating_rate_deg_min=5,
-)
-cell_ox10 = Sample(
-    project=proj,
-    name="cell_ox10",
-    load_skiprows=8,
-    filenames=["CLSOx10_2", "CLSOx10_3"],
-    time_moist=38,
-    time_vm=None,
-    heating_rate_deg_min=10,
-)
-cell_ox50 = Sample(
-    project=proj,
-    name="cell_ox50",
-    load_skiprows=8,
-    filenames=["CLSOx50_4", "CLSOx50_5"],
-    time_moist=38,
-    time_vm=None,
-    heating_rate_deg_min=50,
-)
-# %%
-# kas_cell = proj.kas_analysis(samplenames=["cell_ox5", "cell_ox10", "cell_ox50"])
-# %%
-rep = proj.plot_multireport(
-    report_type="proximate", x_ticklabels_rotation=30, legend_loc="best", legend_bbox_xy=(1, 1.01)
-)
-# %%
-rep = proj.plot_multireport(report_type="oxidation", x_ticklabels_rotation=0)
-# %%
-
-
-# %%
+    # %%
