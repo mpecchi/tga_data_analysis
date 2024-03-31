@@ -4,8 +4,10 @@ import pathlib as plib
 from typing import Any, Dict, Literal
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
+
 import seaborn as sns
 
 
@@ -116,6 +118,7 @@ htchs: list[str] = [
     ".....",
 ]
 
+
 class MyFigure:
     """
     A class for creating and customizing figures using matplotlib and seaborn.
@@ -175,7 +178,7 @@ class MyFigure:
         self.kwargs.update(kwargs)  # Override defaults with any kwargs provided
         self.process_kwargs()
 
-        sns.set_palette(self.kwargs["color_palette"])
+        sns.set_palette(self.kwargs["color_palette"], self.kwargs["color_palette_n_colors"])
         sns.set_style(self.kwargs["sns_style"], {"font.family": self.kwargs["text_font"]})
 
         self.create_figure()
@@ -203,7 +206,8 @@ class MyFigure:
             "y_ticks": None,
             "x_ticklabels": None,
             "y_ticklabels": None,
-            "twinx": False,
+            "x_ticklabels_rotation": 0,
+            "twinx": None,
             "yt_lab": None,
             "yt_lim": None,
             "yt_ticks": None,
@@ -212,10 +216,12 @@ class MyFigure:
             "legend_loc": "best",
             "legend_ncols": 1,
             "legend_title": None,
-            "annotate_lttrs": False,
+            "legend_bbox_xy": None,
+            "annotate_lttrs": None,
             "annotate_lttrs_xy": None,
-            "grid": False,
+            "grid": None,
             "color_palette": "deep",
+            "color_palette_n_colors": None,
             "text_font": "Dejavu Sans",
             "sns_style": "ticks",
         }
@@ -314,6 +320,11 @@ class MyFigure:
         self.update_axes_list_props()
 
         self.add_legend()
+
+        self.apply_hatch_patterns()
+
+        self.rotate_x_labels()
+
         try:
             self.fig.align_labels()  # align labels of subplots, needed only for multi plot
         except AttributeError:
@@ -341,8 +352,10 @@ class MyFigure:
         """_summary_"""
         for sprop in ["legend", "legend_loc", "legend_ncols", "legend_title"]:
             self.broad_props[sprop] = self._broadcast_value_prop(self.kwargs[sprop], sprop)
+        for lprop in ["legend_bbox_xy"]:
+            self.broad_props[lprop] = self._broadcast_list_prop(self.kwargs[lprop], lprop)
 
-        if self.kwargs["twinx"] is False:
+        if self.kwargs["twinx"] is None:
 
             for i, ax in enumerate(self.axs):
                 if self.broad_props["legend"][i]:
@@ -350,7 +363,13 @@ class MyFigure:
                         loc=self.broad_props["legend_loc"][i],
                         ncol=self.broad_props["legend_ncols"][i],
                         title=self.broad_props["legend_title"][i],
+                        bbox_to_anchor=(
+                            self.broad_props["legend_bbox_xy"][i]
+                            if self.broad_props["legend_bbox_xy"][i] is not None
+                            else None
+                        ),
                     )
+
         else:
             for i, (ax, axt) in enumerate(zip(self.axs, self.axts)):
                 if self.broad_props["legend"][i]:
@@ -362,6 +381,11 @@ class MyFigure:
                         loc=self.broad_props["legend_loc"][i],
                         ncol=self.broad_props["legend_ncols"][i],
                         title=self.broad_props["legend_title"][i],
+                        bbox_to_anchor=(
+                            self.broad_props["legend_bbox_xy"][i]
+                            if self.broad_props["legend_bbox_xy"][i] is not None
+                            else None
+                        ),
                     )
 
     def annotate_letters(self) -> None:
@@ -377,10 +401,10 @@ class MyFigure:
         else:
             x_lttrs = -0.15
             y_lttrs = -0.15
-        if self.kwargs["annotate_lttrs"] is not False:
+        if self.kwargs["annotate_lttrs"] is not None:
             if isinstance(self.kwargs["annotate_lttrs"], str):
                 letters_list = [self.kwargs["annotate_lttrs"]]
-            elif isinstance(self.kwargs["annotate_lttrs"], list, tuple):
+            elif isinstance(self.kwargs["annotate_lttrs"], (list, tuple)):
                 letters_list = self.kwargs["annotate_lttrs"]
             for i, ax in enumerate(self.axs):
                 ax.annotate(
@@ -425,7 +449,12 @@ class MyFigure:
 
     def update_axes_single_props(self):
         """_summary_"""
-        for sprop in ["x_lab", "y_lab", "yt_lab", "grid"]:
+        for sprop in [
+            "x_lab",
+            "y_lab",
+            "yt_lab",
+            "grid",
+        ]:
             self.broad_props[sprop] = self._broadcast_value_prop(self.kwargs[sprop], sprop)
 
         # Update each axis with the respective properties
@@ -434,7 +463,6 @@ class MyFigure:
             ax.set_ylabel(self.broad_props["y_lab"][i])
             if self.broad_props["grid"][i] is not None:
                 ax.grid(self.broad_props["grid"][i])
-
         if self.kwargs["twinx"]:
             for i, axt in enumerate(self.axts):
                 axt.set_ylabel(self.broad_props["yt_lab"][i])
@@ -477,6 +505,41 @@ class MyFigure:
                     axt.set_yticks(self.broad_props["yt_ticks"][i])
                 if self.broad_props["yt_ticklabels"][i] is not None:
                     axt.set_yticklabels(self.broad_props["yt_ticklabels"][i])
+
+    def rotate_x_labels(self):
+        self.broad_props["x_ticklabels_rotation"] = self._broadcast_value_prop(
+            self.kwargs["x_ticklabels_rotation"], "x_ticklabels_rotation"
+        )
+
+        # Update each axis with the respective properties
+        for i, ax in enumerate(self.axs):
+            rotation = self.broad_props["x_ticklabels_rotation"][i]
+
+            # Directly set the rotation for existing tick labels
+            for label in ax.get_xticklabels():
+                label.set_rotation(rotation)
+                if rotation != 0:
+                    label.set_ha("right")
+                    label.set_rotation_mode("anchor")
+
+    def apply_hatch_patterns(self):
+        for ax in self.axs:
+            # Check if the plot is a bar plot
+            bars = [bar for bar in ax.patches if isinstance(bar, mpatches.Rectangle)]
+            # If there are no bars, return immediately
+            if not bars:
+                return
+            num_groups = len(ax.get_xticks(minor=False))
+            # Determine the number of bars in each group
+            bars_in_group = len(bars) // num_groups
+            patterns = htchs[:bars_in_group]  # set hatch patterns in correct order
+            hatches = []  # list for hatches in the order of the bars
+            for h in patterns:  # loop over patterns to create bar-ordered hatches
+                for i in range(int(len(bars) / len(patterns))):
+                    hatches.append(h)
+            # loop over bars and hatches to set hatches in correct order
+            for bar, hatch in zip(bars, hatches):
+                bar.set_hatch(hatch)
 
     def _broadcast_value_prop(self, prop: list | str | float | int | bool, prop_name: str) -> list:
         """_summary_
@@ -545,12 +608,13 @@ if __name__ == "__main__":
         grid=True,
         annotate_lttrs=["a", "b", "a", "b"],
         annotate_lttrs_xy=[-0.11, -0.15],
+        x_ticklabels_rotation=0,
     )
 
     f.axs[0].plot([0, 1], [0, 3], label="a")
     f.axts[0].plot([0, 2], [0, 4], label="b")
     f.axts[0].plot([0, 2], [0, 5], label="ccc")
     f.axs[1].plot([0, 1], [0, 3], label="aaa")
-    ins = f.create_insex(f.axs[0], [0.6, 0.8], [0.4, 0.6], [0, 0.2], [0, 0.2])
+    ins = f.create_inset(f.axs[0], [0.6, 0.8], [0.4, 0.6], [0, 0.2], [0, 0.2])
     ins.plot([0, 1], [0, 3], label="a")
     f.save_figure(filename="my_plot", out_path=plib.Path(r"C:\Users\mp933\Desktop\New folder"))

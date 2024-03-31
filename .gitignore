@@ -3,6 +3,7 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=windows,visualstudiocode,python
 example/data/output/
 test/data/output/
+myscripts/
 example/compounds_properties.xlsx
 ### Python ###
 # Byte-compiled / optimized / DLL files

@@ -94,7 +94,7 @@ class Project:
         else:
             raise ValueError(f"{samplename = } already used")
 
-    def multi_report(
+    def multireport(
         self,
         samplenames: list[str] | None = None,
         labels: list[str] | None = None,
@@ -161,15 +161,210 @@ class Project:
             report = pd.DataFrame(rows)
 
         else:
-            raise ValueError("Invalid report style provided")
+            raise ValueError(f"{report_style = } is not a valid option")
         self.multireport_types_computed.append(report_type)
         self.multireports[report_type] = report
         if self.auto_save_reports:
             out_path = plib.Path(self.out_path, "multireports")
             out_path.mkdir(parents=True, exist_ok=True)
-
-            report.to_excel(plib.Path(out_path, f"{self.name}_{report_type}_{report_style}.xlsx"))
+            if filename is None:
+                filename = f"{self.name}_{report_type}_{report_style}.xlsx"
+            else:
+                filename = filename + ".xlsx"
+            report.to_excel(plib.Path(out_path, filename))
         return report
+
+    def plot_multireport(
+        self,
+        filename: str = "plot",
+        samplenames: list[str] | None = None,
+        labels: list[str] | None = None,
+        report_type: Literal["proximate", "oxidation", "soliddist"] = "proximate",
+        bar_labels: list[str] | None = None,
+        **kwargs,
+    ) -> MyFigure:
+        """
+        Generate a multi-plot for proximate analysis.
+
+        Parameters:
+        - exps (list): List of experiments.
+        - filename (str): Name of the output file (default: "Prox").
+        - smpl_labs (list): List of sample labels (default: None).
+        - xlab_rot (int): Rotation angle of x-axis labels (default: 0).
+        - paper_col (float): Color of the plot background (default: 0.8).
+        - hgt_mltp (float): Height multiplier of the plot (default: 1.5).
+        - bboxtoanchor (bool): Whether to place the legend outside the plot area (default: True).
+        - x_anchor (float): X-coordinate of the legend anchor point (default: 1.13).
+        - y_anchor (float): Y-coordinate of the legend anchor point (default: 1.02).
+        - legend_loc (str): Location of the legend (default: 'best').
+        - y_lim (list): Y-axis limits for the bar plot (default: [0, 100]).
+        - yt_lim (list): Y-axis limits for the scatter plot (default: [0, 1]).
+        - y_ticks (list): Y-axis tick positions for the bar plot (default: None).
+        - yt_ticks (list): Y-axis tick positions for the scatter plot (default: None).
+
+        Returns:
+        - None
+        """
+        kw_keys = ["height", "width", "grid", "text_font"]
+        kw_default_values = [
+            4,
+            4,
+            self.plot_grid,
+            self.plot_font,
+        ]
+        for kwk, kwd in zip(kw_keys, kw_default_values):
+            if kwk not in kwargs.keys():
+                kwargs[kwk] = kwd
+
+        df = self.multireport(samplenames, labels, report_type, report_style="ave_std")
+        df_ave = df.xs("ave", level=1, drop_level=False)
+        df_std = df.xs("std", level=1, drop_level=False)
+        # drop the multi-level index to simplify the DataFrame
+        df_ave = df_ave.droplevel(1)
+        df_std = df_std.droplevel(1)
+        out_path = plib.Path(self.out_path, "multireport_plots")
+        out_path.mkdir(parents=True, exist_ok=True)
+
+        if report_type == "proximate":
+            vars_bar = ["moisture (stb)", "VM (db)", "FC (db)", "ash (db)"]
+            df_ave.columns = vars_bar
+            df_std.columns = vars_bar
+            bar_yaxis = vars_bar
+            bar_ytaxis = None
+            twinx = None
+            y_lab = self.tg_label
+            yt_lab = None
+
+        elif report_type == "oxidation":
+            vars_bar = ["T$_i$", "T$_p$", "T$_b$", "S"]
+            df_ave.columns = vars_bar
+            df_std.columns = vars_bar
+            bar_yaxis = ["T$_i$", "T$_p$", "T$_b$"]
+            bar_ytaxis = "S"
+            twinx = True
+            y_lab = f"T [{self.temp_symbol}]"
+            yt_lab = "S (comb. index)"
+
+        elif report_type == "soliddist":
+            vars_bar = [f"{col.split(" ")[0]} {col.split(" ")[-1]}" for col in df_ave.columns]
+            df_ave.columns = vars_bar
+            df_std.columns = vars_bar
+            bar_yaxis = vars_bar
+            bar_ytaxis = None
+            twinx = None
+            y_lab = "step mass loss [wt%]"
+            yt_lab = None
+
+        myfig = MyFigure(
+            rows=1,
+            cols=1,
+            twinx=twinx,
+            y_lab=y_lab,
+            yt_lab=yt_lab,
+            **kwargs,
+        )
+        df_ave[bar_yaxis].plot(
+            ax=myfig.axs[0],
+            kind="bar",
+            yerr=df_std[bar_yaxis],
+            capsize=2,
+            width=0.85,
+            ecolor="k",
+            edgecolor="black",
+        )
+        if bar_ytaxis is not None:
+            myfig.axts[0].scatter(
+                df_ave.index,
+                df_ave[bar_ytaxis],
+                label=bar_ytaxis,
+                edgecolor="black",
+                color=clrs[3],
+                # s=100
+            )
+            myfig.axts[0].errorbar(
+                df_ave.index,
+                df_ave[bar_ytaxis],
+                yerr=df_std[bar_ytaxis],
+                ecolor="k",
+                linestyle="None",
+                capsize=2,
+            )
+        myfig.save_figure(filename + report_type, out_path)
+        return myfig
+
+    def plot_multi_tg(
+        self,
+        filename: str = "plot",
+        samplenames: list[str] | None = None,
+        labels: list[str] | None = None,
+        **kwargs,
+    ) -> MyFigure:
+        """
+        Plot multiple thermogravimetric (TG) curves.
+
+        Args:
+            exps (list): List of experimental data objects.
+            filename (str, optional): Name of the output file. Defaults to 'Fig'.
+            paper_col (float, optional): Width of the figure in inches. Defaults to 0.78.
+            hgt_mltp (float, optional): Height multiplier of the figure. Defaults to 1.25.
+            x_lim (tuple, optional): Limits of the x-axis. Defaults to None.
+            y_lim (list, optional): Limits of the y-axis. Defaults to [0, 100].
+            y_ticks (list, optional): Custom y-axis tick locations. Defaults to None.
+            lttrs (bool, optional): Whether to annotate letters on the plot. Defaults to False.
+            save_as_pdf (bool, optional): Whether to save the figure as a PDF file. Defaults to False.
+            save_as_svg (bool, optional): Whether to save the figure as an SVG file. Defaults to False.
+
+        Returns:
+            None
+        """
+        if samplenames is None:
+            samplenames = self.samplenames
+
+        samples = [self.samples[samplename] for samplename in samplenames]
+
+        if labels is None:
+            labels = samplenames
+        for sample in samples:
+            if not sample.proximate_computed:
+                sample.proximate_analysis()
+
+        keys = ["height", "width", "grid", "text_font", "x_lab", "y_lab"]
+        values = [
+            4,
+            4,
+            self.plot_grid,
+            self.plot_font,
+            f"T [{self.temp_symbol}]",
+            self.tg_label,
+        ]
+        for kwk, kwd in zip(keys, values):
+            if kwk not in kwargs.keys():
+                kwargs[kwk] = kwd
+
+        out_path = plib.Path(self.out_path, "multisample_plots")
+        out_path.mkdir(parents=True, exist_ok=True)
+        myfig = MyFigure(
+            rows=1,
+            cols=1,
+            **kwargs,
+        )
+        for i, sample in enumerate(samples):
+            myfig.axs[0].plot(
+                sample.temp.ave(),
+                sample.mp_db.ave(),
+                color=clrs[i],
+                linestyle=lnstls[i],
+                label=labels[i],
+            )
+            myfig.axs[0].fill_between(
+                sample.temp.ave(),
+                sample.mp_db.ave() - sample.mp_db.std(),
+                sample.mp_db.ave() + sample.mp_db.std(),
+                color=clrs[i],
+                alpha=0.3,
+            )
+        myfig.save_figure(filename, out_path)
+        return myfig
 
     def kas_analysis(
         self,
@@ -281,108 +476,6 @@ class Project:
 
         return reports
 
-    def AAproximate_multi_plot(
-        exps: list[TGAExp],
-        filename: str = "plot",
-        labels: list[str] | None = None,
-        y_lab="mass fraction [wt%]",
-        yt_lab="mean TG deviation [%]",
-        x_labels_rotation: int = 0,
-        **kwargs,
-    ) -> MyFigure:
-        """
-        Generate a multi-plot for proximate analysis.
-
-        Parameters:
-        - exps (list): List of experiments.
-        - filename (str): Name of the output file (default: "Prox").
-        - smpl_labs (list): List of sample labels (default: None).
-        - xlab_rot (int): Rotation angle of x-axis labels (default: 0).
-        - paper_col (float): Color of the plot background (default: 0.8).
-        - hgt_mltp (float): Height multiplier of the plot (default: 1.5).
-        - bboxtoanchor (bool): Whether to place the legend outside the plot area (default: True).
-        - x_anchor (float): X-coordinate of the legend anchor point (default: 1.13).
-        - y_anchor (float): Y-coordinate of the legend anchor point (default: 1.02).
-        - legend_loc (str): Location of the legend (default: 'best').
-        - y_lim (list): Y-axis limits for the bar plot (default: [0, 100]).
-        - yt_lim (list): Y-axis limits for the scatter plot (default: [0, 1]).
-        - y_ticks (list): Y-axis tick positions for the bar plot (default: None).
-        - yt_ticks (list): Y-axis tick positions for the scatter plot (default: None).
-
-        Returns:
-        - None
-        """
-        for exp in exps:
-            if not exp.proximate_computed:
-                exp.proximate_analysis()
-        out_path = plib.Path(self.out_path, "proximate_multiplots")
-        out_path.mkdir(parents=True, exist_ok=True)
-        vars_bar = ["moisture (stb)", "VM (db)", "FC (db)", "ash (db)"]
-        vars_scat = "mean TG dev."
-        if not labels:  # try with labels and use name if no label is given
-            labels = [exp.label if exp.label else exp.name for exp in exps]
-        df_ave = pd.DataFrame(columns=vars_bar, index=labels)
-        df_std = pd.DataFrame(columns=vars_bar, index=labels)
-        df_ave["moisture (stb)"] = [exp.moist_ar for exp in exps]
-        df_ave["VM (db)"] = [exp.vm_db for exp in exps]
-        df_ave["FC (db)"] = [exp.fc_db for exp in exps]
-        df_ave["ash (db)"] = [exp.ash_db for exp in exps]
-        df_std["moisture (stb)"] = [exp.moist_ar_std for exp in exps]
-        df_std["VM (db)"] = [exp.vm_db_std for exp in exps]
-        df_std["FC (db)"] = [exp.fc_db_std for exp in exps]
-        df_std["ash (db)"] = [exp.ash_db_std for exp in exps]
-
-        aveTG = [exp.AveTGstd_p for exp in exps]
-        # remove x_labels_rotation form kwargs as it is dealt with in this fucntion
-        _ = kwargs.pop("x_labels_rotation", None)
-        myfig = MyFigure(
-            rows=1,
-            cols=1,
-            twinx=True,
-            text_font=TGAExp.plot_font,
-            y_lab=y_lab,
-            yt_lab=yt_lab,
-            grid=TGAExp.plot_grid,
-            **kwargs,
-        )
-        df_ave.plot(
-            ax=myfig.axs[0],
-            kind="bar",
-            yerr=df_std,
-            capsize=2,
-            width=0.85,
-            ecolor="k",
-            edgecolor="black",
-            # rot=xlab_rot,
-        )
-        bars = myfig.axs[0].patches
-        patterns = [None, "//", "...", "--"]  # set hatch patterns in correct order
-        hatches = []  # list for hatches in the order of the bars
-        for h in patterns:  # loop over patterns to create bar-ordered hatches
-            for i in range(int(len(bars) / len(patterns))):
-                hatches.append(h)
-        # loop over bars and hatches to set hatches in correct order
-        for bar, hatch in zip(bars, hatches):
-            bar.set_hatch(hatch)
-        myfig.axts[0].errorbar(
-            x=df_ave.index,
-            y=aveTG,
-            linestyle="None",
-            marker=mrkrs[0],
-            color=clrs[4],
-            markersize=10,
-            markeredgecolor="k",
-            label=vars_scat,
-        )
-        if x_labels_rotation == 0:
-            myfig.axs[0].set_xticklabels(df_ave.index, rotation=x_labels_rotation)
-        else:
-            myfig.axs[0].set_xticklabels(
-                df_ave.index, rotation=x_labels_rotation, ha="right", rotation_mode="anchor"
-            )
-        myfig.save_figure(filename, out_path)
-        return myfig
-
 
 class Sample:
 
@@ -415,6 +508,9 @@ class Sample:
         self.plot_font = project.plot_font
         self.plot_grid = project.plot_grid
         self.dtg_basis = project.dtg_basis
+        self.temp_lim_dtg = project.temp_lim_dtg
+        self.len_dtg_db = project.len_dtg_db
+        self.temp_dtg = project.temp_dtg
         self.auto_save_reports = project.auto_save_reports
         self.temp_i_temp_b_threshold = project.temp_i_temp_b_threshold
         self.resolution_sec_deg_dtg = project.resolution_sec_deg_dtg
@@ -508,10 +604,10 @@ class Sample:
         self.dwdtemp_mean: Measure = Measure(name="dwdtemp_mean")
         self.s_combustion_index: Measure = Measure(name="s_combustion_index")
         # soliddist
-        self.temp_dist: Measure = Measure(name="temp_dist_" + self.temp_unit)
-        self.time_dist: Measure = Measure(name="time_dist")
-        self.dmp_dist: Measure = Measure(name="dmp_dist")
-        self.loc_dist: Measure = Measure(name="loc_dist")
+        self.temp_soliddist: Measure = Measure(name="temp_dist_" + self.temp_unit)
+        self.time_soliddist: Measure = Measure(name="time_dist")
+        self.dmp_soliddist: Measure = Measure(name="dmp_dist")
+        self.loc_soliddist: Measure = Measure(name="loc_dist")
         # deconvolution
         self.dcv_best_fit: Measure = Measure(name="dcv_best_fit")
         self.dcv_r2: Measure = Measure(name="dcv_r2")
@@ -775,12 +871,12 @@ class Sample:
             for step in steps_min:
                 idxs.append(np.argmax(self.time.stk(f) > step))
             idxs.append(len(self.time.stk(f)) - 1)
-            self.temp_dist.add(f, self.temp.stk(f)[idxs])
-            self.time_dist.add(f, self.time.stk(f)[idxs])
+            self.temp_soliddist.add(f, self.temp.stk(f)[idxs])
+            self.time_soliddist.add(f, self.time.stk(f)[idxs])
 
-            self.dmp_dist.add(f, -np.diff(self.mp_db.stk(f)[idxs], prepend=100))
+            self.dmp_soliddist.add(f, -np.diff(self.mp_db.stk(f)[idxs], prepend=100))
 
-            self.loc_dist.add(
+            self.loc_soliddist.add(
                 f, np.convolve(np.insert(self.mp_db.stk(f)[idxs], 0, 100), [0.5, 0.5], mode="valid")
             )
 
@@ -896,13 +992,13 @@ class Sample:
                 self.soliddist_analysis()
             if report_type == "soliddist":
                 variables = []
-                for p in self.temp_dist.ave():
+                for p in self.temp_soliddist.ave():
                     variables.append(Measure(name=f"{p:0.0f} {self.temp_unit}"))
                 for f in range(self.n_repl):
-                    for t, dmp in enumerate(self.dmp_dist.stk(f)):
+                    for t, dmp in enumerate(self.dmp_soliddist.stk(f)):
                         variables[t].add(f, dmp)
             elif report_type == "soliddist_extended":
-                variables = [self.temp_dist, self.time_dist, self.dmp_dist]
+                variables = [self.temp_soliddist, self.time_soliddist, self.dmp_soliddist]
         else:
             raise ValueError(f"{report_type = } is not a valid option")
 
@@ -1043,7 +1139,6 @@ class Sample:
                     ymax=0,
                     linestyle=lnstls[f],
                     color=clrs[f],
-                    label=r"$T_{i}$",
                 )
                 mf.axs[5].vlines(
                     self.time_dtg.stk(f)[self.temp_p_idx.stk(f)],
@@ -1051,7 +1146,6 @@ class Sample:
                     ymax=np.min(self.dtg_db.stk(f)) / 5,
                     linestyle=lnstls[f],
                     color=clrs[f],
-                    label=r"$T_{p}$",
                 )
                 mf.axs[5].vlines(
                     self.time_dtg.stk(f)[self.temp_b_idx.stk(f)],
@@ -1059,7 +1153,6 @@ class Sample:
                     ymax=0,
                     linestyle=lnstls[f],
                     color=clrs[f],
-                    label=r"$T_{b}$",
                 )
         mf.save_figure(self.name + "_tg_dtg", out_path)
         return mf
@@ -1123,7 +1216,7 @@ class Sample:
             )
             mf.axts[0].plot(self.time.stk(f), self.temp.stk(f))
 
-        for tm, mp, dmp in zip(self.time_dist(), self.loc_dist(), self.dmp_dist()):
+        for tm, mp, dmp in zip(self.time_soliddist(), self.loc_soliddist(), self.dmp_soliddist()):
             mf.axs[0].annotate(
                 f"{dmp:0.0f}%", ha="center", va="top", xy=(tm - 10, mp + 1), fontsize=9
             )
@@ -1302,44 +1395,59 @@ class Measure:
 test_dir: plib.Path = plib.Path(
     r"C:\Users\mp933\OneDrive - Cornell University\Python\tga_data_analysis\tests\data"
 )
-print(test_dir)
 
 # %%
-m1 = Measure()
-values = [1, 4, 7]
-for repl, value in enumerate(values):
-    m1.add(repl, value)
-assert m1.ave() == np.average(values)
-assert m1.std() == np.std(values)
-# %%
-m2 = Measure()
-values = [[1, 4, 5], [2, 6, 7], [3, 8, 9]]
-ave = [2, 6, 7]
-std = 0
-for repl, value in enumerate(values):
-    m2.add(repl, value)
-print(m2.ave())
-print(m2.std())
+# m1 = Measure()
+# values = [1, 4, 7]
+# for repl, value in enumerate(values):
+#     m1.add(repl, value)
+# assert m1.ave() == np.average(values)
+# assert m1.std() == np.std(values)
+# # %%
+# m2 = Measure()
+# values = [[1, 4, 5], [2, 6, 7], [3, 8, 9]]
+# ave = [2, 6, 7]
+# std = 0
+# for repl, value in enumerate(values):
+#     m2.add(repl, value)
+# print(m2.ave())
+# print(m2.std())
 
 # %%
 proj = Project(test_dir, name="test", temp_unit="K")
 # %%
-# cell = Sample(
-#     project=proj,
-#     name="cell",
-#     filenames=["CLSOx5_1", "CLSOx5_2", "CLSOx5_3"],
-#     time_moist=38,
-#     time_vm=None,
-# )
+cell = Sample(
+    project=proj,
+    name="cell",
+    filenames=["CLSOx5_1", "CLSOx5_2", "CLSOx5_3"],
+    time_moist=38,
+    time_vm=None,
+)
+mf = cell.plot_tg_dtg(x_ticklabels_rotation=0)
+# %%
+#
+# %%
 # misc = Sample(
 #     project=proj, name="misc", filenames=["MIS_1", "MIS_2", "MIS_3"], time_moist=38, time_vm=147
 # )
-# sda = Sample(
-#     project=proj, name="sda", filenames=["SDa_1", "SDa_2", "SDa_3"], time_moist=38, time_vm=None
-# )
-# sdb = Sample(
-#     project=proj, name="sdb", filenames=["SDb_1", "SDb_2", "SDb_3"], time_moist=38, time_vm=None
-# )
+proj = Project(test_dir, name="test", temp_unit="C")
+sda = Sample(
+    project=proj, name="sda", filenames=["SDa_1", "SDa_2", "SDa_3"], time_moist=38, time_vm=None
+)
+sdb = Sample(
+    project=proj, name="sdb", filenames=["SDb_1", "SDb_2", "SDb_3"], time_moist=38, time_vm=None
+)
+proj.plot_multi_tg()
+# %%
+sda.plot_soliddist()
+rep = proj.multireport(report_type="soliddist")
+rep = proj.plot_multireport(
+    report_type="soliddist",
+    legend_loc="upper center",
+    color_palette="rocket",
+    color_palette_n_colors=7,
+)
+# %%
 # dig = Sample(
 #     project=proj, name="dig", filenames=["DIG10_1", "DIG10_2", "DIG10_3"], time_moist=22, time_vm=98
 # )
@@ -1404,5 +1512,14 @@ cell_ox50 = Sample(
     heating_rate_deg_min=50,
 )
 # %%
-kas_cell = proj.kas_analysis(samplenames=["cell_ox5", "cell_ox10", "cell_ox50"])
+# kas_cell = proj.kas_analysis(samplenames=["cell_ox5", "cell_ox10", "cell_ox50"])
+# %%
+rep = proj.plot_multireport(
+    report_type="proximate", x_ticklabels_rotation=30, legend_loc="best", legend_bbox_xy=(1, 1.01)
+)
+# %%
+rep = proj.plot_multireport(report_type="oxidation", x_ticklabels_rotation=0)
+# %%
+
+
 # %%
