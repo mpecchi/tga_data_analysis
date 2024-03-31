@@ -111,7 +111,7 @@ class Project:
             self.samplenames.append(samplename)
             self.samples[samplename] = sample
         else:
-            raise ValueError(f"{samplename = } already used")
+            print(f"{samplename = } already present in project. Sample not added.")
 
     def multireport(
         self,
@@ -1104,25 +1104,23 @@ class Sample:
         out_path = plib.Path(self.out_path, "single_sample_plots")
         out_path.mkdir(parents=True, exist_ok=True)
 
-        keys = ["height", "width", "grid", "text_font", "x_lab", "y_lab"]
-        values = [
-            8,
-            6,
-            self.plot_grid,
-            self.plot_font,
-            "time [min]",
-            [
+        default_kwargs = {
+            "height": 8,
+            "width": 6,
+            "x_lab":"time [min]",
+            "y_lab":[
+                f"T [{self.temp_symbol}]",
                 f"T [{self.temp_symbol}]",
                 f"{self.tg_label} (stb)",
                 f"{self.tg_label} (db)",
-                f"T [{self.temp_symbol}]",
                 f"{self.tg_label} (db)",
                 f"{self.dtg_label} (db)",
             ],
-        ]
-        for kwk, kwd in zip(keys, values):
-            if kwk not in kwargs.keys():
-                kwargs[kwk] = kwd
+            "grid": self.plot_grid,
+            "text_font": self.plot_font,
+        }
+        # Update kwargs with the default key-value pairs if the key is not present in kwargs
+        kwargs = {**default_kwargs, **kwargs}
 
         mf = MyFigure(
             rows=3,
@@ -1248,29 +1246,19 @@ class Sample:
         out_path = plib.Path(self.out_path, "single_sample_plots")
         out_path.mkdir(parents=True, exist_ok=True)
 
-        keys = [
-            "height",
-            "width",
-            "grid",
-            "text_font",
-            "x_lab",
-            "y_lab",
-            "yt_lab",
-            "legend_loc",
-        ]
-        values = [
-            5,
-            6,
-            self.plot_grid,
-            self.plot_font,
-            "time [min]",
-            f"{self.tg_label} (db)",
-            f"T [{self.temp_symbol}]",
-            "center left",
-        ]
-        for kwk, kwd in zip(keys, values):
-            if kwk not in kwargs.keys():
-                kwargs[kwk] = kwd
+        default_kwargs = {
+            "height": 4,
+            "width": 5,
+            "x_lab":"time [min]",
+            "y_lab":f"{self.tg_label} (db)",
+            "yt_lab": f"T [{self.temp_symbol}]",
+            "legend_loc": "center left",
+            "grid": self.plot_grid,
+            "text_font": self.plot_font,
+
+        }
+        # Update kwargs with the default key-value pairs if the key is not present in kwargs
+        kwargs = {**default_kwargs, **kwargs}
 
         mf = MyFigure(
             rows=1,
@@ -1313,26 +1301,17 @@ class Sample:
             raise Exception("Deconvolution analysis not computed")
         out_path = plib.Path(self.out_path, "single_sample_plots")
         out_path.mkdir(parents=True, exist_ok=True)
-        keys = [
-            "height",
-            "width",
-            "grid",
-            "text_font",
-            "x_lab",
-            "y_lab",
-        ]
-        values = [
-            8,
-            3.5,
-            self.plot_grid,
-            self.plot_font,
-            f"T [{self.temp_symbol}]",
-            f"{self.dtg_label} (db)",
-        ]
-        for kwk, kwd in zip(keys, values):
-            if kwk not in kwargs.keys():
-                kwargs[kwk] = kwd
 
+        default_kwargs = {
+            "height": 8,
+            "width": 3.5,
+            "x_lab":f"T [{self.temp_symbol}]",
+            "y_lab":f"{self.dtg_label} (db)",
+            "grid": self.plot_grid,
+            "text_font": self.plot_font,
+        }
+        # Update kwargs with the default key-value pairs if the key is not present in kwargs
+        kwargs = {**default_kwargs, **kwargs}
         mf = MyFigure(
             rows=self.n_repl,
             cols=1,

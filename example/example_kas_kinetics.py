@@ -1,6 +1,6 @@
 import pathlib as plib
 from tga_data_analysis.tga import Project, Sample
-from tga_data_analysis.kas_analysis import KasSample, plot_multi_activation_energy
+from tga_data_analysis.kas_kinetics import KasSample, plot_multi_activation_energy
 
 
 folder_path = plib.Path(__file__).resolve().parent / "kas_kinetics"
