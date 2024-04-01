@@ -120,6 +120,8 @@ class KasSample:
         out_path.mkdir(parents=True, exist_ok=True)
 
         default_kwargs = {
+            "filename": self.name + "_isolines",
+            "out_path": out_path,
             "height": 4,
             "width": 5,
             "grid": self.plot_grid,
@@ -149,7 +151,7 @@ class KasSample:
                 linestyle="None",
                 marker=mrkrs[i],
             )
-        myfig.save_figure(self.name + "_isolines", out_path)
+        myfig.save_figure()
         return myfig
 
     def plot_activation_energy(
@@ -183,6 +185,8 @@ class KasSample:
         out_path.mkdir(parents=True, exist_ok=True)
 
         default_kwargs = {
+            "filename": self.name + "_isolines",
+            "out_path": out_path,
             "height": 4,
             "width": 4,
             "grid": self.plot_grid,
@@ -204,7 +208,7 @@ class KasSample:
             self.activation_energy + self.activation_energy_std,
             alpha=0.3,
         )
-        myfig.save_figure(self.name + "_isolines", out_path)
+        myfig.save_figure()
         return myfig
 
 
@@ -243,6 +247,8 @@ def plot_multi_activation_energy(
     out_path.mkdir(parents=True, exist_ok=True)
 
     default_kwargs = {
+        "filename": filename + "_activation_energy",
+        "out_path": out_path,
         "height": 4,
         "width": 4,
         "grid": kassamples[0].plot_grid,
@@ -274,5 +280,5 @@ def plot_multi_activation_energy(
             color=clrs[i],
             linestyle=lnstls[i],
         )
-    myfig.save_figure(filename + "_activation_energy", out_path)
+    myfig.save_figure()
     return myfig

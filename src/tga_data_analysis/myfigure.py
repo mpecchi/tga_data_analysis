@@ -193,6 +193,8 @@ class MyFigure:
         :return: A dictionary of default settings.
         """
         defaults = {
+            "filename": None,
+            "out_path": None,
             "rows": 1,
             "cols": 1,
             "width": 6.0,
@@ -244,6 +246,11 @@ class MyFigure:
             if kwarg not in valid_kwargs:
 
                 raise ValueError(f"Invalid keyword argument: '{kwarg}' \n {valid_kwargs = }")
+        if self.kwargs["out_path"] is not None:
+            self.kwargs["out_path"] = plib.Path(self.kwargs["out_path"])
+        if self.kwargs["filename"] is not None:
+            if not isinstance(self.kwargs["filename"], str):
+                raise ValueError("Filename must be a str.")
         self.kwargs["rows"] = int(self.kwargs["rows"])
         self.kwargs["cols"] = int(self.kwargs["cols"])
         self.kwargs["width"] = float(self.kwargs["width"])
@@ -287,8 +294,8 @@ class MyFigure:
 
     def save_figure(
         self,
-        filename: str = "figure",
-        out_path: plib.Path | None = plib.Path("."),
+        filename: str | None = None,
+        out_path: plib.Path | None = None,
         tight_layout: bool = True,
         save_as_png: bool = True,
         save_as_pdf: bool = False,
@@ -337,6 +344,10 @@ class MyFigure:
             "svg": save_as_svg,
             "eps": save_as_eps,
         }
+        if filename is None:
+            filename = self.kwargs["filename"]
+        if out_path is None:
+            out_path = self.kwargs["out_path"]
 
         for fmt, should_save in formats.items():
             if should_save:
@@ -593,6 +604,8 @@ class MyFigure:
 
 if __name__ == "__main__":
     f = MyFigure(
+        filename="my_plot",
+        out_path=plib.Path(r"C:\Users\mp933\Desktop\New folder"),
         rows=4,
         cols=1,
         width=6,
@@ -618,4 +631,4 @@ if __name__ == "__main__":
     f.axs[1].plot([0, 1], [0, 3], label="aaa")
     ins = f.create_inset(f.axs[0], [0.6, 0.8], [0.4, 0.6], [0, 0.2], [0, 0.2])
     ins.plot([0, 1], [0, 3], label="a")
-    f.save_figure(filename="my_plot", out_path=plib.Path(r"C:\Users\mp933\Desktop\New folder"))
+    f.save_figure()

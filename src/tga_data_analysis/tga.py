@@ -230,14 +230,6 @@ class Project:
         samplenames = [sample.name for sample in samples]
         if labels is None:
             labels = samplenames
-        default_kwargs = {
-            "height": 4,
-            "width": 4,
-            "grid": self.plot_grid,
-            "text_font": self.plot_font,
-        }
-        # Update kwargs with the default key-value pairs if the key is not present in kwargs
-        kwargs = {**default_kwargs, **kwargs}
 
         df = self.multireport(samples, labels, report_type, report_style="ave_std")
         df_ave = df.xs("ave", level=1, drop_level=False)
@@ -245,8 +237,6 @@ class Project:
         # drop the multi-level index to simplify the DataFrame
         df_ave = df_ave.droplevel(1)
         df_std = df_std.droplevel(1)
-        out_path = plib.Path(self.out_path, "multireport_plots")
-        out_path.mkdir(parents=True, exist_ok=True)
 
         if report_type == "proximate":
             if bar_labels is None:
@@ -287,6 +277,18 @@ class Project:
             y_lab = "step mass loss [wt%]"
             yt_lab = None
 
+        out_path = plib.Path(self.out_path, "multireport_plots")
+        out_path.mkdir(parents=True, exist_ok=True)
+        default_kwargs = {
+            "filename": filename + report_type,
+            "out_path": out_path,
+            "height": 4,
+            "width": 4,
+            "grid": self.plot_grid,
+            "text_font": self.plot_font,
+        }
+        # Update kwargs with the default key-value pairs if the key is not present in kwargs
+        kwargs = {**default_kwargs, **kwargs}
         myfig = MyFigure(
             rows=1,
             cols=1,
@@ -321,7 +323,7 @@ class Project:
                 linestyle="None",
                 capsize=2,
             )
-        myfig.save_figure(filename + report_type, out_path)
+        myfig.save_figure()
         return myfig
 
     def plot_multi_tg(
@@ -359,7 +361,12 @@ class Project:
             if not sample.proximate_computed:
                 sample.proximate_analysis()
 
+        out_path = plib.Path(self.out_path, "multisample_plots")
+        out_path.mkdir(parents=True, exist_ok=True)
+
         default_kwargs = {
+            "filename": filename + "_tg",
+            "out_path": out_path,
             "height": 4,
             "width": 4,
             "grid": self.plot_grid,
@@ -370,8 +377,7 @@ class Project:
         }
         # Update kwargs with the default key-value pairs if the key is not present in kwargs
         kwargs = {**default_kwargs, **kwargs}
-        out_path = plib.Path(self.out_path, "multisample_plots")
-        out_path.mkdir(parents=True, exist_ok=True)
+
         myfig = MyFigure(
             rows=1,
             cols=1,
@@ -392,7 +398,7 @@ class Project:
                 color=clrs[i],
                 alpha=0.3,
             )
-        myfig.save_figure(filename + "_tg", out_path)
+        myfig.save_figure()
         return myfig
 
     def plot_multi_dtg(
@@ -430,7 +436,11 @@ class Project:
             if not sample.proximate_computed:
                 sample.proximate_analysis()
 
+        out_path = plib.Path(self.out_path, "multisample_plots")
+        out_path.mkdir(parents=True, exist_ok=True)
         default_kwargs = {
+            "filename": filename + "_dtg",
+            "out_path": out_path,
             "height": 4,
             "width": 4,
             "grid": self.plot_grid,
@@ -442,8 +452,6 @@ class Project:
         # Update kwargs with the default key-value pairs if the key is not present in kwargs
         kwargs = {**default_kwargs, **kwargs}
 
-        out_path = plib.Path(self.out_path, "multisample_plots")
-        out_path.mkdir(parents=True, exist_ok=True)
         myfig = MyFigure(
             rows=1,
             cols=1,
@@ -464,7 +472,7 @@ class Project:
                 color=clrs[i],
                 alpha=0.3,
             )
-        myfig.save_figure(filename + "_dtg", out_path)
+        myfig.save_figure()
         return myfig
 
     def plot_multi_soliddist(
@@ -502,7 +510,11 @@ class Project:
             if not sample.proximate_computed:
                 sample.proximate_analysis()
 
+        out_path = plib.Path(self.out_path, "multisample_plots")
+        out_path.mkdir(parents=True, exist_ok=True)
         default_kwargs = {
+            "filename": filename + "_soliddist",
+            "out_path": out_path,
             "height": 4,
             "width": 5,
             "grid": self.plot_grid,
@@ -515,8 +527,6 @@ class Project:
         # Update kwargs with the default key-value pairs if the key is not present in kwargs
         kwargs = {**default_kwargs, **kwargs}
 
-        out_path = plib.Path(self.out_path, "multisample_plots")
-        out_path.mkdir(parents=True, exist_ok=True)
         myfig = MyFigure(
             rows=1,
             twinx=True,
@@ -541,7 +551,7 @@ class Project:
                 color=clrs[i],
                 alpha=0.3,
             )
-        myfig.save_figure(filename + "_soliddist", out_path)
+        myfig.save_figure()
         return myfig
 
     def _reformat_ave_std_columns(self, reports):
@@ -1122,6 +1132,8 @@ class Sample:
         out_path.mkdir(parents=True, exist_ok=True)
 
         default_kwargs = {
+            "filename": self.name + "_tg_dtg",
+            "out_path": out_path,
             "height": 8,
             "width": 6,
             "x_lab": "time [min]",
@@ -1242,7 +1254,7 @@ class Sample:
                     linestyle=lnstls[f],
                     color=clrs[f],
                 )
-        mf.save_figure(self.name + "_tg_dtg", out_path)
+        mf.save_figure()
         return mf
 
     def plot_soliddist(self, **kwargs: dict[str, Any]) -> MyFigure:
@@ -1264,6 +1276,8 @@ class Sample:
         out_path.mkdir(parents=True, exist_ok=True)
 
         default_kwargs = {
+            "filename": self.name + "_soliddist",
+            "out_path": out_path,
             "height": 4,
             "width": 5,
             "x_lab": "time [min]",
@@ -1297,7 +1311,7 @@ class Sample:
             mf.axs[0].annotate(
                 f"{dmp:0.0f}%", ha="center", va="top", xy=(tm - 10, mp + 1), fontsize=9
             )
-        mf.save_figure(self.name + "_soliddist", out_path)
+        mf.save_figure()
         return mf
 
     def plot_deconv(self, **kwargs: dict[str, Any]) -> MyFigure:
@@ -1319,6 +1333,8 @@ class Sample:
         out_path.mkdir(parents=True, exist_ok=True)
 
         default_kwargs = {
+            "filename": self.name + "_deconv",
+            "out_path": out_path,
             "height": 8,
             "width": 3.5,
             "x_lab": f"T [{self.temp_symbol}]",
@@ -1361,7 +1377,7 @@ class Sample:
                 xy=(0.85, 0.96),
                 size="x-small",
             )
-        mf.save_figure(self.name + "_deconv", out_path)
+        mf.save_figure()
         return mf
 
 
