@@ -420,32 +420,33 @@ class MyFigure:
     def create_inset(
         self,
         ax: Axes,
-        ins_x_loc: list[float, float],
-        ins_y_loc: list[float, float],
-        ins_x_lim: list[float, float],
-        ins_y_lim: list[float, float],
+        ins_x_loc: tuple[float],
+        ins_y_loc: tuple[float],
+        ins_x_lim: tuple[float] | None = None,
+        ins_y_lim: tuple[float] | None = None,
     ) -> Axes:
         """_summary_
 
         :param ax: _description_
         :type ax: Axes
         :param ins_x_loc: _description_
-        :type ins_x_loc: list[float, float]
+        :type ins_x_loc: tuple[float]
         :param ins_y_loc: _description_
-        :type ins_y_loc: list[float, float]
+        :type ins_y_loc: tuple[float]
         :param ins_x_lim: _description_
-        :type ins_x_lim: list[float, float]
+        :type ins_x_lim: tuple[float]
         :param ins_y_lim: _description_
-        :type ins_y_lim: list[float, float]
+        :type ins_y_lim: tuple[float]
         :return: _description_
         :rtype: Axes
         """
         wdt = ins_x_loc[1] - ins_x_loc[0]
         hgt = ins_y_loc[1] - ins_y_loc[0]
         inset = ax.inset_axes([ins_x_loc[0], ins_y_loc[0], wdt, hgt])
-
-        inset.set_xlim(MyFigure._adjust_lims(ins_x_lim))
-        inset.set_ylim(MyFigure._adjust_lims(ins_y_lim))
+        if ins_x_lim is not None:
+            inset.set_xlim(MyFigure._adjust_lims(ins_x_lim))
+        if ins_y_lim is not None:
+            inset.set_ylim(MyFigure._adjust_lims(ins_y_lim))
         return inset
 
     def update_axes_single_props(self):
