@@ -243,7 +243,8 @@ class MyFigure:
         # Check for any invalid keyword arguments
         for kwarg in self.kwargs:
             if kwarg not in valid_kwargs:
-                raise ValueError(f"Invalid keyword argument: '{kwarg}'")
+
+                raise ValueError(f"Invalid keyword argument: '{kwarg}' \n {valid_kwargs = }")
         self.kwargs["rows"] = int(self.kwargs["rows"])
         self.kwargs["cols"] = int(self.kwargs["cols"])
         self.kwargs["width"] = float(self.kwargs["width"])
@@ -319,9 +320,9 @@ class MyFigure:
 
         self.update_axes_list_props()
 
-        self.add_legend()
-
         self.apply_hatch_patterns()
+
+        self.add_legend()
 
         self.rotate_x_labels()
 

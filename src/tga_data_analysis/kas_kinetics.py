@@ -189,6 +189,7 @@ class KasSample:
             "text_font": self.plot_font,
             "x_lab": r"$\alpha$ [-]",
             "y_lab": r"$E_{a}$ [kJ/mol]",
+            "legend": None,
         }
         # Update kwargs with the default key-value pairs if the key is not present in kwargs
         kwargs = {**default_kwargs, **kwargs}
@@ -275,84 +276,3 @@ def plot_multi_activation_energy(
         )
     myfig.save_figure(filename + "_activation_energy", out_path)
     return myfig
-
-
-# %%
-test_dir: plib.Path = plib.Path(
-    r"C:\Users\mp933\OneDrive - Cornell University\Python\tga_data_analysis\tests\data"
-)
-proj = Project(test_dir, name="test", temp_unit="K")
-cell_ox5 = Sample(
-    project=proj,
-    name="cell_ox5",
-    filenames=["CLSOx5_1", "CLSOx5_2", "CLSOx5_3"],
-    time_moist=38,
-    time_vm=None,
-    heating_rate_deg_min=5,
-)
-cell_ox10 = Sample(
-    project=proj,
-    name="cell_ox10",
-    load_skiprows=8,
-    filenames=["CLSOx10_2", "CLSOx10_3", "CLSOx10_4"],
-    time_moist=38,
-    time_vm=None,
-    heating_rate_deg_min=10,
-)
-cell_ox50 = Sample(
-    project=proj,
-    name="cell_ox50",
-    load_skiprows=8,
-    filenames=["CLSOx50_4", "CLSOx50_5", "CLSOx50_6"],
-    time_moist=38,
-    time_vm=None,
-    heating_rate_deg_min=50,
-)
-cell_ox100 = Sample(
-    project=proj,
-    name="cell_ox100",
-    load_skiprows=8,
-    filenames=["CLSOx100_4", "CLSOx100_5", "CLSOx100_6"],
-    time_moist=38,
-    time_vm=None,
-    heating_rate_deg_min=100,
-)
-# %%
-cell = KasSample(proj, samples=[cell_ox5, cell_ox10, cell_ox50, cell_ox100], name="cellulose")
-cell.plot_isolines(legend_bbox_xy=(1, 1))
-cell.plot_activation_energy(legend_bbox_xy=(1, 1))
-# %%
-pc_ox10 = Sample(
-    project=proj,
-    name="pc_ox10",
-    load_skiprows=8,
-    filenames=["PCOx10_1"],
-    time_moist=38,
-    time_vm=None,
-    heating_rate_deg_min=10,
-)
-pc_ox50 = Sample(
-    project=proj,
-    name="pc_ox50",
-    load_skiprows=8,
-    filenames=["PCOx50_1"],
-    time_moist=38,
-    time_vm=None,
-    heating_rate_deg_min=50,
-)
-pc_ox100 = Sample(
-    project=proj,
-    name="pc_ox100",
-    load_skiprows=8,
-    filenames=["PCOx100_1"],
-    time_moist=38,
-    time_vm=None,
-    heating_rate_deg_min=100,
-)
-# %%
-pc = KasSample(proj, samples=[pc_ox10, pc_ox50, pc_ox100], name="primary")
-pc.plot_isolines(legend_bbox_xy=(1, 1))
-pc.plot_activation_energy(legend_bbox_xy=(1, 1))
-# %%
-plot_multi_activation_energy([cell, pc])
-# %%

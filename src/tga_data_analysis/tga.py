@@ -115,7 +115,7 @@ class Project:
 
     def multireport(
         self,
-        samplenames: list[str] | None = None,
+        samples: list[Sample] | None = None,
         labels: list[str] | None = None,
         report_type: Literal[
             "proximate", "oxidation", "oxidation_extended", "soliddist", "soliddist_extended"
@@ -134,10 +134,10 @@ class Project:
         Returns:
             pandas.DataFrame: DataFrame containing the multi-sample proximate report.
         """
-        if samplenames is None:
-            samplenames = self.samplenames
+        if samples is None:
+            samples = list[self.samples.values()]
 
-        samples = [self.samples[samplename] for samplename in samplenames]
+        samplenames = [sample.name for sample in samples]
 
         if labels is None:
             labels = samplenames
@@ -196,7 +196,7 @@ class Project:
     def plot_multireport(
         self,
         filename: str = "plot",
-        samplenames: list[str] | None = None,
+        samples: list[Sample] | None = None,
         labels: list[str] | None = None,
         report_type: Literal["proximate", "oxidation", "soliddist"] = "proximate",
         bar_labels: list[str] | None = None,
@@ -224,6 +224,12 @@ class Project:
         Returns:
         - None
         """
+        if samples is None:
+            samples = list[self.samples.values()]
+
+        samplenames = [sample.name for sample in samples]
+        if labels is None:
+            labels = samplenames
         default_kwargs = {
             "height": 4,
             "width": 4,
@@ -233,7 +239,7 @@ class Project:
         # Update kwargs with the default key-value pairs if the key is not present in kwargs
         kwargs = {**default_kwargs, **kwargs}
 
-        df = self.multireport(samplenames, labels, report_type, report_style="ave_std")
+        df = self.multireport(samples, labels, report_type, report_style="ave_std")
         df_ave = df.xs("ave", level=1, drop_level=False)
         df_std = df.xs("std", level=1, drop_level=False)
         # drop the multi-level index to simplify the DataFrame
@@ -243,7 +249,10 @@ class Project:
         out_path.mkdir(parents=True, exist_ok=True)
 
         if report_type == "proximate":
-            vars_bar = ["moisture (stb)", "VM (db)", "FC (db)", "ash (db)"]
+            if bar_labels is None:
+                vars_bar = ["moisture (stb)", "VM (db)", "FC (db)", "ash (db)"]
+            else:
+                vars_bar = bar_labels
             df_ave.columns = vars_bar
             df_std.columns = vars_bar
             bar_yaxis = vars_bar
@@ -253,17 +262,23 @@ class Project:
             yt_lab = None
 
         elif report_type == "oxidation":
-            vars_bar = ["T$_i$", "T$_p$", "T$_b$", "S"]
+            if bar_labels is None:
+                vars_bar = ["T$_i$", "T$_p$", "T$_b$", "S"]
+            else:
+                vars_bar = bar_labels
             df_ave.columns = vars_bar
             df_std.columns = vars_bar
-            bar_yaxis = ["T$_i$", "T$_p$", "T$_b$"]
-            bar_ytaxis = "S"
+            bar_yaxis = vars_bar[:3]
+            bar_ytaxis = vars_bar[-1]
             twinx = True
             y_lab = f"T [{self.temp_symbol}]"
             yt_lab = "S (comb. index)"
 
         elif report_type == "soliddist":
-            vars_bar = [f"{col.split(" ")[0]} {col.split(" ")[-1]}" for col in df_ave.columns]
+            if bar_labels is None:
+                vars_bar = [f"{col.split(" ")[0]} {col.split(" ")[-1]}" for col in df_ave.columns]
+            else:
+                vars_bar = bar_labels
             df_ave.columns = vars_bar
             df_std.columns = vars_bar
             bar_yaxis = vars_bar
@@ -312,7 +327,7 @@ class Project:
     def plot_multi_tg(
         self,
         filename: str = "plot",
-        samplenames: list[str] | None = None,
+        samples: list[Sample] | None = None,
         labels: list[str] | None = None,
         **kwargs,
     ) -> MyFigure:
@@ -334,11 +349,10 @@ class Project:
         Returns:
             None
         """
-        if samplenames is None:
-            samplenames = self.samplenames
+        if samples is None:
+            samples = list[self.samples.values()]
 
-        samples = [self.samples[samplename] for samplename in samplenames]
-
+        samplenames = [sample.name for sample in samples]
         if labels is None:
             labels = samplenames
         for sample in samples:
@@ -384,7 +398,7 @@ class Project:
     def plot_multi_dtg(
         self,
         filename: str = "plot",
-        samplenames: list[str] | None = None,
+        samples: list[Sample] | None = None,
         labels: list[str] | None = None,
         **kwargs,
     ) -> MyFigure:
@@ -406,11 +420,10 @@ class Project:
         Returns:
             None
         """
-        if samplenames is None:
-            samplenames = self.samplenames
+        if samples is None:
+            samples = list[self.samples.values()]
 
-        samples = [self.samples[samplename] for samplename in samplenames]
-
+        samplenames = [sample.name for sample in samples]
         if labels is None:
             labels = samplenames
         for sample in samples:
@@ -457,7 +470,7 @@ class Project:
     def plot_multi_soliddist(
         self,
         filename: str = "plot",
-        samplenames: list[str] | None = None,
+        samples: list[Sample] | None = None,
         labels: list[str] | None = None,
         **kwargs,
     ) -> MyFigure:
@@ -479,11 +492,10 @@ class Project:
         Returns:
             None
         """
-        if samplenames is None:
-            samplenames = self.samplenames
+        if samples is None:
+            samples = list[self.samples.values()]
 
-        samples = [self.samples[samplename] for samplename in samplenames]
-
+        samplenames = [sample.name for sample in samples]
         if labels is None:
             labels = samplenames
         for sample in samples:
@@ -584,6 +596,7 @@ class Sample:
         time_moist: float = 38.0,
         time_vm: float = 147,
         heating_rate_deg_min: float | None = None,
+        temp_i_temp_b_threshold: float | None = None
     ):
         # store the sample in the project
         self.project_name = project.name
@@ -602,7 +615,7 @@ class Sample:
         self.len_dtg_db = project.len_dtg_db
         self.temp_dtg = project.temp_dtg
         self.auto_save_reports = project.auto_save_reports
-        self.temp_i_temp_b_threshold = project.temp_i_temp_b_threshold
+
         self.resolution_sec_deg_dtg = project.resolution_sec_deg_dtg
         self.dtg_window_filter = project.dtg_window_filter
         self.temp_initial_celsius = project.temp_initial_celsius
@@ -627,6 +640,10 @@ class Sample:
             self.time_vm = project.time_vm
         else:
             self.time_vm = time_vm
+        if temp_i_temp_b_threshold is None:
+            self.temp_i_temp_b_threshold = project.temp_i_temp_b_threshold
+        else:
+            self.temp_i_temp_b_threshold = temp_i_temp_b_threshold
         # sample default
         self.name = name
         self.filenames = filenames
@@ -1052,7 +1069,7 @@ class Sample:
         if report_type == "proximate":
             if not self.proximate_computed:
                 self.proximate_analysis()
-            variables = [self.moist_ar, self.ash_db, self.vm_db, self.fc_db]
+            variables = [self.moist_ar, self.vm_db, self.fc_db, self.ash_db]
         elif report_type == "oxidation" or report_type == "oxidation_extended":
             if not self.oxidation_computed:
                 self.oxidation_analysis()
