@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "hhttps://github.com/mpecchi/tga_data_analysis"
+Homepage = "https://github.com/mpecchi/tga_data_analysis"
 Documentation = "https://tga-data-analysis.readthedocs.io/en/latest/"
 
 [tool.black]
