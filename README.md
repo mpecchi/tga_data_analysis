@@ -1,5 +1,7 @@
 # Thermogravimetric Analysis in Python
 
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 ## Overview
 PyTGA is a Python module designed for conducting and analyzing Thermogravimetric Analysis (TGA) experiments. It offers tools for loading, processing, and analyzing TGA data, focusing on proximate and oxidation analysis, solid distillation analysis, and deconvolution analysis.
 
