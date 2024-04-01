@@ -135,7 +135,7 @@ class Project:
             pandas.DataFrame: DataFrame containing the multi-sample proximate report.
         """
         if samples is None:
-            samples = list[self.samples.values()]
+            samples = list(self.samples.values())
 
         samplenames = [sample.name for sample in samples]
 
@@ -225,7 +225,7 @@ class Project:
         - None
         """
         if samples is None:
-            samples = list[self.samples.values()]
+            samples = list(self.samples.values())
 
         samplenames = [sample.name for sample in samples]
         if labels is None:
@@ -350,7 +350,7 @@ class Project:
             None
         """
         if samples is None:
-            samples = list[self.samples.values()]
+            samples = list(self.samples.values())
 
         samplenames = [sample.name for sample in samples]
         if labels is None:
@@ -421,7 +421,7 @@ class Project:
             None
         """
         if samples is None:
-            samples = list[self.samples.values()]
+            samples = list(self.samples.values())
 
         samplenames = [sample.name for sample in samples]
         if labels is None:
@@ -493,7 +493,7 @@ class Project:
             None
         """
         if samples is None:
-            samples = list[self.samples.values()]
+            samples = list(self.samples.values())
 
         samplenames = [sample.name for sample in samples]
         if labels is None:
@@ -596,7 +596,7 @@ class Sample:
         time_moist: float = 38.0,
         time_vm: float = 147,
         heating_rate_deg_min: float | None = None,
-        temp_i_temp_b_threshold: float | None = None
+        temp_i_temp_b_threshold: float | None = None,
     ):
         # store the sample in the project
         self.project_name = project.name
@@ -1124,8 +1124,8 @@ class Sample:
         default_kwargs = {
             "height": 8,
             "width": 6,
-            "x_lab":"time [min]",
-            "y_lab":[
+            "x_lab": "time [min]",
+            "y_lab": [
                 f"T [{self.temp_symbol}]",
                 f"T [{self.temp_symbol}]",
                 f"{self.tg_label} (stb)",
@@ -1266,13 +1266,12 @@ class Sample:
         default_kwargs = {
             "height": 4,
             "width": 5,
-            "x_lab":"time [min]",
-            "y_lab":f"{self.tg_label} (db)",
+            "x_lab": "time [min]",
+            "y_lab": f"{self.tg_label} (db)",
             "yt_lab": f"T [{self.temp_symbol}]",
             "legend_loc": "center left",
             "grid": self.plot_grid,
             "text_font": self.plot_font,
-
         }
         # Update kwargs with the default key-value pairs if the key is not present in kwargs
         kwargs = {**default_kwargs, **kwargs}
@@ -1322,8 +1321,8 @@ class Sample:
         default_kwargs = {
             "height": 8,
             "width": 3.5,
-            "x_lab":f"T [{self.temp_symbol}]",
-            "y_lab":f"{self.dtg_label} (db)",
+            "x_lab": f"T [{self.temp_symbol}]",
+            "y_lab": f"{self.dtg_label} (db)",
             "grid": self.plot_grid,
             "text_font": self.plot_font,
         }
