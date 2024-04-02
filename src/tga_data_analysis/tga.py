@@ -334,8 +334,8 @@ class Project:
         default_kwargs = {
             "filename": filename + report_type,
             "out_path": out_path,
-            "height": 4,
-            "width": 4,
+            "height": 3.2,
+            "width": 3.2,
             "grid": self.plot_grid,
             "text_font": self.plot_font,
         }
@@ -415,8 +415,8 @@ class Project:
         default_kwargs = {
             "filename": filename + "_tg",
             "out_path": out_path,
-            "height": 4,
-            "width": 4,
+            "height": 3.2,
+            "width": 3.2,
             "grid": self.plot_grid,
             "text_font": self.plot_font,
             "x_lab": f"T [{self.temp_symbol}]",
@@ -485,8 +485,8 @@ class Project:
         default_kwargs = {
             "filename": filename + "_dtg",
             "out_path": out_path,
-            "height": 4,
-            "width": 4,
+            "height": 3.2,
+            "width": 3.2,
             "grid": self.plot_grid,
             "text_font": self.plot_font,
             "x_lab": f"T [{self.temp_symbol}]",
@@ -555,8 +555,8 @@ class Project:
         default_kwargs = {
             "filename": filename + "_soliddist",
             "out_path": out_path,
-            "height": 4,
-            "width": 5,
+            "height": 3.2,
+            "width": 3.2,
             "grid": self.plot_grid,
             "text_font": self.plot_font,
             "x_lab": "time [min]",
@@ -1273,8 +1273,8 @@ class Sample:
         default_kwargs = {
             "filename": self.name + "_tg_dtg",
             "out_path": out_path,
-            "height": 8,
-            "width": 6,
+            "height": 8.53,
+            "width": 6.4,
             "x_lab": "time [min]",
             "y_lab": [
                 f"T [{self.temp_symbol}]",
@@ -1418,8 +1418,8 @@ class Sample:
         default_kwargs = {
             "filename": self.name + "_soliddist",
             "out_path": out_path,
-            "height": 4,
-            "width": 5,
+            "height": 3.2,
+            "width": 3.2,
             "x_lab": "time [min]",
             "y_lab": f"{self.tg_label} (db)",
             "yt_lab": f"T [{self.temp_symbol}]",
@@ -1475,8 +1475,8 @@ class Sample:
         default_kwargs = {
             "filename": self.name + "_deconv",
             "out_path": out_path,
-            "height": 8,
-            "width": 3.5,
+            "height": 8.53,
+            "width": 3.2,
             "x_lab": f"T [{self.temp_symbol}]",
             "y_lab": f"{self.dtg_label} (db)",
             "grid": self.plot_grid,

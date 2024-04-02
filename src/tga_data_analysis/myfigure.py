@@ -171,6 +171,7 @@ class MyFigure:
 
         sns.set_palette(self.kwargs["color_palette"], self.kwargs["color_palette_n_colors"])
         sns.set_style(self.kwargs["sns_style"], {"font.family": self.kwargs["text_font"]})
+        plt.rcParams.update({"font.size": self.kwargs["text_font_size"]})
 
         self.create_figure()
 
@@ -218,6 +219,12 @@ class MyFigure:
             "color_palette_n_colors": None,
             "text_font": "Dejavu Sans",
             "sns_style": "ticks",
+            "text_font_size": 10,
+            "legend_font_size": 10,
+            "x_labelpad": 0,
+            "y_labelpad": 0,
+            "legend_borderpad": 0.3,
+            "legend_handlelength": 1.5,
         }
         return defaults
 
@@ -239,6 +246,7 @@ class MyFigure:
         if self.kwargs["filename"] is not None:
             if not isinstance(self.kwargs["filename"], str):
                 raise ValueError("Filename must be a str.")
+
         self.kwargs["rows"] = int(self.kwargs["rows"])
         self.kwargs["cols"] = int(self.kwargs["cols"])
         self.kwargs["width"] = float(self.kwargs["width"])
@@ -289,7 +297,9 @@ class MyFigure:
         save_as_pdf: bool = False,
         save_as_svg: bool = False,
         save_as_eps: bool = False,
+        save_as_tif: bool = False,
         png_transparency: bool = False,
+        dpi: int = 300,
     ) -> None:
         """
         Save the figure to a file.
@@ -332,6 +342,7 @@ class MyFigure:
             "pdf": save_as_pdf,
             "svg": save_as_svg,
             "eps": save_as_eps,
+            "tif": save_as_tif,
         }
         if filename is None:
             filename = self.kwargs["filename"]
@@ -343,7 +354,7 @@ class MyFigure:
                 full_path = plib.Path(out_path, f"{filename}.{fmt}")
                 self.fig.savefig(
                     full_path,
-                    dpi=300,
+                    dpi=dpi,
                     transparent=png_transparency,
                     bbox_inches="tight" if tight_layout else None,
                 )
@@ -356,7 +367,7 @@ class MyFigure:
             self.broad_props[sprop] = self._broadcast_value_prop(self.kwargs[sprop], sprop)
         for lprop in ["legend_bbox_xy"]:
             self.broad_props[lprop] = self._broadcast_list_prop(self.kwargs[lprop], lprop)
-
+        borderpad = (0.5,)  # Smaller border pad
         if self.kwargs["twinx"] is None:
 
             for i, ax in enumerate(self.axs):
@@ -370,6 +381,9 @@ class MyFigure:
                             if self.broad_props["legend_bbox_xy"][i] is not None
                             else None
                         ),
+                        fontsize=self.kwargs["legend_font_size"],
+                        borderpad=self.kwargs["legend_borderpad"],
+                        handlelength=self.kwargs["legend_handlelength"],
                     )
 
         else:
@@ -388,6 +402,9 @@ class MyFigure:
                             if self.broad_props["legend_bbox_xy"][i] is not None
                             else None
                         ),
+                        fontsize=self.kwargs["legend_font_size"],
+                        borderpad=self.kwargs["legend_borderpad"],
+                        handlelength=self.kwargs["legend_handlelength"],
                     )
 
     def annotate_letters(self) -> None:
@@ -418,7 +435,7 @@ class MyFigure:
                     xycoords="axes fraction",
                     xy=(0, 0),
                     xytext=(x_lttrs, y_lttrs),
-                    size="large",
+                    size=self.kwargs["text_font_size"],
                     weight="bold",
                 )
 
@@ -469,8 +486,8 @@ class MyFigure:
 
         # Update each axis with the respective properties
         for i, ax in enumerate(self.axs):
-            ax.set_xlabel(self.broad_props["x_lab"][i])
-            ax.set_ylabel(self.broad_props["y_lab"][i])
+            ax.set_xlabel(self.broad_props["x_lab"][i], labelpad=self.kwargs["x_labelpad"])
+            ax.set_ylabel(self.broad_props["y_lab"][i], labelpad=self.kwargs["y_labelpad"])
             if self.broad_props["grid"][i] is not None:
                 ax.grid(self.broad_props["grid"][i])
         if self.kwargs["twinx"]:
