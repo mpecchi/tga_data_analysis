@@ -17,6 +17,26 @@ from tga_data_analysis.myfigure import MyFigure, clrs, lnstls, htchs, mrkrs
 
 
 class Project:
+    """
+    Represents a project for TGA data analysis.
+
+    :param folder_path: Path to the folder containing the data files.
+    :param name: Name of the project. Defaults to the last part of the folder path if not provided.
+    :param temp_unit: Temperature unit ('C' for Celsius, 'K' for Kelvin). Defaults to 'C'.
+    :param plot_font: Font used for plotting. Defaults to 'Dejavu Sans'.
+    :param dtg_basis: Basis for DTG calculations ('temperature' or 'time'). Defaults to 'temperature'.
+    :param temp_i_temp_b_threshold: Threshold for temperature calculations. Defaults to 0.01.
+    :param resolution_sec_deg_dtg: Resolution for DTG. Defaults to 5.
+    :param dtg_window_filter: Window size for the DTG filter. Defaults to 101.
+    :param plot_grid: Indicates if a grid should be shown on plots. Defaults to False.
+    :param column_name_mapping: Mapping for column names. Optional.
+    :param load_skiprows: Number of rows to skip when loading files. Defaults to 0.
+    :param time_moist: Time for moisture analysis. Defaults to 38.0.
+    :param time_vm: Time for VM analysis. Defaults to 147.0.
+    :param temp_initial_celsius: Initial temperature in Celsius for analysis. Defaults to 40.
+    :param temp_lim_dtg_celsius: Temperature limits for DTG in Celsius. Optional.
+    :param auto_save_reports: Indicates if reports should be auto-saved. Defaults to True.
+    """
 
     def __init__(
         self,
@@ -37,6 +57,42 @@ class Project:
         temp_lim_dtg_celsius: tuple[float] | None = None,
         auto_save_reports: bool = True,
     ):
+        """
+        Initialize a new Project instance with various parameters for analysis.
+
+        :param folder_path: The path to the folder containing the project data.
+        :type folder_path: plib.Path
+        :param name: The name of the project. Defaults to the last part of the folder path if None.
+        :type name: str, optional
+        :param temp_unit: The unit of temperature used in the project ('C' for Celsius, 'K' for Kelvin).
+        :type temp_unit: Literal["C", "K"]
+        :param plot_font: The font used in plots, either 'Dejavu Sans' or 'Times New Roman'.
+        :type plot_font: Literal["Dejavu Sans", "Times New Roman"]
+        :param dtg_basis: The basis for DTG calculations, either 'temperature' or 'time'.
+        :type dtg_basis: Literal["temperature", "time"]
+        :param temp_i_temp_b_threshold: The percentage threshold for Ti and Tb calculation in DTG analysis.
+        :type temp_i_temp_b_threshold: float
+        :param resolution_sec_deg_dtg: The resolution in seconds or degrees for DTG analysis.
+        :type resolution_sec_deg_dtg: int
+        :param dtg_window_filter: The window size for the Savitzky-Golay filter in DTG analysis.
+        :type dtg_window_filter: int
+        :param plot_grid: Whether to display a grid in the plots.
+        :type plot_grid: bool
+        :param column_name_mapping: Mapping of column names from file to standard names used in the analysis.
+        :type column_name_mapping: dict[str, str], optional
+        :param load_skiprows: The number of rows to skip when loading data files.
+        :type load_skiprows: int
+        :param time_moist: The time considered for the moisture analysis.
+        :type time_moist: float
+        :param time_vm: The time considered for the volatile matter analysis.
+        :type time_vm: float
+        :param temp_initial_celsius: The initial temperature for certain calculations, in Celsius.
+        :type temp_initial_celsius: float
+        :param temp_lim_dtg_celsius: The temperature limits for DTG analysis, in Celsius.
+        :type temp_lim_dtg_celsius: tuple[float], optional
+        :param auto_save_reports: Whether to automatically save generated reports.
+        :type auto_save_reports: bool
+        """
         self.folder_path = folder_path
         self.out_path = plib.Path(folder_path, "output")
         if name is None:
@@ -107,6 +163,14 @@ class Project:
         self.multireport_types_computed: list[str] = []
 
     def add_sample(self, samplename: str, sample: Sample):
+        """
+        Add a sample to the project.
+
+        :param samplename: The name of the sample to add.
+        :type samplename: str
+        :param sample: The sample object to add.
+        :type sample: Sample
+        """
         if samplename not in self.samplenames:
             self.samplenames.append(samplename)
             self.samples[samplename] = sample
@@ -125,14 +189,22 @@ class Project:
         filename: str | None = None,
     ) -> pd.DataFrame:
         """
-        Generate a multi-sample proximate report.
+        Generate a multi-sample report based on the specified report type and style.
 
-        Args:
-            exps (list): List of experiments.
-            filename (str, optional): Name of the output file. Defaults to 'Rep'.
-
-        Returns:
-            pandas.DataFrame: DataFrame containing the multi-sample proximate report.
+        :param samples: A list of Sample objects to include in the report. If None, uses all samples in the project.
+        :type samples: list[Sample], optional
+        :param labels: A list of labels corresponding to each sample. If None, sample names are used as labels.
+        :type labels: list[str], optional
+        :param report_type: The type of report to generate, choices include 'proximate', 'oxidation', 'oxidation_extended', 'soliddist', and 'soliddist_extended'.
+        :type report_type: Literal["proximate", "oxidation", "oxidation_extended", "soliddist", "soliddist_extended"]
+        :param report_style: The style of the report, choices are 'repl_ave_std', 'ave_std', and 'ave_pm_std'.
+        :type report_style: Literal["repl_ave_std", "ave_std", "ave_pm_std"]
+        :param decimals_in_ave_pm_std: The number of decimal places to use for the average plus-minus standard deviation format.
+        :type decimals_in_ave_pm_std: int
+        :param filename: The name of the file to save the report. If None, the report is not saved.
+        :type filename: str, optional
+        :return: A pandas DataFrame containing the generated report.
+        :rtype: pd.DataFrame
         """
         if samples is None:
             samples = list(self.samples.values())
@@ -203,26 +275,22 @@ class Project:
         **kwargs,
     ) -> MyFigure:
         """
-        Generate a multi-plot for proximate analysis.
+        Generate a plot for the multi-sample report.
 
-        Parameters:
-        - exps (list): List of experiments.
-        - filename (str): Name of the output file (default: "Prox").
-        - smpl_labs (list): List of sample labels (default: None).
-        - xlab_rot (int): Rotation angle of x-axis labels (default: 0).
-        - paper_col (float): Color of the plot background (default: 0.8).
-        - hgt_mltp (float): Height multiplier of the plot (default: 1.5).
-        - bboxtoanchor (bool): Whether to place the legend outside the plot area (default: True).
-        - x_anchor (float): X-coordinate of the legend anchor point (default: 1.13).
-        - y_anchor (float): Y-coordinate of the legend anchor point (default: 1.02).
-        - legend_loc (str): Location of the legend (default: 'best').
-        - y_lim (list): Y-axis limits for the bar plot (default: [0, 100]).
-        - yt_lim (list): Y-axis limits for the scatter plot (default: [0, 1]).
-        - y_ticks (list): Y-axis tick positions for the bar plot (default: None).
-        - yt_ticks (list): Y-axis tick positions for the scatter plot (default: None).
-
-        Returns:
-        - None
+        :param filename: The name of the file to save the plot. Defaults to "plot".
+        :type filename: str
+        :param samples: A list of Sample objects to include in the plot. If None, uses all samples in the project.
+        :type samples: list[Sample], optional
+        :param labels: A list of labels corresponding to each sample. If None, sample names are used as labels.
+        :type labels: list[str], optional
+        :param report_type: The type of report to plot, choices include 'proximate', 'oxidation', and 'soliddist'.
+        :type report_type: Literal["proximate", "oxidation", "soliddist"]
+        :param bar_labels: Labels for the bars in the plot. If None, default labels based on the report type are used.
+        :type bar_labels: list[str], optional
+        :param kwargs: Additional keyword arguments to pass to the plotting function.
+        :type kwargs: dict
+        :return: An instance of MyFigure containing the generated plot.
+        :rtype: MyFigure
         """
         if samples is None:
             samples = list(self.samples.values())
@@ -334,22 +402,18 @@ class Project:
         **kwargs,
     ) -> MyFigure:
         """
-        Plot multiple thermogravimetric (TG) curves.
+        Plot multiple thermogravimetric (TG) curves for the given samples.
 
-        Args:
-            exps (list): List of experimental data objects.
-            filename (str, optional): Name of the output file. Defaults to 'Fig'.
-            paper_col (float, optional): Width of the figure in inches. Defaults to 0.78.
-            hgt_mltp (float, optional): Height multiplier of the figure. Defaults to 1.25.
-            x_lim (tuple, optional): Limits of the x-axis. Defaults to None.
-            y_lim (list, optional): Limits of the y-axis. Defaults to [0, 100].
-            y_ticks (list, optional): Custom y-axis tick locations. Defaults to None.
-            lttrs (bool, optional): Whether to annotate letters on the plot. Defaults to False.
-            save_as_pdf (bool, optional): Whether to save the figure as a PDF file. Defaults to False.
-            save_as_svg (bool, optional): Whether to save the figure as an SVG file. Defaults to False.
-
-        Returns:
-            None
+        :param filename: The name of the file to save the plot. Defaults to "plot".
+        :type filename: str
+        :param samples: A list of Sample objects to be plotted. If None, plots all samples in the project.
+        :type samples: list[Sample], optional
+        :param labels: Labels for each sample in the plot. If None, sample names are used.
+        :type labels: list[str], optional
+        :param kwargs: Additional keyword arguments for plotting customization.
+        :type kwargs: dict
+        :return: A MyFigure instance containing the plot.
+        :rtype: MyFigure
         """
         if samples is None:
             samples = list(self.samples.values())
@@ -409,22 +473,18 @@ class Project:
         **kwargs,
     ) -> MyFigure:
         """
-        Plot multiple thermogravimetric (TG) curves.
+        Plot multiple derivative thermogravimetric (DTG) curves for the given samples.
 
-        Args:
-            exps (list): List of experimental data objects.
-            filename (str, optional): Name of the output file. Defaults to 'Fig'.
-            paper_col (float, optional): Width of the figure in inches. Defaults to 0.78.
-            hgt_mltp (float, optional): Height multiplier of the figure. Defaults to 1.25.
-            x_lim (tuple, optional): Limits of the x-axis. Defaults to None.
-            y_lim (list, optional): Limits of the y-axis. Defaults to [0, 100].
-            y_ticks (list, optional): Custom y-axis tick locations. Defaults to None.
-            lttrs (bool, optional): Whether to annotate letters on the plot. Defaults to False.
-            save_as_pdf (bool, optional): Whether to save the figure as a PDF file. Defaults to False.
-            save_as_svg (bool, optional): Whether to save the figure as an SVG file. Defaults to False.
-
-        Returns:
-            None
+        :param filename: The name of the file to save the plot. Defaults to "plot".
+        :type filename: str
+        :param samples: A list of Sample objects to be plotted. If None, plots all samples in the project.
+        :type samples: list[Sample], optional
+        :param labels: Labels for each sample in the plot. If None, sample names are used.
+        :type labels: list[str], optional
+        :param kwargs: Additional keyword arguments for plotting customization.
+        :type kwargs: dict
+        :return: A MyFigure instance containing the plot.
+        :rtype: MyFigure
         """
         if samples is None:
             samples = list(self.samples.values())
@@ -483,22 +543,18 @@ class Project:
         **kwargs,
     ) -> MyFigure:
         """
-        Plot multiple thermogravimetric (TG) curves.
+        Plot multiple solid distribution curves for the given samples.
 
-        Args:
-            exps (list): List of experimental data objects.
-            filename (str, optional): Name of the output file. Defaults to 'Fig'.
-            paper_col (float, optional): Width of the figure in inches. Defaults to 0.78.
-            hgt_mltp (float, optional): Height multiplier of the figure. Defaults to 1.25.
-            x_lim (tuple, optional): Limits of the x-axis. Defaults to None.
-            y_lim (list, optional): Limits of the y-axis. Defaults to [0, 100].
-            y_ticks (list, optional): Custom y-axis tick locations. Defaults to None.
-            lttrs (bool, optional): Whether to annotate letters on the plot. Defaults to False.
-            save_as_pdf (bool, optional): Whether to save the figure as a PDF file. Defaults to False.
-            save_as_svg (bool, optional): Whether to save the figure as an SVG file. Defaults to False.
-
-        Returns:
-            None
+        :param filename: The name of the file to save the plot. Defaults to "plot".
+        :type filename: str
+        :param samples: A list of Sample objects to be plotted. If None, plots all samples in the project.
+        :type samples: list[Sample], optional
+        :param labels: Labels for each sample in the plot. If None, sample names are used.
+        :type labels: list[str], optional
+        :param kwargs: Additional keyword arguments for plotting customization.
+        :type kwargs: dict
+        :return: A MyFigure instance containing the plot.
+        :rtype: MyFigure
         """
         if samples is None:
             samples = list(self.samples.values())
@@ -556,10 +612,15 @@ class Project:
 
     def _reformat_ave_std_columns(self, reports):
         """
-        Reformat column names based on the average and standard deviation.
+        Reformat the columns of the given reports to have standard deviation and average values.
 
-        Args:
-            reports (list of pd.DataFrame): List of reports to reformat column names.
+        This method is intended to be used internally within the Project class to standardize
+        the report dataframes before generating multi-sample reports.
+
+        :param reports: A list of report DataFrames to reformat.
+        :type reports: list[pd.DataFrame]
+        :return: A list of reformatted DataFrames.
+        :rtype: list[pd.DataFrame]
         """
         # Check that all reports have the same number of columns
         num_columns = len(reports[0].columns)
@@ -591,6 +652,10 @@ class Project:
 
 
 class Sample:
+    """
+    A class representing a sample in the project, containing methods for loading, processing,
+    and analyzing thermogravimetric analysis (TGA) data associated with the sample.
+    """
 
     def __init__(
         self,
@@ -608,6 +673,36 @@ class Sample:
         heating_rate_deg_min: float | None = None,
         temp_i_temp_b_threshold: float | None = None,
     ):
+        """
+        Initialize a new Sample instance with parameters for TGA data analysis.
+
+        :param project: The Project object to which this sample belongs.
+        :type project: Project
+        :param name: The name of the sample.
+        :type name: str
+        :param filenames: A list of filenames associated with the sample.
+        :type filenames: list[str]
+        :param folder_path: The path to the folder containing the sample data. If None, the project's folder path is used.
+        :type folder_path: plib.Path, optional
+        :param label: A label for the sample. If None, the sample's name is used as the label.
+        :type label: str, optional
+        :param correct_ash_mg: A list of ash correction values in milligrams, one per file.
+        :type correct_ash_mg: list[float], optional
+        :param correct_ash_fr: A list of ash correction values as a fraction, one per file.
+        :type correct_ash_fr: list[float], optional
+        :param column_name_mapping: A dictionary mapping file column names to standardized column names for analysis.
+        :type column_name_mapping: dict[str, str], optional
+        :param load_skiprows: The number of rows to skip at the beginning of the files when loading.
+        :type load_skiprows: int
+        :param time_moist: The time considered for the moisture analysis.
+        :type time_moist: float
+        :param time_vm: The time considered for the volatile matter analysis.
+        :type time_vm: float
+        :param heating_rate_deg_min: The heating rate in degrees per minute, used for certain calculations.
+        :type heating_rate_deg_min: float, optional
+        :param temp_i_temp_b_threshold: The threshold percentage used for calculating initial and final temperatures in DTG analysis.
+        :type temp_i_temp_b_threshold: float, optional
+        """
         # store the sample in the project
         self.project_name = project.name
         project.add_sample(name, self)
@@ -727,12 +822,15 @@ class Sample:
         self.proximate_analysis()
 
     def _broadcast_value_prop(self, prop: list | str | float | int | bool) -> list:
-        """_summary_
+        """
+        Broadcast a single value or a list of values to match the number of replicates.
 
-        :param prop: _description_
-        :type prop: list | str | float | int | bool
-        :raises ValueError: _description_
-        :return: _description_
+        This method is used internally to ensure that properties like corrections have a value
+        for each replicate, even if a single value is provided for all.
+
+        :param prop: A single value or a list of values to be broadcasted.
+        :type prop: list | float | int | bool
+        :return: A list of values with length equal to the number of replicates.
         :rtype: list
         """
         if prop is None:
@@ -756,6 +854,20 @@ class Sample:
         load_skiprows: int | None = None,
         column_name_mapping: dict | None = None,
     ) -> pd.DataFrame:
+        """
+        Load data from a single file associated with the sample.
+
+        :param filename: The name of the file to be loaded.
+        :type filename: str
+        :param folder_path: The folder path where the file is located. If None, uses the sample's folder path.
+        :type folder_path: plib.Path, optional
+        :param load_skiprows: The number of rows to skip at the beginning of the file. If None, uses the sample's default.
+        :type load_skiprows: int, optional
+        :param column_name_mapping: A mapping of file column names to standardized column names. If None, uses the sample's default.
+        :type column_name_mapping: dict, optional
+        :return: The loaded data as a pandas DataFrame.
+        :rtype: pd.DataFrame
+        """
         if column_name_mapping is None:
             column_name_mapping = self.column_name_mapping
         if folder_path is None:
@@ -780,6 +892,20 @@ class Sample:
         correct_ash_fr: float | None,
         correct_ash_mg: float | None,
     ):
+        """
+        Apply corrections to the loaded file data.
+
+        This method adjusts the mass measurements in the file based on provided ash correction values.
+
+        :param file: The data file to be corrected.
+        :type file: pd.DataFrame
+        :param correct_ash_mg: The correction value for ash in milligrams. If None, no correction is applied.
+        :type correct_ash_mg: float, optional
+        :param correct_ash_fr: The correction value for ash as a fraction. If None, no correction is applied.
+        :type correct_ash_fr: float, optional
+        :return: The corrected data as a pandas DataFrame.
+        :rtype: pd.DataFrame
+        """
         if correct_ash_mg is not None:
             file["m_mg"] = file["m_mg"] - np.min(file["m_mg"]) + correct_ash_mg
         try:
@@ -803,10 +929,13 @@ class Sample:
 
     def load_files(self):
         """
-        Loads all the files for the experiment.
+        Load all files associated with this sample, applying necessary corrections and adjustments.
 
-        Returns:
-            list: The list of loaded files.
+        This method loads and processes each file, ensuring consistent data structure and applying
+        corrections such as ash content adjustments.
+
+        :return: A dictionary where keys are filenames and values are the corresponding corrected data as pandas DataFrames.
+        :rtype: dict[str, pd.DataFrame]
         """
         print("\n" + self.name)
         # import files and makes sure that replicates have the same size
@@ -829,7 +958,10 @@ class Sample:
 
     def proximate_analysis(self):
         """
-        Performs proximate analysis on the loaded data.
+        Perform proximate analysis on the loaded data for the sample.
+
+        This analysis calculates moisture content, ash content, volatile matter, and fixed carbon
+        based on the thermogravimetric data. The results are stored in the instance's attributes for later use.
         """
         if not self.files_loaded:
             self.load_files()
@@ -907,14 +1039,12 @@ class Sample:
 
     def oxidation_analysis(self):
         """
-        Perform oxidation analysis on the data.
+        Conduct oxidation analysis on the sample's data.
 
-        This method calculates various oxidation parameters based on the proximate analysis results.
-        It computes the Ti, Tp, Tb, dwdT_max, dwdT_mean, and S values for each file in the dataset,
-        and then calculates the average and standard deviation of these values.
-
-        Returns:
-            None
+        This method calculates various oxidation parameters such as the initial oxidation temperature (Ti),
+        peak oxidation temperature (Tp), and final oxidation temperature (Tb). It also computes derivative
+        parameters like maximum and average rates of weight loss. The results are stored in the instance's
+        attributes for further analysis.
         """
         if not self.proximate_computed:
             self.proximate_analysis()
@@ -952,14 +1082,13 @@ class Sample:
 
     def soliddist_analysis(self, steps_min: list[float] | None = None):
         """
-        Perform solid distance analysis.
+        Perform solid distribution analysis on the sample's data.
 
-        Args:
-            steps_min (list, optional): List of minimum steps for analysis.
-              Defaults to [40, 70, 100, 130, 160, 190].
+        This analysis calculates the weight loss at specified temperature steps, providing insight into
+        the solid decomposition process. The results are used for generating solid distribution plots.
 
-        Returns:
-            None
+        :param steps_min: Temperature steps (in minutes) at which the weight loss is calculated. If None, default steps are used.
+        :type steps_min: list[float], optional
         """
         if steps_min is None:
             steps_min = [40, 70, 100, 130, 160, 190]
@@ -995,22 +1124,29 @@ class Sample:
         amplitude_maxs: list[float] | None = None,
     ):
         """
-        Perform deconvolution analysis on the data.
+        Perform deconvolution analysis on the sample's DTG data.
 
-        Args:
-            centers (list): List of peak centers.
-            sigmas (list, optional): List of peak sigmas. Defaults to None.
-            amplitudes (list, optional): List of peak amplitudes. Defaults to None.
-            center_mins (list, optional): List of minimum values for peak centers. Defaults to None.
-            center_maxs (list, optional): List of maximum values for peak centers. Defaults to None.
-            s_mins (list, optional): List of minimum values for peak sigmas. Defaults to None.
-            s_maxs (list, optional): List of maximum values for peak sigmas. Defaults to None.
-            a_mins (list, optional): List of minimum values for peak amplitudes. Defaults to None.
-            a_maxs (list, optional): List of maximum values for peak amplitudes. Defaults to None.
-            TLim (tuple, optional): Tuple specifying the time range for analysis. Defaults to None.
+        This method fits multiple Gaussian peaks to the DTG curve to identify and analyze individual
+        decomposition steps within the sample.
 
-        Returns:
-            None
+        :param centers: Initial guesses for the centers of the Gaussian peaks.
+        :type centers: list[float]
+        :param sigmas: Initial guesses for the standard deviations of the Gaussian peaks. If None, defaults are used.
+        :type sigmas: list[float], optional
+        :param amplitudes: Initial guesses for the amplitudes of the Gaussian peaks. If None, defaults are used.
+        :type amplitudes: list[float], optional
+        :param center_mins: Minimum allowed values for the centers of the Gaussian peaks. If None, no bounds are applied.
+        :type center_mins: list[float], optional
+        :param center_maxs: Maximum allowed values for the centers of the Gaussian peaks. If None, no bounds are applied.
+        :type center_maxs: list[float], optional
+        :param sigma_mins: Minimum allowed values for the standard deviations of the Gaussian peaks. If None, no bounds are applied.
+        :type sigma_mins: list[float], optional
+        :param sigma_maxs: Maximum allowed values for the standard deviations of the Gaussian peaks. If None, no bounds are applied.
+        :type sigma_maxs: list[float], optional
+        :param amplitude_mins: Minimum allowed values for the amplitudes of the Gaussian peaks. If None, no bounds are applied.
+        :type amplitude_mins: list[float], optional
+        :param amplitude_maxs: Maximum allowed values for the amplitudes of the Gaussian peaks. If None, no bounds are applied.
+        :type amplitude_maxs: list[float], optional
         """
         if not self.proximate_computed:
             self.proximate_analysis()
@@ -1076,6 +1212,18 @@ class Sample:
             "proximate", "oxidation", "oxidation_extended", "soliddist", "soliddist_extended"
         ] = "proximate",
     ) -> pd.DataFrame:
+        """
+        Generate a report based on the specified analysis type.
+
+        This method provides detailed insights into the sample's properties, such as proximate analysis,
+        oxidation characteristics, and solid distribution, based on the selected report type.
+
+        :param report_type: The type of report to generate. Options include 'proximate', 'oxidation',
+                            'oxidation_extended', 'soliddist', and 'soliddist_extended'.
+        :type report_type: Literal["proximate", "oxidation", "oxidation_extended", "soliddist", "soliddist_extended"]
+        :return: A pandas DataFrame containing the analysis results.
+        :rtype: pd.DataFrame
+        """
         if report_type == "proximate":
             if not self.proximate_computed:
                 self.proximate_analysis()
@@ -1123,8 +1271,15 @@ class Sample:
 
     def plot_tg_dtg(self, **kwargs: dict[str, Any]) -> MyFigure:
         """
-        Plot the TGA data.
+        Generate a plot combining thermogravimetric (TG) and derivative thermogravimetric (DTG) data.
 
+        This method creates a figure showing the TG and DTG curves, providing a visual representation
+        of the sample's thermal decomposition behavior.
+
+        :param kwargs: Additional keyword arguments for plot customization.
+        :type kwargs: dict
+        :return: A MyFigure instance containing the generated plot.
+        :rtype: MyFigure
         """
         if not self.proximate_computed:
             self.proximate_analysis()
@@ -1259,14 +1414,15 @@ class Sample:
 
     def plot_soliddist(self, **kwargs: dict[str, Any]) -> MyFigure:
         """
-        Plot the solid distribution analysis.
+        Generate a plot illustrating the solid distribution analysis results.
 
-        Args:
-            paper_col (int): Number of columns in the plot for paper publication (default is 1).
-            hgt_mltp (float): Height multiplier for the plot (default is 1.25).
+        This method plots the weight loss of the sample at specified temperature steps, showing the
+        distribution of solid components within the sample.
 
-        Returns:
-            None
+        :param kwargs: Additional keyword arguments for plot customization.
+        :type kwargs: dict
+        :return: A MyFigure instance containing the generated plot.
+        :rtype: MyFigure
         """
 
         # slightly different plotting behaviour (uses averages)
@@ -1316,15 +1472,15 @@ class Sample:
 
     def plot_deconv(self, **kwargs: dict[str, Any]) -> MyFigure:
         """
-        Plot the deconvolution results.
+        Generate a plot showing the deconvolution analysis results.
 
-        Args:
-            filename (str, optional): The filename to save the plot. Defaults to 'Deconv'.
-            x_lim (tuple, optional): The x-axis limits of the plot. Defaults to None.
-            y_lim (tuple, optional): The y-axis limits of the plot. Defaults to None.
-            save_as_pdf (bool, optional): Whether to save the plot as a PDF file. Defaults to False.
-            save_as_svg (bool, optional): Whether to save the plot as an SVG file. Defaults to False.
-            legend (str, optional): The position of the legend in the plot. Defaults to 'best'.
+        This method visualizes the Gaussian peak fitting performed on the DTG data, illustrating the
+        identified decomposition steps within the sample.
+
+        :param kwargs: Additional keyword arguments for plot customization.
+        :type kwargs: dict
+        :return: A MyFigure instance containing the deconvolution analysis plot.
+        :rtype: MyFigure
         """
 
         if not self.deconv_computed:
@@ -1383,10 +1539,9 @@ class Sample:
 
 class Measure:
     """
-    A class to collect and analyze a series of numerical data points or arrays.
-
-    Attributes:
-        _stk (dict): A dictionary to store the data points or numpy arrays with integer keys.
+    A class to handle and analyze a series of measurements or data points. It provides functionalities
+    to add new data, compute averages, and calculate standard deviations, supporting the analysis
+    of replicated measurement data.
     """
 
     std_type: Literal["population", "sample"] = "population"
@@ -1397,7 +1552,15 @@ class Measure:
 
     @classmethod
     def set_std_type(cls, new_std_type: Literal["population", "sample"]):
-        """"""
+        """
+        Set the standard deviation type for all instances of Measure.
+
+        This class method configures whether the standard deviation calculation should be
+        performed as a sample standard deviation or a population standard deviation.
+
+        :param new_std_type: The type of standard deviation to use ('population' or 'sample').
+        :type new_std_type: Literal["population", "sample"]
+        """
         cls.std_type = new_std_type
         if new_std_type == "population":
             cls.np_ddof: int = 0
@@ -1406,7 +1569,10 @@ class Measure:
 
     def __init__(self, name: str | None = None):
         """
-        Initializes the Measure class with an empty dictionary for _stk.
+        Initialize a Measure object to store and analyze data.
+
+        :param name: An optional name for the Measure object, used for identification and reference in analyses.
+        :type name: str, optional
         """
         self.name = name
         self._stk: dict[int : np.ndarray | float] = {}
@@ -1418,10 +1584,12 @@ class Measure:
 
     def add(self, replicate: int, value: np.ndarray | pd.Series | float | int) -> None:
         """
-        Adds a new data point or numpy array to the _stk dictionary with the specified replicate key.
+        Add a new data point or series of data points to the Measure object.
 
-        :param replicate: The integer key (replicate number) to associate with the value.
-        :param value: A data point, numpy array, or pandas Series to be added.
+        :param replicate: The identifier for the replicate to which the data belongs.
+        :type replicate: int
+        :param value: The data point(s) to be added. Can be a single value or a series of values.
+        :type value: np.ndarray | pd.Series | float | int
         """
         if isinstance(value, (pd.Series, pd.DataFrame)):
             value = value.to_numpy()
@@ -1433,10 +1601,12 @@ class Measure:
 
     def stk(self, replicate: int | None = None) -> np.ndarray | float:
         """
-        Retrieves the data point or array associated with the specified replicate key.
+        Retrieve the data points for a specific replicate or all data if no replicate is specified.
 
-        :param replicate: The key (replicate number) of the data point or array to retrieve.
-        :return: The data point or array associated with the replicate key.
+        :param replicate: The identifier for the replicate whose data is to be retrieved. If None, data for all replicates is returned.
+        :type replicate: int, optional
+        :return: The data points for the specified replicate or all data.
+        :rtype: np.ndarray | float
         """
         if replicate is None:
             return self._stk
@@ -1445,9 +1615,10 @@ class Measure:
 
     def ave(self) -> np.ndarray:
         """
-        Calculates the mean of all data points or arrays stored in _stk.
+        Calculate and return the average of the data points across all replicates.
 
-        :return: The mean value(s) across all data points or arrays.
+        :return: The average values for the data points.
+        :rtype: np.ndarray
         """
         if all(isinstance(v, np.ndarray) for v in self._stk.values()):
             self._ave = np.mean(np.column_stack(list(self._stk.values())), axis=1)
@@ -1458,9 +1629,10 @@ class Measure:
 
     def std(self) -> np.ndarray:
         """
-        Calculates the standard deviation of all data points or arrays stored in _stk.
+        Calculate and return the standard deviation of the data points across all replicates.
 
-        :return: The standard deviation value(s) across all data points or arrays.
+        :return: The standard deviation of the data points.
+        :rtype: np.ndarray
         """
         if all(isinstance(v, np.ndarray) for v in self._stk.values()):
             self._std = np.std(
