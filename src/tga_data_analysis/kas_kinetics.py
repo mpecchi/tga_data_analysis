@@ -6,6 +6,11 @@ from tga_data_analysis.myfigure import MyFigure, clrs, lttrs, lnstls, mrkrs
 
 
 class KasSample:
+    """
+    A class to handle and analyze kinetic data using the Kissinger-Akahira-Sunose (KAS) method.
+    It provides functionalities to perform KAS analysis on a set of samples, plot analysis results,
+    and compare different samples' kinetic parameters.
+    """
 
     def __init__(
         self,
@@ -15,6 +20,20 @@ class KasSample:
         ramps: list[float] | None = None,
         alpha: list[float] | None = None,
     ):
+        """
+        Initialize a KasSample object with parameters for KAS analysis.
+
+        :param project: The Project object associated with the kinetic analysis.
+        :type project: Project
+        :param samples: A list of Sample objects to be analyzed. If None, all samples in the project are used.
+        :type samples: list[Sample], optional
+        :param name: An optional name for the KasSample object, used for identification.
+        :type name: str, optional
+        :param ramps: A list of heating rates for each sample. If None, the heating rates are taken from the samples.
+        :type ramps: list[float], optional
+        :param alpha: A list of conversion values to be analyzed. If None, a default range is used.
+        :type alpha: list[float], optional
+        """
         self.plot_grid = project.plot_grid
         self.plot_font = project.plot_font
         self.out_path = plib.Path(project.out_path, "kas_analysis")
@@ -55,15 +74,10 @@ class KasSample:
         self,
     ):
         """
-        Perform KAS (Kissinger-Akahira-Sunose) analysis on a set of experiments.
+        Perform the KAS analysis across the provided samples, calculating the activation energy for different conversions.
 
-        Args:
-            samplenames (list[str]): List of sample names to analyze.
-            ramps (list[float]): List of ramp values used for each experiment.
-            alpha (list[float]): List of alpha values to investigate. Defaults to np.arange(0.05, .9, 0.05).
-
-        Returns:
-            dict: Results of the KAS analysis.
+        This method computes the activation energy for the given conversion values (alpha) using the KAS method.
+        The results are stored within the object for later access and visualization.
         """
 
         r_gas_constant = 8.314462618  # Universal gas constant in J/(mol*K)
@@ -94,23 +108,14 @@ class KasSample:
         **kwargs,
     ) -> MyFigure:
         """
-        Plot isolines for KAS analysis.
+        Plot the KAS analysis isolines for the set of samples.
 
-        Parameters:
-        - exps (list): List of experiments.
-        - kas_names (list, optional): List of names for each KAS analysis. If not provided, the names will be extracted from the KAS analysis data.
-        - filename (str, optional): Name of the output file. Default is 'KAsIso'.
-        - paper_col (float, optional): Width of the plot in inches. Default is 0.78.
-        - hgt_mltp (float, optional): Height multiplier for the plot. Default is 1.25.
-        - x_lim (tuple, optional): Limits for the x-axis. Default is None.
-        - y_lim (tuple, optional): Limits for the y-axis. Default is None.
-        - annt_names (bool, optional): Whether to annotate the names of the KAS analysis. Default is True.
-        - annotate_lttrs (bool, optional): Whether to annotate the letters for each KAS analysis. Default is False.
-        - leg_cols (int, optional): Number of columns in the legend. Default is 1.
-        - bboxtoanchor (bool, optional): Whether to place the legend outside of the plot area. Default is True.
-        - x_anchor (float, optional): X-coordinate for the legend anchor. Default is 1.13.
-        - y_anchor (float, optional): Y-coordinate for the legend anchor. Default is 1.02.
-        - legend_loc (str, optional): Location of the legend. Default is 'best'.
+        This method generates a plot of the KAS isolines, providing a visual representation of the kinetic analysis results.
+
+        :param kwargs: Additional keyword arguments for plot customization.
+        :type kwargs: dict
+        :return: A MyFigure instance containing the isoline plot.
+        :rtype: MyFigure
         """
 
         if not self.kas_analysis_computed:
@@ -159,25 +164,15 @@ class KasSample:
         **kwargs,
     ) -> MyFigure:
         """
-        Plot isolines for KAS analysis.
+        Plot the activation energy as a function of conversion for the analyzed samples.
 
-        Parameters:
-        - exps (list): List of experiments.
-        - kas_names (list, optional): List of names for each KAS analysis. If not provided, the names will be extracted from the KAS analysis data.
-        - filename (str, optional): Name of the output file. Default is 'KAsIso'.
-        - paper_col (float, optional): Width of the plot in inches. Default is 0.78.
-        - hgt_mltp (float, optional): Height multiplier for the plot. Default is 1.25.
-        - x_lim (tuple, optional): Limits for the x-axis. Default is None.
-        - y_lim (tuple, optional): Limits for the y-axis. Default is None.
-        - annt_names (bool, optional): Whether to annotate the names of the KAS analysis. Default is True.
-        - annotate_lttrs (bool, optional): Whether to annotate the letters for each KAS analysis. Default is False.
-        - leg_cols (int, optional): Number of columns in the legend. Default is 1.
-        - bboxtoanchor (bool, optional): Whether to place the legend outside of the plot area. Default is True.
-        - x_anchor (float, optional): X-coordinate for the legend anchor. Default is 1.13.
-        - y_anchor (float, optional): Y-coordinate for the legend anchor. Default is 1.02.
-        - legend_loc (str, optional): Location of the legend. Default is 'best'.
+        This method generates a plot showing the variation of activation energy with conversion, offering insights into the kinetic behavior of the sample.
+
+        :param kwargs: Additional keyword arguments for plot customization.
+        :type kwargs: dict
+        :return: A MyFigure instance containing the activation energy plot.
+        :rtype: MyFigure
         """
-
         if not self.kas_analysis_computed:
             self.kas_analysis()
 
@@ -219,22 +214,21 @@ def plot_multi_activation_energy(
     **kwargs,
 ) -> MyFigure:
     """
-    Plot multiple thermogravimetric (TG) curves.
+    Plot the activation energy for multiple KAS analyses, comparing their kinetic parameters.
 
-    Args:
-        exps (list): List of experimental data objects.
-        filename (str, optional): Name of the output file. Defaults to 'Fig'.
-        paper_col (float, optional): Width of the figure in inches. Defaults to 0.78.
-        hgt_mltp (float, optional): Height multiplier of the figure. Defaults to 1.25.
-        x_lim (tuple, optional): Limits of the x-axis. Defaults to None.
-        y_lim (list, optional): Limits of the y-axis. Defaults to [0, 100].
-        y_ticks (list, optional): Custom y-axis tick locations. Defaults to None.
-        lttrs (bool, optional): Whether to annotate letters on the plot. Defaults to False.
-        save_as_pdf (bool, optional): Whether to save the figure as a PDF file. Defaults to False.
-        save_as_svg (bool, optional): Whether to save the figure as an SVG file. Defaults to False.
+    This function creates a plot showing the activation energy against conversion for a series of KasSample objects,
+    allowing for a comparative analysis of different samples or conditions.
 
-    Returns:
-        None
+    :param kassamples: A list of KasSample objects for which the activation energy plots are generated.
+    :type kassamples: list[KasSample]
+    :param labels: Labels corresponding to each KasSample object. If None, the names of the samples are used.
+    :type labels: list[str], optional
+    :param filename: The base name for the file to save the plot. Defaults to "plot".
+    :type filename: str
+    :param kwargs: Additional keyword arguments for plot customization.
+    :type kwargs: dict
+    :return: A MyFigure instance containing the comparative activation energy plot.
+    :rtype: MyFigure
     """
 
     if labels is None:

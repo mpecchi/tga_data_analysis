@@ -6,5 +6,7 @@ Modules
    :caption: Modules:
 
    tga
-   myfigure
+
    kas_kinetics
+
+   myfigure

@@ -18,24 +18,8 @@ from tga_data_analysis.myfigure import MyFigure, clrs, lnstls, htchs, mrkrs
 
 class Project:
     """
-    Represents a project for TGA data analysis.
+    Represents a project (identified by the folder where the data is stored) for TGA data analysis.
 
-    :param folder_path: Path to the folder containing the data files.
-    :param name: Name of the project. Defaults to the last part of the folder path if not provided.
-    :param temp_unit: Temperature unit ('C' for Celsius, 'K' for Kelvin). Defaults to 'C'.
-    :param plot_font: Font used for plotting. Defaults to 'Dejavu Sans'.
-    :param dtg_basis: Basis for DTG calculations ('temperature' or 'time'). Defaults to 'temperature'.
-    :param temp_i_temp_b_threshold: Threshold for temperature calculations. Defaults to 0.01.
-    :param resolution_sec_deg_dtg: Resolution for DTG. Defaults to 5.
-    :param dtg_window_filter: Window size for the DTG filter. Defaults to 101.
-    :param plot_grid: Indicates if a grid should be shown on plots. Defaults to False.
-    :param column_name_mapping: Mapping for column names. Optional.
-    :param load_skiprows: Number of rows to skip when loading files. Defaults to 0.
-    :param time_moist: Time for moisture analysis. Defaults to 38.0.
-    :param time_vm: Time for VM analysis. Defaults to 147.0.
-    :param temp_initial_celsius: Initial temperature in Celsius for analysis. Defaults to 40.
-    :param temp_lim_dtg_celsius: Temperature limits for DTG in Celsius. Optional.
-    :param auto_save_reports: Indicates if reports should be auto-saved. Defaults to True.
     """
 
     def __init__(
