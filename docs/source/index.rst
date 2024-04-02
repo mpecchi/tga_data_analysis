@@ -11,8 +11,11 @@ Welcome to tga_data_analysis's documentation!
    :caption: Contents:
 
    modules
+
    tga
+
    kas_kinetics
+
    myfigure
 
 
