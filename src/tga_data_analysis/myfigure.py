@@ -1,7 +1,7 @@
 from __future__ import annotations
 import string
 import pathlib as plib
-from typing import Any, Dict, Literal
+from typing import Any, Dict
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -410,6 +410,8 @@ class MyFigure:
                 letters_list = [self.kwargs["annotate_lttrs"]]
             elif isinstance(self.kwargs["annotate_lttrs"], (list, tuple)):
                 letters_list = self.kwargs["annotate_lttrs"]
+            else:
+                raise ValueError("annotate_lttrs is given in the wrong format")
             for i, ax in enumerate(self.axs):
                 ax.annotate(
                     f"({letters_list[i]})",
@@ -554,7 +556,7 @@ class MyFigure:
             patterns = htchs[:bars_in_group]  # set hatch patterns in correct order
             hatches = []  # list for hatches in the order of the bars
             for h in patterns:  # loop over patterns to create bar-ordered hatches
-                for i in range(int(len(bars) / len(patterns))):
+                for _ in range(int(len(bars) / len(patterns))):
                     hatches.append(h)
             # loop over bars and hatches to set hatches in correct order
             for bar, hatch in zip(bars, hatches):
