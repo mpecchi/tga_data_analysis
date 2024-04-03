@@ -7,17 +7,12 @@ Welcome to tga_data_analysis's documentation!
 =============================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
    :caption: Contents:
 
-   modules
-
    tga
-
    kas_kinetics
-
    measure
-
    myfigure
 
 

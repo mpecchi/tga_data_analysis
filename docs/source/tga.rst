@@ -1,5 +1,5 @@
 tga_data_analysis.tga
-=====================
+===============================
 
 .. automodule:: tga_data_analysis.tga
    :members:

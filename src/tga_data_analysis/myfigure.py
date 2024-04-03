@@ -230,9 +230,9 @@ class MyFigure:
 
     def process_kwargs(self) -> None:
         """
-        Process and validate the provided keyword arguments, ensuring they are compatible with the figure settings.
+        Process and validate keyword arguments.
 
-        Raises a ValueError if an invalid keyword argument is provided or if required arguments are missing.
+        Raises a ValueError if an invalid keyword argument is provided.
         """
         valid_kwargs = set(self.default_kwargs().keys())
 
@@ -367,7 +367,7 @@ class MyFigure:
             self.broad_props[sprop] = self._broadcast_value_prop(self.kwargs[sprop], sprop)
         for lprop in ["legend_bbox_xy"]:
             self.broad_props[lprop] = self._broadcast_list_prop(self.kwargs[lprop], lprop)
-        borderpad = (0.5,)  # Smaller border pad
+
         if self.kwargs["twinx"] is None:
 
             for i, ax in enumerate(self.axs):
@@ -563,7 +563,7 @@ class MyFigure:
         """
         for ax in self.axs:
             # Check if the plot is a bar plot
-            bars = [bar for bar in ax.patches if isinstance(bar, mpatches.Rectangle)]
+            bars = [b for b in ax.patches if isinstance(b, mpatches.Rectangle)]
             # If there are no bars, return immediately
             if not bars:
                 return
@@ -576,8 +576,8 @@ class MyFigure:
                 for _ in range(int(len(bars) / len(patterns))):
                     hatches.append(h)
             # loop over bars and hatches to set hatches in correct order
-            for bar, hatch in zip(bars, hatches):
-                bar.set_hatch(hatch)
+            for b, hatch in zip(bars, hatches):
+                b.set_hatch(hatch)
 
     def _broadcast_value_prop(self, prop: list | str | float | int | bool, prop_name: str) -> list:
         """

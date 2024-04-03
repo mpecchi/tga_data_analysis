@@ -16,19 +16,16 @@ release = "2.0.2"
 
 extensions = ["sphinx.ext.autodoc", "sphinx_autodoc_typehints", "sphinx.ext.viewcode"]
 
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+autodoc_mock_imports = ["__future__"]
+
+exclude_patterns = []
 
 templates_path = ["_templates"]
 
-autodoc_typehints = "description"
-
-autodoc_class_signature = "separated"
-
-autodoc_default_options = {"members": True, "undoc-members": True, "show-inheritance": True}
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "sphinx_rtd_theme"
+html_theme = "piccolo_theme"
 
 html_static_path = ["_static"]

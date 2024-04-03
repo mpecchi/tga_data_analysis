@@ -1,10 +1,10 @@
 from __future__ import annotations
+from typing import Literal, Any
 import pathlib as plib
 import numpy as np
 import pandas as pd
 from scipy.signal import savgol_filter
 from lmfit.models import GaussianModel, LinearModel
-from typing import Literal, Any
 from tga_data_analysis.myfigure import MyFigure, clrs, lnstls
 from tga_data_analysis.measure import Measure
 
@@ -41,13 +41,13 @@ class Project:
         :type folder_path: plib.Path
         :param name: The name of the project. Defaults to the last part of the folder path if None.
         :type name: str, optional
-        :param temp_unit: The unit of temperature used in the project ('C' for Celsius, 'K' for Kelvin).
+        :param temp_unit: The unit of temperature used in the project ('C':Celsius, 'K':Kelvin).
         :type temp_unit: Literal["C", "K"]
         :param plot_font: The font used in plots, either 'Dejavu Sans' or 'Times New Roman'.
         :type plot_font: Literal["Dejavu Sans", "Times New Roman"]
         :param dtg_basis: The basis for DTG calculations, either 'temperature' or 'time'.
         :type dtg_basis: Literal["temperature", "time"]
-        :param temp_i_temp_b_threshold: The percentage threshold for Ti and Tb calculation in DTG analysis.
+        :param temp_i_temp_b_threshold: The threshold for Ti and Tb calculation in DTG analysis.
         :type temp_i_temp_b_threshold: float
         :param resolution_sec_deg_dtg: The resolution in seconds or degrees for DTG analysis.
         :type resolution_sec_deg_dtg: int
@@ -790,7 +790,6 @@ class Sample:
         self.oxidation_computed = False
         self.soliddist_computed = False
         self.deconv_computed = False
-        self.KAS_computed = False
         # for reports
         self.reports: dict[str, pd.DataFrame] = {}
         self.report_types_computed: list[str] = []
@@ -1461,7 +1460,7 @@ class Sample:
         """
 
         if not self.deconv_computed:
-            raise Exception("Deconvolution analysis not computed")
+            raise ValueError("Deconvolution analysis not computed")
         out_path = plib.Path(self.out_path, "single_sample_plots")
         out_path.mkdir(parents=True, exist_ok=True)
 
