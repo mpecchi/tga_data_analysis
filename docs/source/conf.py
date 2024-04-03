@@ -14,9 +14,7 @@ release = "2.0.2"
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ["sphinx.ext.autodoc", "sphinx_autodoc_typehints", "sphinx.ext.viewcode"]
-
-autodoc_mock_imports = ["__future__"]
+extensions = ["sphinx.ext.autodoc", "sphinx.ext.viewcode", "sphinx_autodoc_typehints"]
 
 exclude_patterns = []
 

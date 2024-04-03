@@ -10,6 +10,8 @@ Welcome to tga_data_analysis's documentation!
    :maxdepth: 4
    :caption: Contents:
 
+   example_project
+
    tga
    kas_kinetics
    measure
