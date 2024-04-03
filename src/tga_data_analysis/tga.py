@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Dec 14 14:28:04 2022
-
-@author: mp933
-"""
-# %%
 from __future__ import annotations
 import pathlib as plib
 import numpy as np
