@@ -16,6 +16,8 @@ Welcome to tga_data_analysis's documentation!
 
    kas_kinetics
 
+   measure
+
    myfigure
 
 

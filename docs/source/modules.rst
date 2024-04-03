@@ -9,4 +9,6 @@ Modules
 
    kas_kinetics
 
+   measure 
+
    myfigure
