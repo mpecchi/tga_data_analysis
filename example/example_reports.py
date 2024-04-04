@@ -2,10 +2,8 @@
 import pathlib as plib
 from tga_data_analysis.tga import Project, Sample
 
-# test_dir = plib.Path(__file__).resolve().parent / "proximate"
-test_dir: plib.Path = plib.Path(
-    r"C:\Users\mp933\OneDrive - Cornell University\Python\tga_data_analysis\example\proximate"
-)
+test_dir = plib.Path(__file__).resolve().parent / "proximate_analysis"
+
 proj = Project(test_dir, name="test", temp_unit="K")
 sru = Sample(
     project=proj, name="sru", filenames=["SRU_1", "SRU_2", "SRU_3"], time_moist=38, time_vm=167

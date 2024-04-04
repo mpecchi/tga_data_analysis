@@ -3,9 +3,7 @@ import pathlib as plib
 from tga_data_analysis.tga import Project, Sample
 
 test_dir = plib.Path(__file__).resolve().parent / "deconvolution"
-test_dir: plib.Path = plib.Path(
-    r"C:\Users\mp933\OneDrive - Cornell University\Python\tga_data_analysis\example\deconvolution"
-)
+
 proj = Project(test_dir, name="test", temp_unit="K")
 cell = Sample(
     project=proj,

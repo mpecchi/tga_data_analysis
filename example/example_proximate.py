@@ -1,7 +1,7 @@
 import pathlib as plib
 from tga_data_analysis.tga import Project, Sample
 
-test_dir = plib.Path(__file__).resolve().parent / "proximate"
+test_dir = plib.Path(__file__).resolve().parent / "proximate_analysis"
 
 proj = Project(test_dir, name="test", temp_unit="K")
 sru = Sample(

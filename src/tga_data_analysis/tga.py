@@ -5,8 +5,9 @@ import numpy as np
 import pandas as pd
 from scipy.signal import savgol_filter
 from lmfit.models import GaussianModel, LinearModel
-from tga_data_analysis.myfigure import MyFigure, clrs, lnstls
 from tga_data_analysis.measure import Measure
+from tga_data_analysis.myfigure import MyFigure, clrs, lnstls
+
 
 
 class Project:
