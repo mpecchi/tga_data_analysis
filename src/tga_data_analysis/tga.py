@@ -9,7 +9,6 @@ from tga_data_analysis.measure import Measure
 from tga_data_analysis.myfigure import MyFigure, clrs, lnstls
 
 
-
 class Project:
     """
     Represents a project (identified by the folder where the data is stored) for TGA data analysis.
@@ -312,7 +311,7 @@ class Project:
 
         elif report_type == "soliddist":
             if bar_labels is None:
-                vars_bar = [f"{col.split(" ")[0]} {col.split(" ")[-1]}" for col in df_ave.columns]
+                vars_bar = [f"{col.split(' ')[0]} {col.split(' ')[-1]}" for col in df_ave.columns]
             else:
                 vars_bar = bar_labels
             df_ave.columns = vars_bar
@@ -645,9 +644,9 @@ class Sample:
         correct_ash_mg: list[float] | None = None,
         correct_ash_fr: list[float] | None = None,
         column_name_mapping: dict[str:str] | None = None,
-        load_skiprows: int = 0,
-        time_moist: float = 38.0,
-        time_vm: float = 147,
+        load_skiprows: int | None = None,
+        time_moist: float | None = None,
+        time_vm: float | None = None,
         heating_rate_deg_min: float | None = None,
         temp_i_temp_b_threshold: float | None = None,
     ):
