@@ -11,7 +11,8 @@ from tga_data_analysis.myfigure import MyFigure, colors, linestyles
 
 class Project:
     """
-    Represents a project (identified by the folder where the data is stored) for TGA data analysis.
+    Represents a project (identified by the folder where the data is stored)
+    for TGA data analysis.
 
     """
 

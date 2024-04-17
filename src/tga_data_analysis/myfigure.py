@@ -254,7 +254,13 @@ class MyFigure:
             raise ValueError("Number of legend columns must be positive.")
 
     def broadcast_all_kwargs(self) -> None:
-        """ """
+        """
+        Broadcast each kwargs property to a list of the same len as the axs or axts.
+        If one value is given, it is repeated for all axes, if multiple values are
+        given as a list, the list is maintained.
+        This is performed on single value properties (labels, booleans) and on
+        properties that are given as a list (x_lim, y_lim etc)
+        """
         broad_props: dict[str, list] = {}
         # single props (one value per axis)
         for sprop in [
@@ -292,7 +298,9 @@ class MyFigure:
 
     def update_axes_props_pre_data(self) -> None:
         """
-        Update properties that are applied to each axis individually.
+        Update properties that are applied to each axis individually before the axes are
+        populated with data, as the data does not influence the behavior.
+        Examples are axis labels or limits.
         """
 
         # Update each axis with the respective properties
@@ -352,6 +360,11 @@ class MyFigure:
         return self
 
     def update_axes_props_post_data(self) -> None:
+        """
+        Update properties that are applied to each axis individually AFTER the axes are
+        populated with data, as the data does DO influence the behavior.
+        Examples are legend or annotating outliers or masking data.
+        """
         for i, ax in enumerate(self.axs):
             if self.kwargs["auto_apply_hatches_to_bars"]:
                 _apply_hatch_patterns_to_ax(ax)
@@ -555,23 +568,23 @@ def _add_legend_to_ax(
 
 
 def _mask_insignificant_data_in_ax(ax, alpha: float = 0.3) -> None:
-    bars = [b for b in ax.patches if isinstance(b, mpatches.Rectangle)]
+    axbars = [b for b in ax.patches if isinstance(b, mpatches.Rectangle)]
 
-    if not bars:
+    if not axbars:
         return
 
     df_ave, df_std = _extract_ave_std_from_ax(ax)
     ave_values = df_ave.T.to_numpy().ravel().tolist()
     std_values = df_std.T.to_numpy().ravel().tolist()
 
-    # Iterate over bars and their corresponding error bars
-    for i, bar in enumerate(bars):
+    # Iterate over axbars and their corresponding error axbars
+    for i, axbar in enumerate(axbars):
         std = std_values[i]
         ave = ave_values[i]
         if std > ave:
-            bar.set_alpha(alpha)
+            axbar.set_alpha(alpha)
         else:
-            bar.set_alpha(1.0)
+            axbar.set_alpha(1.0)
 
 
 def _annotate_letters_to_ax(ax, letter: str, xy: tuple[float], font_size: int) -> None:
@@ -639,9 +652,9 @@ def _broadcast_list_prop(prop: list | None, prop_name: str, number_of_axis: int)
 
 
 def _extract_ave_std_from_ax(ax):
-    bars = [b for b in ax.patches if isinstance(b, mpatches.Rectangle)]
-    ave_values = [bar.get_height() for bar in bars]
-    std_values = [0] * len(bars)  # Initialize a list of zeros for standard deviations
+    axbars = [b for b in ax.patches if isinstance(b, mpatches.Rectangle)]
+    ave_values = [axbar.get_height() for axbar in axbars]
+    std_values = [0] * len(axbars)  # Initialize a list of zeros for standard deviations
 
     # Collect all LineCollections
     line_collections = [col for col in ax.collections if isinstance(col, LineCollection)]
@@ -656,7 +669,7 @@ def _extract_ave_std_from_ax(ax):
                 std_values[index] = std
                 index += 1
 
-    df_ave = pd.DataFrame([ave_values], columns=[f"Bar {i+1}" for i in range(len(bars))])
+    df_ave = pd.DataFrame([ave_values], columns=[f"Bar {i+1}" for i in range(len(axbars))])
     df_std = pd.DataFrame([std_values], columns=df_ave.columns)
 
     return df_ave, df_std
@@ -677,8 +690,8 @@ def _rotate_x_labels_ax(ax, rotation: float | int) -> None:
 
 def _annotate_outliers_to_ax(ax, decimal_places=2) -> None:
 
-    bars = [b for b in ax.patches if isinstance(b, mpatches.Rectangle)]
-    if not bars:
+    axbars = [b for b in ax.patches if isinstance(b, mpatches.Rectangle)]
+    if not axbars:
         return
 
     # Set dx and dy for text positioning adjustments
@@ -694,7 +707,7 @@ def _annotate_outliers_to_ax(ax, decimal_places=2) -> None:
         df_std.T.to_numpy().ravel().tolist() if not df_std.empty else np.zeros(dfao["ave"].size)
     )
 
-    # Determine x positions of bars
+    # Determine x positions of axbars
     try:
         dfao["xpos"] = [p.get_x() + p.get_width() / 2 for p in ax.patches]
     except ValueError:  # Correct for possible duplicates due to masking
@@ -766,22 +779,22 @@ def _apply_hatch_patterns_to_ax(ax) -> None:
     Apply hatch patterns to bars in the bar plots of each subplot.
 
     This method iterates over all subplots and applies predefined hatch patterns to each bar,
-    enhancing the visual distinction between bars, especially in black and white printouts.
+    enhancing the visual distinction between axbars, especially in black and white printouts.
     """
     # Check if the plot is a bar plot
-    bars = [b for b in ax.patches if isinstance(b, mpatches.Rectangle)]
-    # If there are no bars, return immediately
-    if not bars:
+    axbars = [b for b in ax.patches if isinstance(b, mpatches.Rectangle)]
+    # If there are no axbars, return immediately
+    if not axbars:
         return
     num_groups = len(ax.get_xticks(minor=False))
-    # Determine the number of bars in each group
-    bars_in_group = len(bars) // num_groups
+    # Determine the number of axbars in each group
+    bars_in_group = len(axbars) // num_groups
     patterns = hatches[:bars_in_group]  # set hatch patterns in correct order
-    plot_hatches_list = []  # list for hatches in the order of the bars
+    plot_hatches_list = []  # list for hatches in the order of the axbars
     for h in patterns:  # loop over patterns to create bar-ordered hatches
-        for _ in range(int(len(bars) / len(patterns))):
+        for _ in range(int(len(axbars) / len(patterns))):
             plot_hatches_list.append(h)
-    # loop over bars and hatches to set hatches in correct order
-    for b, hatch in zip(bars, plot_hatches_list):
+    # loop over axbars and hatches to set hatches in correct order
+    for b, hatch in zip(axbars, plot_hatches_list):
         b.set_hatch(hatch)
         b.set_edgecolor("k")
