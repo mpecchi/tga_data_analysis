@@ -6,7 +6,7 @@ import pandas as pd
 from scipy.signal import savgol_filter
 from lmfit.models import GaussianModel, LinearModel
 from tga_data_analysis.measure import Measure
-from tga_data_analysis.myfigure import MyFigure, clrs, lnstls
+from tga_data_analysis.myfigure import MyFigure, colors, linestyles
 
 
 class Project:
@@ -357,7 +357,7 @@ class Project:
                 df_ave[bar_ytaxis],
                 label=bar_ytaxis,
                 edgecolor="black",
-                color=clrs[3],
+                color=colors[3],
                 # s=100
             )
             myfig.axts[0].errorbar(
@@ -428,15 +428,15 @@ class Project:
             myfig.axs[0].plot(
                 sample.temp.ave(),
                 sample.mp_db.ave(),
-                color=clrs[i],
-                linestyle=lnstls[i],
+                color=colors[i],
+                linestyle=linestyles[i],
                 label=labels[i],
             )
             myfig.axs[0].fill_between(
                 sample.temp.ave(),
                 sample.mp_db.ave() - sample.mp_db.std(),
                 sample.mp_db.ave() + sample.mp_db.std(),
-                color=clrs[i],
+                color=colors[i],
                 alpha=0.3,
             )
         myfig.save_figure()
@@ -498,15 +498,15 @@ class Project:
             myfig.axs[0].plot(
                 sample.temp_dtg,
                 sample.dtg_db.ave(),
-                color=clrs[i],
-                linestyle=lnstls[i],
+                color=colors[i],
+                linestyle=linestyles[i],
                 label=labels[i],
             )
             myfig.axs[0].fill_between(
                 sample.temp_dtg,
                 sample.dtg_db.ave() - sample.dtg_db.std(),
                 sample.dtg_db.ave() + sample.dtg_db.std(),
-                color=clrs[i],
+                color=colors[i],
                 alpha=0.3,
             )
         myfig.save_figure()
@@ -566,22 +566,26 @@ class Project:
             **kwargs,
         )
         myfig.axts[0].plot(
-            samples[0].time.ave(), samples[0].temp.ave(), color="k", linestyle=lnstls[1], label="T"
+            samples[0].time.ave(),
+            samples[0].temp.ave(),
+            color="k",
+            linestyle=linestyles[1],
+            label="T",
         )
         for i, sample in enumerate(samples):
 
             myfig.axs[0].plot(
                 sample.time.ave(),
                 sample.mp_db.ave(),
-                color=clrs[i],
-                linestyle=lnstls[i],
+                color=colors[i],
+                linestyle=linestyles[i],
                 label=labels[i],
             )
             myfig.axs[0].fill_between(
                 sample.time.ave(),
                 sample.mp_db.ave() - sample.mp_db.std(),
                 sample.mp_db.ave() + sample.mp_db.std(),
-                color=clrs[i],
+                color=colors[i],
                 alpha=0.3,
             )
         myfig.save_figure()
@@ -1292,37 +1296,37 @@ class Sample:
             mf.axs[0].plot(
                 self.time.stk(f),
                 self.temp.stk(f),
-                color=clrs[f],
-                linestyle=lnstls[f],
+                color=colors[f],
+                linestyle=linestyles[f],
                 label=self.filenames[f],
             )
             mf.axs[2].plot(
                 self.time.stk(f),
                 self.mp_ar.stk(f),
-                color=clrs[f],
-                linestyle=lnstls[f],
+                color=colors[f],
+                linestyle=linestyles[f],
                 label=self.filenames[f],
             )
             mf.axs[4].plot(
                 self.time.stk(f),
                 self.mp_db.stk(f),
-                color=clrs[f],
-                linestyle=lnstls[f],
+                color=colors[f],
+                linestyle=linestyles[f],
                 label=self.filenames[f],
             )
             mf.axs[0].vlines(
                 self.time.stk(f)[self.idx_moist.stk(f)],
                 self.temp.stk(f)[self.idx_moist.stk(f)] - 50,
                 self.temp.stk(f)[self.idx_moist.stk(f)] + 50,
-                linestyle=lnstls[f],
-                color=clrs[f],
+                linestyle=linestyles[f],
+                color=colors[f],
             )
             mf.axs[2].vlines(
                 self.time.stk(f)[self.idx_moist.stk(f)],
                 self.mp_ar.stk(f)[self.idx_moist.stk(f)] - 5,
                 self.mp_ar.stk(f)[self.idx_moist.stk(f)] + 5,
-                linestyle=lnstls[f],
-                color=clrs[f],
+                linestyle=linestyles[f],
+                color=colors[f],
             )
 
             if self.vm_db() < 99:
@@ -1330,36 +1334,36 @@ class Sample:
                     self.time.stk(f)[self.idx_vm.stk(f)],
                     self.temp.stk(f)[self.idx_vm.stk(f)] - 50,
                     self.temp.stk(f)[self.idx_vm.stk(f)] + 50,
-                    linestyle=lnstls[f],
-                    color=clrs[f],
+                    linestyle=linestyles[f],
+                    color=colors[f],
                 )
                 mf.axs[4].vlines(
                     self.time.stk(f)[self.idx_vm.stk(f)],
                     self.mp_db.stk(f)[self.idx_vm.stk(f)] - 5,
                     self.mp_db.stk(f)[self.idx_vm.stk(f)] + 5,
-                    linestyle=lnstls[f],
-                    color=clrs[f],
+                    linestyle=linestyles[f],
+                    color=colors[f],
                 )
             # tg plot 1, 3, 5 on the right
             mf.axs[1].plot(
                 self.time_dtg.stk(f),
                 self.temp_dtg,
-                color=clrs[f],
-                linestyle=lnstls[f],
+                color=colors[f],
+                linestyle=linestyles[f],
                 label=self.filenames[f],
             )
             mf.axs[3].plot(
                 self.time_dtg.stk(f),
                 self.mp_db_dtg.stk(f),
-                color=clrs[f],
-                linestyle=lnstls[f],
+                color=colors[f],
+                linestyle=linestyles[f],
                 label=self.filenames[f],
             )
             mf.axs[5].plot(
                 self.time_dtg.stk(f),
                 self.dtg_db.stk(f),
-                color=clrs[f],
-                linestyle=lnstls[f],
+                color=colors[f],
+                linestyle=linestyles[f],
                 label=self.filenames[f],
             )
             #
@@ -1368,22 +1372,22 @@ class Sample:
                     self.time_dtg.stk(f)[self.temp_i_idx.stk(f)],
                     ymin=-1.5,
                     ymax=0,
-                    linestyle=lnstls[f],
-                    color=clrs[f],
+                    linestyle=linestyles[f],
+                    color=colors[f],
                 )
                 mf.axs[5].vlines(
                     self.time_dtg.stk(f)[self.temp_p_idx.stk(f)],
                     ymin=np.min(self.dtg_db.stk(f)),
                     ymax=np.min(self.dtg_db.stk(f)) / 5,
-                    linestyle=lnstls[f],
-                    color=clrs[f],
+                    linestyle=linestyles[f],
+                    color=colors[f],
                 )
                 mf.axs[5].vlines(
                     self.time_dtg.stk(f)[self.temp_b_idx.stk(f)],
                     ymin=-1.5,
                     ymax=0,
-                    linestyle=lnstls[f],
-                    color=clrs[f],
+                    linestyle=linestyles[f],
+                    color=colors[f],
                 )
         mf.save_figure()
         return mf
@@ -1433,8 +1437,8 @@ class Sample:
             mf.axs[0].plot(
                 self.time.stk(f),
                 self.mp_db.stk(f),
-                color=clrs[f],
-                linestyle=lnstls[f],
+                color=colors[f],
+                linestyle=linestyles[f],
                 label=self.filenames[f],
             )
             mf.axts[0].plot(self.time.stk(f), self.temp.stk(f))
@@ -1493,15 +1497,15 @@ class Sample:
                 color="red",
                 linestyle="--",
             )
-            clrs_p = clrs[:3] + clrs[5:]  # avoid using red
+            colors_p = colors[:3] + colors[5:]  # avoid using red
             for p, peak in enumerate(self.dcv_peaks):
                 if peak.stk(f) is not None:
                     mf.axs[f].plot(
                         self.temp_dtg,
                         peak.stk(f),
                         label=peak.name,
-                        color=clrs_p[p],
-                        linestyle=lnstls[p],
+                        color=colors_p[p],
+                        linestyle=linestyles[p],
                     )
             mf.axs[f].annotate(
                 f"r$^2$={self.dcv_r2.stk(f):.2f}",

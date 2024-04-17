@@ -2,7 +2,7 @@
 import numpy as np
 import pathlib as plib
 from tga_data_analysis.tga import Project, Sample
-from tga_data_analysis.myfigure import MyFigure, clrs, lttrs, lnstls, mrkrs
+from tga_data_analysis.myfigure import MyFigure, colors, letters, linestyles, markers
 
 
 class KasSample:
@@ -146,15 +146,15 @@ class KasSample:
             y_new = fit_fn(x_new)
 
             # Plotting the fit line
-            myfig.axs[0].plot(x_new, y_new, color=clrs[i], linestyle=lnstls[i], label=lab)
+            myfig.axs[0].plot(x_new, y_new, color=colors[i], linestyle=linestyles[i], label=lab)
 
             # Plotting the data points
             myfig.axs[0].plot(
                 self.x_matrix[i, :],
                 self.y_matrix[i, :],
-                color=clrs[i],
+                color=colors[i],
                 linestyle="None",
-                marker=mrkrs[i],
+                marker=markers[i],
             )
         myfig.save_figure()
         return myfig
@@ -260,8 +260,8 @@ def plot_multi_activation_energy(
         myfig.axs[0].plot(
             sample.alpha,
             sample.activation_energy,
-            color=clrs[i],
-            linestyle=lnstls[i],
+            color=colors[i],
+            linestyle=linestyles[i],
             label=labels[i],
         )
 
@@ -271,8 +271,8 @@ def plot_multi_activation_energy(
             sample.activation_energy - sample.activation_energy_std,
             sample.activation_energy + sample.activation_energy_std,
             alpha=0.3,
-            color=clrs[i],
-            linestyle=lnstls[i],
+            color=colors[i],
+            linestyle=linestyles[i],
         )
     myfig.save_figure()
     return myfig
