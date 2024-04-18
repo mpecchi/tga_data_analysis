@@ -17,13 +17,12 @@ permissions:
 
 jobs:
   deploy:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v4.1.1  # Updated version example
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v4.0.0  # Updated version example
       with:
         python-version: '3.x'
     - name: Install dependencies
@@ -33,7 +32,8 @@ jobs:
     - name: Build package
       run: python -m build
     - name: Publish package
-      uses: pypa/gh-action-pypi-publish@1db6a876879e2e1288a3a1b543356e075f5bbc79
+      uses: pypa/gh-action-pypi-publish@latest
       with:
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
+
