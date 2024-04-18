@@ -20,9 +20,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4.1.1  # Updated version example
+    - uses: actions/checkout@v4  # Updated version example
     - name: Set up Python
-      uses: actions/setup-python@v4.0.0  # Updated version example
+      uses: actions/setup-python@v4  # Updated version example
       with:
         python-version: '3.x'
     - name: Install dependencies
