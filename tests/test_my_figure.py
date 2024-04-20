@@ -2,7 +2,7 @@
 from __future__ import annotations
 import matplotlib.pyplot as plt
 import pytest
-from myfigure.myfigure import MyFigure
+from tga_data_analysis.myfigure import MyFigure
 
 
 def test_myfigure_initialization_with_defaults():
