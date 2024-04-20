@@ -16,7 +16,7 @@ PyTGA is a Python module designed for conducting and analyzing Thermogravimetric
 
 ## Documentation
 
-Check out the [documentation](https://tga_data_analysis.readthedocs.io/).
+Check out the [documentation](https://tga-data-analysis.readthedocs.io/).
 
 ## Installation
 
