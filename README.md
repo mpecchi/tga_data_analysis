@@ -23,4 +23,4 @@ Check out the [documentation](https://tga-data-analysis.readthedocs.io/).
 You can install the package from [PyPI](https://pypi.org/project/tga_data_analysis/):
 
 ```bash
-pip install your-package-name
+pip install tga_data_analysis
