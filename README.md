@@ -13,5 +13,14 @@ PyTGA is a Python module designed for conducting and analyzing Thermogravimetric
 - **Deconvolution Analysis**: Deconvolutes TGA curves for peak analysis.
 - **Plotting and Visualization**: Functions for TGA data visualization.
 
-## Example
-The example is available in the example folder that can be found using the project link homepage. Necessary data are provided. The example demonstrates how to use the tga_data_analysis package for basic TGA data analysis and visualization, the example requires downloading the data, installing the package, and setting the folder path to the example data folder.
+
+## Documentation
+
+Check out the [documentation](https://tga_data_analysis.readthedocs.io/).
+
+## Installation
+
+You can install the package from [PyPI](https://pypi.org/project/tga_data_analysis/):
+
+```bash
+pip install your-package-name
