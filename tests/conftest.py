@@ -4,7 +4,10 @@ import numpy as np
 import pytest
 from tga_data_analysis.tga import Project, Sample
 
-test_dir: plib.Path = plib.Path(__file__).parent / "data"
+
+@pytest.fixture
+def test_dir():
+    return plib.Path(__file__).parent / "data"
 
 
 @pytest.fixture

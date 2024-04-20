@@ -1,8 +1,8 @@
 import pathlib as plib
 from tga_data_analysis.tga import Project, Sample
 
-folder_path = plib.Path(__file__).resolve().parent / "oxidation_analysis"
-
+folder_path = plib.Path(__file__).resolve().parent
+# %%
 
 proj = Project(folder_path=folder_path, name="test", temp_unit="K")
 cell_ox5 = Sample(
@@ -34,3 +34,5 @@ for sample in proj.samples.values():
 
 rep = proj.multireport(report_type="oxidation")
 mf = proj.plot_multi_dtg()
+
+# %%

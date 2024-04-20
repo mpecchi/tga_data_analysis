@@ -6,15 +6,11 @@
 Automating TGA Data Analysis
 ============================
 
-The `tga_data_analysis` tool automates the typical analysis of thermogravimetric analysis (TGA) data, saving time and avoiding human error. 
+The `tga_data_analysis` tool automates the typical analysis of thermogravimetric analysis (TGA) data, saving time, avoiding human error, and increasing comparability of results from different groups. 
+
 
 Framework
 ---------
-.. image:: _static/framework.png
-   :width: 646px
-   :height: 458px
-   :alt: alternative text
-   :align: center
 
 Project
 ^^^^^^^
@@ -41,47 +37,51 @@ The ``Sample`` class can generate **multi-replicate reports** and **multi-replic
 
 :doc:`Multi-sample report example <example_reports>`
 
+.. image:: _static/framework.png
+   :width: 646px
+   :height: 458px
+   :alt: alternative text
+   :align: center
+
 Single-sample Analyses
-^^^^^^^^^^^^^^^^^^^^^^
+----------------------
 
 The ``Sample`` class provides method to perform common TGA data analysis at the sample level, providing statistics based on the replicates.
 
 Proximate Analysis
-"""""""""""""""""""
+^^^^^^^^^^^^^^^^^^
 Determines the moisture, volatile matter, and ash content from TGA data.
 
 :doc:`Code example <example_proximate_analysis>`
 
 Oxidation Analysis
-""""""""""""""""""
+^^^^^^^^^^^^^^^^^^
 Analyzes the oxidation behavior of materials.
 
 :doc:`Code example <example_oxidation_analysis>`
 
 Solid-Distillation Analysis
-""""""""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Studies the thermal decomposition and distillation characteristics of solids.
 
 :doc:`Code example <example_soliddistillation>`
 
 Peak Deconvolution Analysis
-""""""""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Resolves overlapping thermal decomposition events.
 
 :doc:`Code example <example_deconvolution>`
 
 Multi-sample Analyses
-^^^^^^^^^^^^^^^^^^^^^
+---------------------
 For analysis that require data from multiple samples (ex. KAS kinetics), a multi-sample class that includes multiple ``Sample`` objects is defined (ex. ``KasSample``).
 Multi-sample classes provide the methods to perform the dedicated analysis and plot the results.
 
 KAS Kinetic Analysis
-""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^
 Applies the Kissinger-Akahira-Sunose method to determine kinetic parameters.
 
 :doc:`Code example <example_kas_kinetics>`
-
-
 
 
 .. toctree::

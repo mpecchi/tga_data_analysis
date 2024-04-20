@@ -1,6 +1,8 @@
-import pytest
-from tga_data_analysis.myfigure import MyFigure
+# %%
+from __future__ import annotations
 import matplotlib.pyplot as plt
+import pytest
+from myfigure.myfigure import MyFigure
 
 
 def test_myfigure_initialization_with_defaults():
@@ -23,55 +25,32 @@ def test_myfigure_initialization_with_custom_values():
 
 
 def test_broadcast_value_prop():
-    fig = MyFigure(rows=2, cols=2)  # Assuming a 2x2 grid
+    fig = MyFigure(rows=2, cols=2, x_lab="test", y_lab=["a", "b", "c", "d"])  # Assuming a 2x2 grid
     # Broadcasting a single value
-    result = fig._broadcast_value_prop("test", "prop_name")
+    result = fig.broad_props["x_lab"]
     assert result == ["test", "test", "test", "test"]
 
     # Broadcasting a list of values
-    result = fig._broadcast_value_prop(["a", "b", "c", "d"], "prop_name")
+    result = fig.broad_props["y_lab"]
     assert result == ["a", "b", "c", "d"]
 
     # Broadcasting with incorrect list size
     with pytest.raises(ValueError):
-        fig._broadcast_value_prop(["a", "b"], "prop_name")
+        fig = MyFigure(rows=2, cols=2, y_lab=["a", "b"])
 
 
 def test_broadcast_list_prop():
-    fig = MyFigure(rows=2, cols=1)  # Assuming a 2x1 grid
+    fig = MyFigure(rows=2, cols=1, x_lim=(0, 1), y_lim=[(0, 1), (2, 4)])  # Assuming a 2x1 grid
     # Broadcasting a list of lists
-    result = fig._broadcast_list_prop([[1, 2], [3, 4]], "prop_name")
-    assert result == [[1, 2], [3, 4]]
+    result = fig.broad_props["x_lim"]
+    assert result == [(0, 1), (0, 1)]
+
+    result = fig.broad_props["y_lim"]
+    assert result == [(0, 1), (2, 4)]
 
     # Broadcasting a list with incorrect inner list size
     with pytest.raises(ValueError):
-        fig._broadcast_list_prop([[1, 2], [3]], "prop_name")
-
-
-def test_broadcast_value_prop_single_axis():
-    fig = MyFigure(rows=1, cols=1)  # A single subplot
-    # Broadcasting a single value
-    result = fig._broadcast_value_prop("test", "prop_name")
-    assert result == ["test"]
-
-    # Broadcasting a list of values (which should be just one value for a single subplot)
-    result = fig._broadcast_value_prop(["a"], "prop_name")
-    assert result == ["a"]
-
-    # Broadcasting with incorrect list size should raise an error even for a single subplot
-    with pytest.raises(ValueError):
-        fig._broadcast_value_prop(["a", "b"], "prop_name")
-
-
-def test_broadcast_list_prop_single_axis():
-    fig = MyFigure(rows=1, cols=1)  # A single subplot
-    # Broadcasting a list of lists (which should just be one list for a single subplot)
-    result = fig._broadcast_list_prop([[1, 2]], "prop_name")
-    assert result == [[1, 2]]
-
-    # Broadcasting a list with incorrect inner list size should raise an error
-    with pytest.raises(ValueError):
-        fig._broadcast_list_prop([[1, 2], [3]], "prop_name")
+        fig = MyFigure(rows=2, cols=1, y_lim=[(0, 1), (2, 4), (3, 5)])
 
 
 def test_create_figure_single_axis():
@@ -104,3 +83,6 @@ def test_invalid_kwargs():
     # Testing with an invalid keyword argument
     with pytest.raises(ValueError):
         MyFigure(invalid_arg=123)
+
+
+# %%

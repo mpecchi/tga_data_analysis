@@ -2,9 +2,9 @@
 import pathlib as plib
 from tga_data_analysis.tga import Project, Sample
 
-test_dir = plib.Path(__file__).resolve().parent / "deconvolution"
-
-proj = Project(test_dir, name="test", temp_unit="K")
+folder_path = plib.Path(__file__).resolve().parent
+# %%
+proj = Project(folder_path, name="test", temp_unit="K")
 cell = Sample(
     project=proj,
     name="cell",

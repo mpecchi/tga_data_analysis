@@ -1,8 +1,9 @@
 import pathlib as plib
 from tga_data_analysis.tga import Project, Sample
 
-test_dir = plib.Path(__file__).resolve().parent / "proximate_analysis"
+test_dir = plib.Path(__file__).resolve().parent
 
+# %%
 proj = Project(test_dir, name="test", temp_unit="K")
 sru = Sample(
     project=proj, name="sru", filenames=["SRU_1", "SRU_2", "SRU_3"], time_moist=38, time_vm=167
@@ -34,3 +35,5 @@ rep = proj.plot_multi_dtg(
     height=4,
     width=4.5,
 )
+
+# %%

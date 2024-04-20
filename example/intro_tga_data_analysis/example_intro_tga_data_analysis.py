@@ -2,7 +2,7 @@
 import pathlib as plib
 from tga_data_analysis.tga import Project, Sample
 
-test_dir = plib.Path(__file__).resolve().parent / "project"
+test_dir = plib.Path(__file__).resolve().parent
 
 
 # %% test different units
@@ -46,3 +46,6 @@ cell = Sample(
     time_vm=None,
 )
 mf = cell.plot_tg_dtg()
+
+
+# %%

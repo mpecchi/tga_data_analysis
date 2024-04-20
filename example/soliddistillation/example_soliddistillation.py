@@ -2,8 +2,8 @@
 import pathlib as plib
 from tga_data_analysis.tga import Project, Sample
 
-folder_path = plib.Path(__file__).resolve().parent / "soliddistillation"
-
+folder_path = plib.Path(__file__).resolve().parent
+# %%
 proj_soliddist = Project(folder_path, name="test", temp_unit="K")
 
 sda = Sample(
