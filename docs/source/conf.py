@@ -9,7 +9,7 @@
 project = "tga_data_analysis"
 copyright = "2024, Matteo Pecchi"
 author = "Matteo Pecchi"
-release = "2.0.2"
+release = "2.0.6"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
