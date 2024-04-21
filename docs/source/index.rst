@@ -8,7 +8,7 @@
    :maxdepth: 2
    :caption: Contents:
 
-   README
+   README.md
 
    tga
 
