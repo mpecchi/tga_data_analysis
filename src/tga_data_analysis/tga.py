@@ -887,6 +887,8 @@ class Sample:
         :return: The corrected data as a pandas DataFrame.
         :rtype: pd.DataFrame
         """
+        if "m_mg" not in file.columns:
+            file["m_mg"] = file["m_p"]  # this avoids keyerrors
         if correct_ash_mg is not None:
             file["m_mg"] = file["m_mg"] - np.min(file["m_mg"]) + correct_ash_mg
         try:
