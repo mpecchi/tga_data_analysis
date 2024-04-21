@@ -38,7 +38,7 @@ The ``Sample`` class provides method to perform common TGA data analysis at the 
 
 ### Proximate Analysis
 Determines the moisture, volatile matter, and ash content from TGA data.
-[![Pic](https://github.com/user/repository/blob/main/path/to/small-image.png?raw=true)](https://github.com/user/repository/blob/main/path/to/full-size-image.png?raw=true)
+
 ### Oxidation Analysis
 Analyzes the oxidation behavior of materials.
 
