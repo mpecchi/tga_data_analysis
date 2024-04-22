@@ -1,10 +1,19 @@
 
-# packages or repos worth mentioning
+# packages or repos or papers worth mentioning
+
+https://www.sciencedirect.com/science/article/pii/S0010465522001357#br0310
+that links to https://github.com/ErickErock/pICNIK/tree/main?tab=MIT-1-ov-file  
 https://github.com/lukasbaldauf/tga-kinetics?tab=readme-ov-file
 https://github.com/lukasbaldauf/tga-kinetics.jl
 
+https://www.nist.gov/system/files/documents/2019/08/28/ta001_bruns_validation_kinetics.pdf
+https://www.sciencedirect.com/science/article/pii/S2405830019301818#fig0005
 
+https://github.com/FluvialSeds/rampedpyrox?tab=readme-ov-file
 
+https://www.tainstruments.com/support/software-downloads-support/downloads/ (proprietary)
+
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9823974/ (excel)
 energy
 
 https://link.springer.com/article/10.1007/s12155-020-10102-1 (excel)
