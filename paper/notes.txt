@@ -1,0 +1,72 @@
+
+# packages or repos worth mentioning
+https://github.com/lukasbaldauf/tga-kinetics?tab=readme-ov-file
+https://github.com/lukasbaldauf/tga-kinetics.jl
+
+
+
+energy
+
+https://link.springer.com/article/10.1007/s12155-020-10102-1 (excel)
+
+https://www.sciencedirect.com/science/article/pii/S0961953419300467?via%3Dihub#fig1 (deconvolution)
+
+https://www.sciencedirect.com/science/article/pii/S0360544215005332?via%3Dihub#fig1 (oxidation)
+
+https://www.sciencedirect.com/science/article/pii/S0016236123002053?via%3Dihub#f0025
+
+https://www.sciencedirect.com/science/article/pii/S2352152X22014839?via%3Dihub#s0010  
+
+https://www.sciencedirect.com/science/article/pii/S0040603122001770?via%3Dihub#fig0001
+
+https://www.mdpi.com/2073-4360/15/14/3010
+
+https://link.springer.com/article/10.3103/S1068364X2207002X (combustion instead of oxidation)
+
+https://www.sciencedirect.com/science/article/pii/S0956053X23006311?via%3Dihub#f0005
+
+https://www.sciencedirect.com/science/article/pii/S2213343721019886?via%3Dihub#fig0010
+
+https://www.sciencedirect.com/science/article/pii/S0165237023001262?via%3Dihub#fig0020
+
+https://www.sciencedirect.com/science/article/pii/S016523702300253X?via%3Dihub#fig0010
+
+material science 
+
+https://link.springer.com/article/10.1007/s12666-021-02202-z 
+
+https://onlinelibrary.wiley.com/doi/full/10.1002/app.32442?casa_token=Xu2nOq8m20oAAAAA%3A3Mo357QtzXtE8UsX-JrmFU3XEEIYCDz_ABz1vweGTfddzJnfdncqLppdFE8SARkAxz1ERhQZDFWyrw
+
+https://journals.sagepub.com/doi/full/10.1080/00325899.2023.2190477
+
+https://www.sciencedirect.com/science/article/pii/S0040603124000194?via%3Dihub#bib0014 (cement hydration)
+ 
+https://www.sciencedirect.com/science/article/pii/S0040603114003645?via%3Dihub#fig0010 (cement hydration)
+
+bioscience
+
+https://doi.org/10.31925/farmacia.2021.3.22 (pharmaceutical)
+
+https://www.sciencedirect.com/science/article/pii/S0141022923001011?via%3Dihub#fig0020
+
+https://www.sciencedirect.com/science/article/pii/S0040603122002325?via%3Dihub#fig0003 (isothermal analysis)
+
+kinetic models
+
+https://link.springer.com/article/10.1007/s10973-022-11210-0 (KAS, OFW)
+
+https://www.sciencedirect.com/science/article/pii/S0040603122001721?via%3Dihub#fig0001
+
+https://pubs.acs.org/doi/10.1021/acsomega.3c09743 
+
+sublimation enthalpies
+https://link.springer.com/article/10.1007/s10973-024-12897-z
+
+https://www.mdpi.com/2073-4360/16/5/629
+
+thermodynamic data 
+
+https://link.springer.com/article/10.1007/s10973-021-11173-8
+
+soil science
+https://link.springer.com/article/10.1007/s10973-022-11709-6#Sec2  (solid distillation)
