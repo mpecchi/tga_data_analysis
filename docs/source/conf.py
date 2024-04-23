@@ -19,7 +19,9 @@ extensions = [
     "sphinx_autodoc_typehints",
     "sphinx.ext.viewcode",
     "myst_parser",
+    "sphinx.ext.napoleon",
 ]
+
 
 exclude_patterns = []
 
@@ -29,6 +31,7 @@ templates_path = ["_templates"]
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "piccolo_theme"
+html_theme = "sphinx_rtd_theme"
 
 html_static_path = ["_static"]
+autoclass_content = "both"

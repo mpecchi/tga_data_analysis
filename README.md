@@ -13,52 +13,101 @@ The `tga_data_analysis` tool automates the typical analysis of thermogravimetric
 
 ## Framework
 
-### Project
+### File
 
-The ``Project`` class refers to a folder that containes all TGA data for a project and to a set of project-level parameters (example temperature unit and plot style). 
+A **.txt** or **.csv** file located in the project folder that contains **time**, **temperature**, and **mass loss** information for a measure.
 
-TGA files that are replicates of the same analysis are loaded and treated as a single ``Samples``. 
+Depending on the instrument export parameter, the structure of ``Files`` can differ slightly. ``Project-Parameters`` ensure that the loading process can lead to the same data structure to allow to perform all downstream computations.
 
-The ``Project`` class can generate publication quality **multi-sample reports** and **multi-sample plots**.
-
+A good naming convention for ``Files`` consists in using ``_`` to ONLY indicate replicates ("A_1", "A_2", or long-sample-name_1, not "name_with_underscores_1").
 
 ### Sample
 
-A collection of replicate runs (TGA files) of the same test, specified by their filenames.
+A collection of ``Files`` that replicate the same measure and ensure reproducibility.
 
-The ``Sample`` class provides direct access to single replicate results and to their average and standard deviation. 
+If the ``Project-Parameters`` do not apply to a specific ``Sample``, their values can be modified for a single ``Sample`` instance.
 
-The ``Measure`` class is used to store each numerical value, so that single replicate, average, and standard deviation are available for each intermediate step and final result.
+The ``Files`` in the ``Sample`` are identified by their names and loaded.
 
-The ``Sample`` class can generate **multi-replicate reports** and **multi-replicate plots** for data inspection.
+Each numerical (ex. ash) or array value (ex. the time vector) from each ``Files`` is stored as a **replicate** using the ``Measure`` class, which provides access to each replicate of the value but also to **average** and **standard deviation** for each value. 
 
-## Single-sample Analyses
+The mass loss profile for each replicate are projected on a common temperature vector thus avoiding asynchronies and artifact peaks in the average values due to instrumental micro-delays. The original temperature, time, and mass loss vector are stored for each ``File``.
 
-The ``Sample`` class provides method to perform common TGA data analysis at the sample level, providing statistics based on the replicates.
+``Single-sample Analyses`` methods are provided to perform common TGA data analysis at the ``Sample`` level:
 
-### Proximate Analysis
-Determines the moisture, volatile matter, and ash content from TGA data.
+* ``Proximate Analysis``: determines the moisture, volatile matter, and ash content from TGA data.
 
-### Oxidation Analysis
-Analyzes the oxidation behavior of materials.
+* ``Oxidation Analysis``: Analyzes the oxidation behavior of materials.
 
+* ``Solid-Distillation Analysis``: Studies the thermal decomposition and distillation characteristics of solids.
 
-### Solid-Distillation Analysis
-Studies the thermal decomposition and distillation characteristics of solids.
+* ``Peak Deconvolution Analysis``: Resolves overlapping thermal decomposition events.
 
+The ``Sample`` class can generate ``multi-replicate reports`` and ``multi-replicate plots`` for TG and DTG curves and for the results of any of the ``Single-sample Analyses``.
 
-### Peak Deconvolution Analysis
-Resolves overlapping thermal decomposition events.
+### Project
 
+The ``folder path`` indicates where the ``Files`` are located and where the ``output`` folder will be created.
 
-## Multi-sample Analyses
+The ``Project-Parameters`` are valid for each ``Sample`` unless specified at the ``Sample`` initialization.
+
+``Samples`` can be added using the ``add_sample`` method or by specifying the ``Project`` to a new ``Sample`` instance during initialization.
+
+The ``Project`` can generate reports and plots using the following methods:
+
+* ``multireport``: Generate a multi-sample report based on the specified report type and style
+
+* ``plot_multi_tg``: Plot multiple thermogravimetric (TG) curves for the given samples.
+
+* ``plot_multi_dtg``: Plot multiple derivative thermogravimetric (DTG) curves for the given samples.
+
+* ``plot_multi_soliddist``: Plot multiple solid distribution curves for the given samples.
+
+* ``plot_multireport``: Plot the results for the multi-sample report
+
+### Multi-sample Analyses
 
 For analysis that require data from multiple samples (ex. KAS kinetics), a multi-sample class that includes multiple ``Sample`` objects is defined (ex. ``KasSample``).
 
 Multi-sample classes provide the methods to perform the dedicated analysis and plot the results.
+The available ones are 
 
-### KAS Kinetic Analysis
-Applies the Kissinger-Akahira-Sunose method to determine kinetic parameters.
+* ``KAS Kinetic Analysis``: Applies the Kissinger-Akahira-Sunose method to determine kinetic parameters.
+
+### Project-Sample-Parameters
+If specified at the ``Project`` level become the default for all ``Samples`` and therefore ``Files``. They can be overwritten for each single ``Sample`` instance. The most important are described here, see the docs for the rest.
+
+* ``load_skiprows`` an int that indicates the number of rows that must be skipped in the file at loading. The first valid row should be the one that contains the name of the columns ("time", "temperature", "tg"; these are just examples).
+
+* ``column_name_mapping`` a dictionary used to specify how to rename the columns in the ``File`` to the standard names that the software can reliably use. These names are ``t_min``, ``T_C``, ``m_p``, and ``m_mg`` for time, temperature, mass percentage, and mass in mg, respectively. At least the first three must be present (if m_mg is missing, it is assumed to be equal to m_p).
+
+* ``time_moist``: The time in minutes where the mass loss should be considered moisture.
+
+* ``time_vm``: The time in minutes where the mass loss should be considered volatile matter.
+
+* ``temp_initial_celsius``: The initial temperature where every ``File`` is going to start to ensure uniformity.
+
+* ``temp_lim_dtg_celsius``: The temperature limits for DTG analysis, in Celsius. It should exclude moisture and fixed 
+carbon segments.
+
+* ``temp_unit``: The unit of temperature the project will convert everything to, not the unit in the ``Files``. 
+
+* ``resolution_sec_deg_dtg``: The resolution in seconds per degree for the common temperature vector used in the DTG 
+analysis.
+
+* ``dtg_window_filter``: The window size for the Savitzky-Golay filter used to smooth the DTG curve.
+
+* ``temp_i_temp_b_threshold``: The fractional threshold for the detection of Ti (t_ignition) and Tb (burnout) calculation in DTG analysis.
+
+**Example**
+
+If files start with 10 method rows before the real data and the columns are names "time/minutes", "temp/C", and "m/%",
+then the ``Project-Parameters`` should be:
+```bash
+load_skiprows=10
+column_name_mapping={"time/minutes": "t_min", "temp/C": "T_C", "m/%": "m_p"}
+```
+
 
 ## Documentation
 
@@ -80,3 +129,12 @@ To run examples:
 2. Download the folder that contains the example
 3. Run the code 
 4. If you run the scripts as Jupyter Notebooks, replace the relative path at the beginning of each example with the absolute path to the folder where the code is located 
+
+
+## Nomenclature
+
+* ar: as received
+* db: dry basis
+* daf: dry, ash-free
+* vm: volatile matter
+* fc: fixed carbon

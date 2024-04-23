@@ -18,8 +18,14 @@ class Project:
 
     def __init__(
         self,
-        folder_path: plib.Path,
+        folder_path: plib.Path | str,
         name: str | None = None,
+        column_name_mapping: dict[str, str] | None = None,
+        load_skiprows: int = 0,
+        time_moist: float = 38.0,
+        time_vm: float = 147.0,
+        temp_initial_celsius: float = 40,
+        temp_lim_dtg_celsius: tuple[float] | None = None,
         temp_unit: Literal["C", "K"] = "C",
         plot_font: Literal["Dejavu Sans", "Times New Roman"] = "Dejavu Sans",
         dtg_basis: Literal["temperature", "time"] = "temperature",
@@ -27,12 +33,6 @@ class Project:
         resolution_sec_deg_dtg: int = 5,
         dtg_window_filter: int = 101,
         plot_grid: bool = False,
-        column_name_mapping: dict[str, str] | None = None,
-        load_skiprows: int = 0,
-        time_moist: float = 38.0,
-        time_vm: float = 147.0,
-        temp_initial_celsius: float = 40,
-        temp_lim_dtg_celsius: tuple[float] | None = None,
         auto_save_reports: bool = True,
     ):
         """
@@ -71,8 +71,8 @@ class Project:
         :param auto_save_reports: Whether to automatically save generated reports.
         :type auto_save_reports: bool
         """
-        self.folder_path = folder_path
-        self.out_path = plib.Path(folder_path, "output")
+        self.folder_path = plib.Path(folder_path)
+        self.out_path = plib.Path(self.folder_path, "output")
         if name is None:
             self.name = self.folder_path.parts[-1]
         else:
