@@ -525,6 +525,7 @@ class Project:
         filename: str = "plot",
         samples: list[Sample] | None = None,
         labels: list[str] | None = None,
+        cut_curves_at_last_step: bool = True,
         **kwargs,
     ) -> MyFigure:
         """
@@ -536,6 +537,8 @@ class Project:
         :type samples: list[Sample], optional
         :param labels: Labels for each sample in the plot. If None, sample names are used.
         :type labels: list[str], optional
+        :param cut_curves_at_last_step: whether to cut the dtg curves at the end of the last segment.
+        :type cut_curves_at_last_step: bool, optional
         :param kwargs: Additional keyword arguments for plotting customization.
         :type kwargs: dict
         :return: A MyFigure instance containing the plot.
@@ -550,6 +553,11 @@ class Project:
         for sample in samples:
             if not sample.proximate_computed:
                 sample.proximate_analysis()
+
+        if cut_curves_at_last_step is True:
+            index_end = np.argmax(samples[0].time.ave() > samples[0].soliddist_steps_min[-1])
+        else:
+            index_end = -1
 
         out_path = plib.Path(self.out_path, "multisample_plots")
         out_path.mkdir(parents=True, exist_ok=True)
@@ -574,8 +582,8 @@ class Project:
             **kwargs,
         )
         myfig.axts[0].plot(
-            samples[0].time.ave(),
-            samples[0].temp.ave(),
+            samples[0].time.ave()[0:index_end],
+            samples[0].temp.ave()[0:index_end],
             color="k",
             linestyle=linestyles[1],
             label="T",
@@ -583,16 +591,16 @@ class Project:
         for i, sample in enumerate(samples):
 
             myfig.axs[0].plot(
-                sample.time.ave(),
-                sample.mp_db.ave(),
+                sample.time.ave()[0:index_end],
+                sample.mp_db.ave()[0:index_end],
                 color=colors[i],
                 linestyle=linestyles[i],
                 label=labels[i],
             )
             myfig.axs[0].fill_between(
-                sample.time.ave(),
-                sample.mp_db.ave() - sample.mp_db.std(),
-                sample.mp_db.ave() + sample.mp_db.std(),
+                sample.time.ave()[0:index_end],
+                sample.mp_db.ave()[0:index_end] - sample.mp_db.std()[0:index_end],
+                sample.mp_db.ave()[0:index_end] + sample.mp_db.std()[0:index_end],
                 color=colors[i],
                 alpha=0.3,
             )
@@ -744,7 +752,7 @@ class Sample:
         if soliddist_steps_min is None:
             self.soliddist_steps_min = project.soliddist_steps_min
         else:
-            self.temp_i_temp_b_threshold = temp_i_temp_b_threshold
+            self.soliddist_steps_min = soliddist_steps_min
         # sample default
         self.name = name
         self.filenames = filenames
