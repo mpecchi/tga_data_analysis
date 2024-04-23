@@ -30,6 +30,7 @@ class Project:
         plot_font: Literal["Dejavu Sans", "Times New Roman"] = "Dejavu Sans",
         dtg_basis: Literal["temperature", "time"] = "temperature",
         temp_i_temp_b_threshold: float = 0.01,  # % of the peak that is used for Ti and Tb
+        soliddist_steps_min: list[int] | None = None,
         resolution_sec_deg_dtg: int = 5,
         dtg_window_filter: int = 101,
         plot_grid: bool = False,
@@ -50,6 +51,8 @@ class Project:
         :type dtg_basis: Literal["temperature", "time"]
         :param temp_i_temp_b_threshold: The threshold for Ti and Tb calculation in DTG analysis.
         :type temp_i_temp_b_threshold: float
+        :param soliddist_steps_min: Temperature steps (in minutes) at which the weight loss is calculated. If None, default steps are used.
+        :type soliddist_steps_min: list[float], optional
         :param resolution_sec_deg_dtg: The resolution in seconds or degrees for DTG analysis.
         :type resolution_sec_deg_dtg: int
         :param dtg_window_filter: The window size for the Savitzky-Golay filter in DTG analysis.
@@ -105,6 +108,10 @@ class Project:
             self.temp_lim_dtg_celsius = (120, 880)
         else:
             self.temp_lim_dtg_celsius = temp_lim_dtg_celsius
+        if soliddist_steps_min is None:
+            self.soliddist_steps_min = [40, 70, 100, 130, 160, 190]
+        else:
+            self.soliddist_steps_min = soliddist_steps_min
         if self.temp_unit == "C":
             self.temp_lim_dtg = self.temp_lim_dtg_celsius
         elif self.temp_unit == "K":
@@ -518,6 +525,7 @@ class Project:
         filename: str = "plot",
         samples: list[Sample] | None = None,
         labels: list[str] | None = None,
+        cut_curves_at_last_step: bool = True,
         **kwargs,
     ) -> MyFigure:
         """
@@ -529,6 +537,8 @@ class Project:
         :type samples: list[Sample], optional
         :param labels: Labels for each sample in the plot. If None, sample names are used.
         :type labels: list[str], optional
+        :param cut_curves_at_last_step: whether to cut the dtg curves at the end of the last segment.
+        :type cut_curves_at_last_step: bool, optional
         :param kwargs: Additional keyword arguments for plotting customization.
         :type kwargs: dict
         :return: A MyFigure instance containing the plot.
@@ -543,6 +553,11 @@ class Project:
         for sample in samples:
             if not sample.proximate_computed:
                 sample.proximate_analysis()
+
+        if cut_curves_at_last_step is True:
+            index_end = np.argmax(samples[0].time.ave() > samples[0].soliddist_steps_min[-1])
+        else:
+            index_end = -1
 
         out_path = plib.Path(self.out_path, "multisample_plots")
         out_path.mkdir(parents=True, exist_ok=True)
@@ -567,8 +582,8 @@ class Project:
             **kwargs,
         )
         myfig.axts[0].plot(
-            samples[0].time.ave(),
-            samples[0].temp.ave(),
+            samples[0].time.ave()[0:index_end],
+            samples[0].temp.ave()[0:index_end],
             color="k",
             linestyle=linestyles[1],
             label="T",
@@ -576,16 +591,16 @@ class Project:
         for i, sample in enumerate(samples):
 
             myfig.axs[0].plot(
-                sample.time.ave(),
-                sample.mp_db.ave(),
+                sample.time.ave()[0:index_end],
+                sample.mp_db.ave()[0:index_end],
                 color=colors[i],
                 linestyle=linestyles[i],
                 label=labels[i],
             )
             myfig.axs[0].fill_between(
-                sample.time.ave(),
-                sample.mp_db.ave() - sample.mp_db.std(),
-                sample.mp_db.ave() + sample.mp_db.std(),
+                sample.time.ave()[0:index_end],
+                sample.mp_db.ave()[0:index_end] - sample.mp_db.std()[0:index_end],
+                sample.mp_db.ave()[0:index_end] + sample.mp_db.std()[0:index_end],
                 color=colors[i],
                 alpha=0.3,
             )
@@ -654,6 +669,7 @@ class Sample:
         time_vm: float | None = None,
         heating_rate_deg_min: float | None = None,
         temp_i_temp_b_threshold: float | None = None,
+        soliddist_steps_min: list[float] | None = None,
     ):
         """
         Initialize a new Sample instance with parameters for TGA data analysis.
@@ -684,6 +700,8 @@ class Sample:
         :type heating_rate_deg_min: float, optional
         :param temp_i_temp_b_threshold: The threshold percentage used for calculating initial and final temperatures in DTG analysis.
         :type temp_i_temp_b_threshold: float, optional
+        :param soliddist_steps_min: Temperature steps (in minutes) at which the weight loss is calculated. If None, default steps are used.
+        :type soliddist_steps_min: list[float], optional
         """
         # store the sample in the project
         self.project_name = project.name
@@ -731,6 +749,10 @@ class Sample:
             self.temp_i_temp_b_threshold = project.temp_i_temp_b_threshold
         else:
             self.temp_i_temp_b_threshold = temp_i_temp_b_threshold
+        if soliddist_steps_min is None:
+            self.soliddist_steps_min = project.soliddist_steps_min
+        else:
+            self.soliddist_steps_min = soliddist_steps_min
         # sample default
         self.name = name
         self.filenames = filenames
@@ -1063,26 +1085,21 @@ class Sample:
         # # average
         self.oxidation_computed = True
 
-    def soliddist_analysis(self, steps_min: list[float] | None = None):
+    def soliddist_analysis(self):
         """
         Perform solid distribution analysis on the sample's data.
 
         This analysis calculates the weight loss at specified temperature steps, providing insight into
         the solid decomposition process. The results are used for generating solid distribution plots.
 
-        :param steps_min: Temperature steps (in minutes) at which the weight loss is calculated. If None, default steps are used.
-        :type steps_min: list[float], optional
         """
-        if steps_min is None:
-            steps_min = [40, 70, 100, 130, 160, 190]
         if not self.proximate_computed:
             self.proximate_analysis()
 
         for f in range(self.n_repl):
             idxs = []
-            for step in steps_min:
+            for step in self.soliddist_steps_min:
                 idxs.append(np.argmax(self.time.stk(f) > step))
-            idxs.append(len(self.time.stk(f)) - 1)
             self.temp_soliddist.add(f, self.temp.stk(f)[idxs])
             self.time_soliddist.add(f, self.time.stk(f)[idxs])
 
