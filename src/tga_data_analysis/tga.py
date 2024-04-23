@@ -30,6 +30,7 @@ class Project:
         plot_font: Literal["Dejavu Sans", "Times New Roman"] = "Dejavu Sans",
         dtg_basis: Literal["temperature", "time"] = "temperature",
         temp_i_temp_b_threshold: float = 0.01,  # % of the peak that is used for Ti and Tb
+        soliddist_steps_min: list[int] | None = None,
         resolution_sec_deg_dtg: int = 5,
         dtg_window_filter: int = 101,
         plot_grid: bool = False,
@@ -50,6 +51,8 @@ class Project:
         :type dtg_basis: Literal["temperature", "time"]
         :param temp_i_temp_b_threshold: The threshold for Ti and Tb calculation in DTG analysis.
         :type temp_i_temp_b_threshold: float
+        :param soliddist_steps_min: Temperature steps (in minutes) at which the weight loss is calculated. If None, default steps are used.
+        :type soliddist_steps_min: list[float], optional
         :param resolution_sec_deg_dtg: The resolution in seconds or degrees for DTG analysis.
         :type resolution_sec_deg_dtg: int
         :param dtg_window_filter: The window size for the Savitzky-Golay filter in DTG analysis.
@@ -105,6 +108,10 @@ class Project:
             self.temp_lim_dtg_celsius = (120, 880)
         else:
             self.temp_lim_dtg_celsius = temp_lim_dtg_celsius
+        if soliddist_steps_min is None:
+            self.soliddist_steps_min = [40, 70, 100, 130, 160, 190]
+        else:
+            self.soliddist_steps_min = soliddist_steps_min
         if self.temp_unit == "C":
             self.temp_lim_dtg = self.temp_lim_dtg_celsius
         elif self.temp_unit == "K":
@@ -654,6 +661,7 @@ class Sample:
         time_vm: float | None = None,
         heating_rate_deg_min: float | None = None,
         temp_i_temp_b_threshold: float | None = None,
+        soliddist_steps_min: list[float] | None = None,
     ):
         """
         Initialize a new Sample instance with parameters for TGA data analysis.
@@ -684,6 +692,8 @@ class Sample:
         :type heating_rate_deg_min: float, optional
         :param temp_i_temp_b_threshold: The threshold percentage used for calculating initial and final temperatures in DTG analysis.
         :type temp_i_temp_b_threshold: float, optional
+        :param soliddist_steps_min: Temperature steps (in minutes) at which the weight loss is calculated. If None, default steps are used.
+        :type soliddist_steps_min: list[float], optional
         """
         # store the sample in the project
         self.project_name = project.name
@@ -729,6 +739,10 @@ class Sample:
             self.time_vm = time_vm
         if temp_i_temp_b_threshold is None:
             self.temp_i_temp_b_threshold = project.temp_i_temp_b_threshold
+        else:
+            self.temp_i_temp_b_threshold = temp_i_temp_b_threshold
+        if soliddist_steps_min is None:
+            self.soliddist_steps_min = project.soliddist_steps_min
         else:
             self.temp_i_temp_b_threshold = temp_i_temp_b_threshold
         # sample default
@@ -1063,26 +1077,21 @@ class Sample:
         # # average
         self.oxidation_computed = True
 
-    def soliddist_analysis(self, steps_min: list[float] | None = None):
+    def soliddist_analysis(self):
         """
         Perform solid distribution analysis on the sample's data.
 
         This analysis calculates the weight loss at specified temperature steps, providing insight into
         the solid decomposition process. The results are used for generating solid distribution plots.
 
-        :param steps_min: Temperature steps (in minutes) at which the weight loss is calculated. If None, default steps are used.
-        :type steps_min: list[float], optional
         """
-        if steps_min is None:
-            steps_min = [40, 70, 100, 130, 160, 190]
         if not self.proximate_computed:
             self.proximate_analysis()
 
         for f in range(self.n_repl):
             idxs = []
-            for step in steps_min:
+            for step in self.soliddist_steps_min:
                 idxs.append(np.argmax(self.time.stk(f) > step))
-            idxs.append(len(self.time.stk(f)) - 1)
             self.temp_soliddist.add(f, self.temp.stk(f)[idxs])
             self.time_soliddist.add(f, self.time.stk(f)[idxs])
 
