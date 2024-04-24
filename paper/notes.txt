@@ -16,6 +16,10 @@ https://www.tainstruments.com/support/software-downloads-support/downloads/ (pro
 https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9823974/ (excel)
 energy
 
+https://www.sciencedirect.com/science/article/pii/S0013935124001919?via%3Dihub#fig1
+
+https://www.sciencedirect.com/science/article/pii/S0960148122008175?via%3Dihub#fig6
+
 https://link.springer.com/article/10.1007/s12155-020-10102-1 (excel)
 
 https://www.sciencedirect.com/science/article/pii/S0961953419300467?via%3Dihub#fig1 (deconvolution)
@@ -62,6 +66,8 @@ https://www.sciencedirect.com/science/article/pii/S0040603122002325?via%3Dihub#f
 
 kinetic models
 
+https://www.sciencedirect.com/science/article/pii/S0040603115003585#fig0005
+
 https://link.springer.com/article/10.1007/s10973-022-11210-0 (KAS, OFW)
 
 https://www.sciencedirect.com/science/article/pii/S0040603122001721?via%3Dihub#fig0001
@@ -72,6 +78,8 @@ sublimation enthalpies
 https://link.springer.com/article/10.1007/s10973-024-12897-z
 
 https://www.mdpi.com/2073-4360/16/5/629
+
+https://www.sciencedirect.com/science/article/pii/S0048969724019351?via%3Dihub#f0015
 
 thermodynamic data 
 
