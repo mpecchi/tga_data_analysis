@@ -33,7 +33,7 @@ misc = Sample(
 proximate_samples = [sru, misc]
 for sample in proximate_samples:
     _ = sample.plot_tg_dtg()
-# create a df report (rep) and export it in excel
+# create a df report (rep) and export it in excel with all samples
 rep = proj.multireport(
     samples=proximate_samples,  # samples to include
     report_type="proximate",  # specify the type of report
