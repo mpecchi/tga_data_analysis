@@ -43,4 +43,7 @@ mf = sdb.plot_soliddist()
 # create a multireports with samples side by side
 rep = proj_soliddist.multireport(report_type="soliddist")
 # plot the soliddist curve of all samples side by side
-mf = proj_soliddist.plot_multi_soliddist(labels=["sample 1", "sample 2", "sample 3"])
+mf = proj_soliddist.plot_multi_soliddist()
+# plot the report for all samples with the step mass loss
+mf = proj_soliddist.multireport(report_type="soliddist")
+# %%
