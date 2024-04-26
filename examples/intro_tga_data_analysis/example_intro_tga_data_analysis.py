@@ -58,6 +58,3 @@ cell = Sample(
 )
 # plot the tg_dtg plot for the cell sample (show all replicates to allow checks)
 mf = cell.plot_tg_dtg()
-
-
-# %%
