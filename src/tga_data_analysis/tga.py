@@ -422,7 +422,6 @@ class Project:
             "text_font": self.plot_font,
             "x_lab": f"T [{self.temp_symbol}]",
             "y_lab": self.tg_label,
-            "x_lim": self.temp_lim_dtg,
         }
         # Update kwargs with the default key-value pairs if the key is not present in kwargs
         kwargs = {**default_kwargs, **kwargs}
@@ -1349,7 +1348,8 @@ class Sample:
                 color=colors[f],
             )
 
-            if self.vm_db() < 99:
+            # only try to plot VM is the analysis includes it
+            if self.time_vm is not None:
                 mf.axs[0].vlines(
                     self.time.stk(f)[self.idx_vm.stk(f)],
                     self.temp.stk(f)[self.idx_vm.stk(f)] - 50,
