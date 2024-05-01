@@ -925,7 +925,13 @@ class Sample:
             file["m_mg"] = file["m_p"]
         file["m_p"] = file["m_mg"] / np.max(file["m_mg"]) * 100
         if correct_ash_fr is not None:
-            file["m_p"] = file["m_p"] - np.min(file["m_p"]) + correct_ash_fr * 100
+            # set the ash value to zero
+            file["m_p"] = file["m_p"] - np.min(file["m_p"])
+            # shift the non-ash fraction up by enough to have ash_ar=correct_ash_fr
+            file["m_p"] = file["m_p"] + np.max(file["m_p"]) * (
+                correct_ash_fr / (1 - correct_ash_fr)
+            )
+            # scale everything to 100 %
             file["m_p"] = file["m_p"] / np.max(file["m_p"]) * 100
         file = file[file["T_C"] >= self.temp_initial_celsius].copy()
         file["T_K"] = file["T_C"] + 273.15
