@@ -1333,37 +1333,80 @@ class Sample:
                 linestyle=linestyles[f],
                 label=self.filenames[f],
             )
-            mf.axs[0].vlines(
-                self.time.stk(f)[self.idx_moist.stk(f)],
-                self.temp.stk(f)[self.idx_moist.stk(f)] - 50,
-                self.temp.stk(f)[self.idx_moist.stk(f)] + 50,
-                linestyle=linestyles[f],
-                color=colors[f],
-            )
-            mf.axs[2].vlines(
-                self.time.stk(f)[self.idx_moist.stk(f)],
-                self.mp_ar.stk(f)[self.idx_moist.stk(f)] - 5,
-                self.mp_ar.stk(f)[self.idx_moist.stk(f)] + 5,
-                linestyle=linestyles[f],
-                color=colors[f],
-            )
+            if self.time_moist:
+                mf.axs[0].plot(
+                    self.time.stk(f)[self.idx_moist.stk(f)],
+                    self.temp.stk(f)[self.idx_moist.stk(f)],
+                    marker="x",
+                    linestyle="None",
+                    color=colors[f],
+                )
+                mf.axs[2].plot(
+                    self.time.stk(f)[self.idx_moist.stk(f)],
+                    self.mp_ar.stk(f)[self.idx_moist.stk(f)],
+                    marker="x",
+                    linestyle="None",
+                    color=colors[f],
+                )
+                if f == self.n_repl - 1:  # only add at the end
+                    mf.axs[0].plot(
+                        [], [], marker="x", linestyle="None", color="grey", label="moist_loc"
+                    )
+                    mf.axs[2].plot(
+                        [], [], marker="x", linestyle="None", color="grey", label="moist_loc"
+                    )
+                # mf.axs[0].vlines(
+                #     self.time.stk(f)[self.idx_moist.stk(f)],
+                #     self.temp.stk(f)[self.idx_moist.stk(f)] - 50,
+                #     self.temp.stk(f)[self.idx_moist.stk(f)] + 50,
+                #     linestyle=linestyles[f],
+                #     color=colors[f],
+                # )
+                # mf.axs[2].vlines(
+                #     self.time.stk(f)[self.idx_moist.stk(f)],
+                #     self.mp_ar.stk(f)[self.idx_moist.stk(f)] - 5,
+                #     self.mp_ar.stk(f)[self.idx_moist.stk(f)] + 5,
+                #     linestyle=linestyles[f],
+                #     color=colors[f],
+                # )
 
             # only try to plot VM is the analysis includes it
-            if self.time_vm is not None:
-                mf.axs[0].vlines(
+            if self.time_vm:
+                # mf.axs[0].vlines(
+                #     self.time.stk(f)[self.idx_vm.stk(f)],
+                #     self.temp.stk(f)[self.idx_vm.stk(f)] - 50,
+                #     self.temp.stk(f)[self.idx_vm.stk(f)] + 50,
+                #     linestyle=linestyles[f],
+                #     color=colors[f],
+                # )
+                # mf.axs[4].vlines(
+                #     self.time.stk(f)[self.idx_vm.stk(f)],
+                #     self.mp_db.stk(f)[self.idx_vm.stk(f)] - 5,
+                #     self.mp_db.stk(f)[self.idx_vm.stk(f)] + 5,
+                #     linestyle=linestyles[f],
+                #     color=colors[f],
+                # )
+                mf.axs[0].plot(
                     self.time.stk(f)[self.idx_vm.stk(f)],
-                    self.temp.stk(f)[self.idx_vm.stk(f)] - 50,
-                    self.temp.stk(f)[self.idx_vm.stk(f)] + 50,
-                    linestyle=linestyles[f],
+                    self.temp.stk(f)[self.idx_vm.stk(f)],
+                    marker="+",
+                    linestyle="None",
                     color=colors[f],
                 )
-                mf.axs[4].vlines(
+                mf.axs[4].plot(
                     self.time.stk(f)[self.idx_vm.stk(f)],
-                    self.mp_db.stk(f)[self.idx_vm.stk(f)] - 5,
-                    self.mp_db.stk(f)[self.idx_vm.stk(f)] + 5,
-                    linestyle=linestyles[f],
+                    self.mp_db.stk(f)[self.idx_vm.stk(f)],
+                    marker="+",
+                    linestyle="None",
                     color=colors[f],
                 )
+                if f == self.n_repl - 1:  # only add at the end
+                    mf.axs[0].plot(
+                        [], [], marker="+", linestyle="None", color="grey", label="vm_loc"
+                    )
+                    mf.axs[4].plot(
+                        [], [], marker="+", linestyle="None", color="grey", label="vm_loc"
+                    )
             # tg plot 1, 3, 5 on the right
             mf.axs[1].plot(
                 self.time_dtg.stk(f),
@@ -1388,27 +1431,58 @@ class Sample:
             )
             #
             if self.oxidation_computed:
-                mf.axs[5].vlines(
+                # mf.axs[5].vlines(
+                #     self.time_dtg.stk(f)[self.temp_i_idx.stk(f)],
+                #     ymin=-1.5,
+                #     ymax=0,
+                #     linestyle=linestyles[f],
+                #     color=colors[f],
+                # )
+                # mf.axs[5].vlines(
+                #     self.time_dtg.stk(f)[self.temp_p_idx.stk(f)],
+                #     ymin=np.min(self.dtg_db.stk(f)),
+                #     ymax=np.min(self.dtg_db.stk(f)) / 5,
+                #     linestyle=linestyles[f],
+                #     color=colors[f],
+                # )
+                # mf.axs[5].vlines(
+                #     self.time_dtg.stk(f)[self.temp_b_idx.stk(f)],
+                #     ymin=-1.5,
+                #     ymax=0,
+                #     linestyle=linestyles[f],
+                #     color=colors[f],
+                # )
+                mf.axs[5].plot(
                     self.time_dtg.stk(f)[self.temp_i_idx.stk(f)],
-                    ymin=-1.5,
-                    ymax=0,
-                    linestyle=linestyles[f],
+                    self.dtg_db.stk(f)[self.temp_i_idx.stk(f)],
+                    marker="x",
+                    linestyle="None",
                     color=colors[f],
                 )
-                mf.axs[5].vlines(
+                mf.axs[5].plot(
                     self.time_dtg.stk(f)[self.temp_p_idx.stk(f)],
-                    ymin=np.min(self.dtg_db.stk(f)),
-                    ymax=np.min(self.dtg_db.stk(f)) / 5,
-                    linestyle=linestyles[f],
+                    self.dtg_db.stk(f)[self.temp_p_idx.stk(f)],
+                    marker="+",
+                    linestyle="None",
                     color=colors[f],
                 )
-                mf.axs[5].vlines(
+                mf.axs[5].plot(
                     self.time_dtg.stk(f)[self.temp_b_idx.stk(f)],
-                    ymin=-1.5,
-                    ymax=0,
-                    linestyle=linestyles[f],
+                    self.dtg_db.stk(f)[self.temp_b_idx.stk(f)],
+                    marker="1",
+                    linestyle="None",
                     color=colors[f],
                 )
+                if f == self.n_repl - 1:  # only add at the end
+                    mf.axs[5].plot(
+                        [], [], marker="x", linestyle="None", color="grey", label="Ti_loc"
+                    )
+                    mf.axs[5].plot(
+                        [], [], marker="+", linestyle="None", color="grey", label="Tp_loc"
+                    )
+                    mf.axs[5].plot(
+                        [], [], marker="1", linestyle="None", color="grey", label="Tb_loc"
+                    )
         mf.save_figure()
         return mf
 
