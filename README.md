@@ -141,4 +141,6 @@ To run examples:
 
 ## Plotting with myfigure
 
-Plot ....
+Plots rely on the package ``myfigure``, a package to simplify 
+Check out the [documentation](https://myfigure.readthedocs.io/) and 
+[GitHub](https://github.com/mpecchi/myfigure/).
