@@ -138,3 +138,7 @@ To run examples:
 * daf: dry, ash-free
 * vm: volatile matter
 * fc: fixed carbon
+
+## Plotting with myfigure
+
+Plot ....

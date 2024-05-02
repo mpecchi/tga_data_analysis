@@ -23,7 +23,8 @@ dependencies = [
     "openpyxl",
     "pyarrow",
     "scipy>=1.7.1",
-    "lmfit>=1.0.2"
+    "lmfit>=1.0.2",
+    "myfigure>=1.0.0",
 ]
 
 [project.urls]
