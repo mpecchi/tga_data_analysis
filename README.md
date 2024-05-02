@@ -138,3 +138,9 @@ To run examples:
 * daf: dry, ash-free
 * vm: volatile matter
 * fc: fixed carbon
+
+## Plotting with myfigure
+
+Plots rely on the package ``myfigure``, a package to simplify 
+Check out the [documentation](https://myfigure.readthedocs.io/) and 
+[GitHub](https://github.com/mpecchi/myfigure/).

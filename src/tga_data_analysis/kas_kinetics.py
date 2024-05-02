@@ -1,8 +1,8 @@
 # %%
-import numpy as np
 import pathlib as plib
+import numpy as np
 from tga_data_analysis.tga import Project, Sample
-from tga_data_analysis.myfigure import MyFigure, colors, letters, linestyles, markers
+from myfigure.myfigure import MyFigure, colors, linestyles, markers
 
 
 class KasSample:

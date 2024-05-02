@@ -15,8 +15,6 @@
    kas_kinetics
    
    measure
-   
-   myfigure
 
 
 Indices and tables

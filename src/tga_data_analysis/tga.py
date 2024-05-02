@@ -6,7 +6,7 @@ import pandas as pd
 from scipy.signal import savgol_filter
 from lmfit.models import GaussianModel, LinearModel
 from tga_data_analysis.measure import Measure
-from tga_data_analysis.myfigure import MyFigure, colors, linestyles
+from myfigure.myfigure import MyFigure, colors, linestyles
 
 
 class Project:

@@ -1,6 +1,6 @@
 [project]
 name = "tga_data_analysis"
-version = "2.0.9"
+version = "2.1.0"
 authors = [
     { name = "Matteo Pecchi"}
 ]
@@ -23,7 +23,8 @@ dependencies = [
     "openpyxl",
     "pyarrow",
     "scipy>=1.7.1",
-    "lmfit>=1.0.2"
+    "lmfit>=1.0.2",
+    "myfigure>=1.0.0",
 ]
 
 [project.urls]
