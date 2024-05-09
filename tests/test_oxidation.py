@@ -32,15 +32,13 @@ def test_oxidation_with_temperature(test_dir, temp_symbol):
     cell_ox5.oxidation_analysis()
     cell_ox10.oxidation_analysis()
     if temp_symbol == "K":
-        assert abs(cell_ox5.temp_i.ave() - 543.3366666666667) <= threshold
-        assert abs(cell_ox5.temp_b.ave() - 785.15) <= threshold
-        assert abs(cell_ox10.temp_i.ave() - 549.3166666666666) <= threshold
-        assert abs(cell_ox10.temp_b.ave() - 796.9333333333334) <= threshold
+        conv = +273.15
     else:
-        assert abs(cell_ox5.temp_i.ave() - 543.3366666666667 + 273.15) <= threshold
-        assert abs(cell_ox5.temp_b.ave() - 785.15 + 273.15) <= threshold
-        assert abs(cell_ox10.temp_i.ave() - 549.3166666666666 + 273.15) <= threshold
-        assert abs(cell_ox10.temp_b.ave() - 796.9333333333334 + 273.15) <= threshold
+        conv = 0
+    np.testing.assert_allclose(cell_ox5.temp_i.ave(), 270.18666666666667 + conv)
+    np.testing.assert_allclose(cell_ox5.temp_b.ave(), 512.0 + conv)
+    np.testing.assert_allclose(cell_ox10.temp_i.ave(), 276.1666666666667 + conv)
+    np.testing.assert_allclose(cell_ox10.temp_b.ave(), 523.7833333333333 + conv)
 
 
 # %%
