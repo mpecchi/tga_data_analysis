@@ -12,7 +12,7 @@ threshold = 1e-5
 @pytest.mark.parametrize("temp_symbol", ["C", "K"])
 def test_deconvolution_with_temperature(test_dir, temp_symbol):
 
-    proj = Project(test_dir, name="test", temp_unit=temp_symbol)
+    proj = Project(test_dir, name="test", temp_unit=temp_symbol, dtg_window_filter=101)
 
     misc = Sample(
         project=proj, name="misc", filenames=["MIS_1", "MIS_2", "MIS_3"], time_moist=38, time_vm=147

@@ -11,7 +11,7 @@ threshold = 1e-5
 # %%
 @pytest.mark.parametrize("temp_symbol", ["C", "K"])
 def test_oxidation_with_temperature(test_dir, temp_symbol):
-    proj = Project(folder_path=test_dir, name="test", temp_unit=temp_symbol)
+    proj = Project(folder_path=test_dir, name="test", temp_unit=temp_symbol, dtg_window_filter=101)
     cell_ox5 = Sample(
         project=proj,
         name="cell_ox5",
