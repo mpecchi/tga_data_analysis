@@ -31,7 +31,7 @@ class Project:
         temp_i_temp_b_threshold: float = 0.01,  # % of the peak that is used for Ti and Tb
         soliddist_steps_min: list[int] | None = None,
         resolution_sec_deg_dtg: int = 5,
-        dtg_window_filter: int | None = 101,
+        dtg_window_filter: int | None = 51,
         plot_grid: bool = False,
         auto_save_reports: bool = True,
     ):
