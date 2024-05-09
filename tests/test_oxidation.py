@@ -32,15 +32,15 @@ def test_oxidation_with_temperature(test_dir, temp_symbol):
     cell_ox5.oxidation_analysis()
     cell_ox10.oxidation_analysis()
     if temp_symbol == "K":
-        assert abs(cell_ox5.temp_i.ave() - 535.2540624725805) <= threshold
-        assert abs(cell_ox5.temp_b.ave() - 789.8543958936563) <= threshold
-        assert abs(cell_ox10.temp_i.ave() - 542.6560103536018) <= threshold
-        assert abs(cell_ox10.temp_b.ave() - 799.4569228744407) <= threshold
+        assert abs(cell_ox5.temp_i.ave() - 543.3366666666667) <= threshold
+        assert abs(cell_ox5.temp_b.ave() - 785.15) <= threshold
+        assert abs(cell_ox10.temp_i.ave() - 549.3166666666666) <= threshold
+        assert abs(cell_ox10.temp_b.ave() - 796.9333333333334) <= threshold
     else:
-        assert abs(cell_ox5.temp_i.ave() - 535.2540624725805 + 273.15) <= threshold
-        assert abs(cell_ox5.temp_b.ave() - 789.8543958936563 + 273.15) <= threshold
-        assert abs(cell_ox10.temp_i.ave() - 542.6560103536018 + 273.15) <= threshold
-        assert abs(cell_ox10.temp_b.ave() - 799.4569228744407 + 273.15) <= threshold
+        assert abs(cell_ox5.temp_i.ave() - 543.3366666666667 + 273.15) <= threshold
+        assert abs(cell_ox5.temp_b.ave() - 785.15 + 273.15) <= threshold
+        assert abs(cell_ox10.temp_i.ave() - 549.3166666666666 + 273.15) <= threshold
+        assert abs(cell_ox10.temp_b.ave() - 796.9333333333334 + 273.15) <= threshold
 
 
 # %%

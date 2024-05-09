@@ -7,7 +7,6 @@ from tga_data_analysis.tga import Project, Sample
 folder_path = plib.Path(__file__).resolve().parent
 # if running as a Jupyter notebook, use absolute paths
 # folder_path = plib.Path("absolute path to folder")
-folder_path = plib.Path("/Users/matteo/Projects/tga_data_analysis/examples/reports")
 # %%
 # create the project with default paramters for all samples
 proj = Project(
@@ -15,7 +14,6 @@ proj = Project(
     temp_unit="K",  # the temperature used in the results (not in the inputs)
     time_moist=38,  # the time (min) where the moisture content shoudl be taken
     time_vm=167,  # the time (min) where the volatile matter should be taken
-    dtg_basis="temperature",  # either "time" or "temperature" (should be temperature)
 )
 # add the first sample, giving names and filenames (txt files in the folder path)
 sru = Sample(
@@ -63,3 +61,5 @@ for report_style in ["repl_ave_std", "ave_std", "ave_pm_std"]:
 
 # plot the tabulated results as a barplot
 mf = proj.plot_multireport(report_type=report_type)
+
+# %%

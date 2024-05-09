@@ -84,7 +84,9 @@ class KasSample:
         c_to_k = 273.15
 
         for idx, sample in enumerate(self.samples):
-            temp = sample.temp_dtg + c_to_k if sample.temp_unit == "C" else sample.temp_dtg
+            if not sample.dtg_computed:
+                sample.dtg_analysis()
+            temp = sample.temp_dtg() + c_to_k if sample.temp_unit == "C" else sample.temp_dtg()
             alpha_mass = 1 - (sample.mp_db_dtg() - np.min(sample.mp_db_dtg())) / (
                 np.max(sample.mp_db_dtg()) - np.min(sample.mp_db_dtg())
             )

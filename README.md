@@ -92,8 +92,7 @@ carbon segments.
 
 * ``temp_unit``: The unit of temperature the project will convert everything to, not the unit in the ``Files``. 
 
-* ``resolution_sec_deg_dtg``: The resolution in seconds per degree for the common temperature vector used in the DTG 
-analysis.
+* ``dtg_basis`` and ``resolution_sec_deg_dtg``: these parameters are no longer available and raise exceptions if specified. The dtg curve is now only computed as dTG/dtime (temperature is used for plotting), but replicates are not interpolated anymore so the resolution reflects the data resolution from the machine.
 
 * ``dtg_window_filter``: The window size for the Savitzky-Golay filter used to smooth the DTG curve.
 

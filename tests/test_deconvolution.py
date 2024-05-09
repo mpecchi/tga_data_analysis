@@ -22,7 +22,7 @@ def test_deconvolution_with_temperature(test_dir, temp_symbol):
     else:
         misc.deconv_analysis([280, 380])
 
-    assert abs(min(misc.dcv_best_fit()) + 1.0045394426179157) <= threshold
+    assert abs(min(misc.dcv_best_fit()) + 10.542964622868018) <= threshold
 
 
 # %%

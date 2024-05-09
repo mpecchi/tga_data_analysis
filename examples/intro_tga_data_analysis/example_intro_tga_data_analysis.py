@@ -6,7 +6,7 @@ from tga_data_analysis.tga import Project, Sample
 # which is the same as where the script is __file__
 folder_path = plib.Path(__file__).resolve().parent
 # if running as a Jupyter notebook, use absolute paths
-# folder_path = plib.Path("absolute path to folder")
+# folder_path = r"absolute path to folder"
 # %%
 # create the project instance, important parameters are:
 # the moisture value is used to compute the dry basis curve
@@ -15,9 +15,8 @@ proj_default = Project(
     name="default",  # the name of the project
     temp_unit="C",  # the temperature that results will use (C or K)
     plot_font="Dejavu Sans",  # chose the font for the plots
-    dtg_basis="temperature",  # chose the DTG units (wt%/temp or /time)
     resolution_sec_deg_dtg=5,  # chose the resolution for dtg vectors
-    dtg_window_filter=101,  # chose the filtering window for dtg curve
+    dtg_window_filter=None,  # chose the filtering window for dtg curve
     plot_grid=False,  # wheter to include a grid in plots
     temp_initial_celsius=40,  # initial temperature for all curves (exclude data before)
     temp_lim_dtg_celsius=None,  # temperature limits for the dtg curves
@@ -41,9 +40,8 @@ proj_mod = Project(
     name="mod",
     temp_unit="K",
     plot_font="Times New Roman",
-    dtg_basis="time",
     resolution_sec_deg_dtg=2,  # bad choice, but shows the parameter use (see DTG (db))
-    dtg_window_filter=201,  # bad choice, but shows the parameter use (see DTG (db))
+    dtg_window_filter=51,  # smoothing window for dtg curve
     plot_grid=True,
     temp_initial_celsius=50,
     temp_lim_dtg_celsius=(150, 750),
@@ -58,3 +56,5 @@ cell = Sample(
 )
 # plot the tg_dtg plot for the cell sample (show all replicates to allow checks)
 mf = cell.plot_tg_dtg()
+
+# %%

@@ -14,7 +14,7 @@ proj = Project(
     temp_unit="K",  # the temperature used in the results (not in the inputs)
     time_moist=38,  # the time (min) where the moisture content shoudl be taken
     time_vm=167,  # the time (min) where the volatile matter should be taken
-    dtg_basis="temperature",  # either "time" or "temperature" (should be temperature)
+    dtg_window_filter=51,  # change this to 11, 21, 51, or None to see the difference
 )
 # add the first sample, giving names and filenames (txt files in the folder path)
 sru = Sample(
@@ -68,3 +68,5 @@ mf = proj.plot_multi_dtg(
     height=4,
     width=4.5,
 )
+
+# %%

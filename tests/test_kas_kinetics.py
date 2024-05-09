@@ -11,7 +11,7 @@ threshold = 1e-5
 
 # %%
 @pytest.mark.parametrize("temp_symbol", ["C", "K"])
-def test_deconvolution_with_temperature(test_dir, temp_symbol):
+def test_kas_kinetics_with_temperature(test_dir, temp_symbol):
 
     proj = Project(folder_path=test_dir, name="test", temp_unit=temp_symbol)
     cell_ox5 = Sample(
@@ -49,25 +49,24 @@ def test_deconvolution_with_temperature(test_dir, temp_symbol):
         time_vm=None,
         heating_rate_deg_min=100,
     )
-    # %%
     cell = KasSample(proj, samples=[cell_ox5, cell_ox10, cell_ox50, cell_ox100], name="cellulose")
     cell.kas_analysis()
     checked_results = [
-        184.43662974,
-        179.45539645,
-        175.97863874,
-        175.39423197,
-        174.07068577,
-        173.61644355,
-        172.75240559,
-        172.29217511,
-        172.20614031,
-        172.57585466,
-        172.27021231,
-        172.9921345,
-        178.61935678,
-        197.75950085,
-        250.29872367,
+        182.98695498901722,
+        177.93533544211007,
+        175.00305447358866,
+        174.24922678890448,
+        173.10247795834562,
+        172.17212058541972,
+        172.38983956887415,
+        171.32000094274244,
+        171.9362038980991,
+        171.33484227896233,
+        171.9242539930856,
+        172.52779644872686,
+        177.92903770087554,
+        195.65939854731468,
+        247.71378828071303,
     ]
     for result, checked_result in zip(list(cell.activation_energy), checked_results):
         assert abs(result - checked_result) <= threshold
