@@ -140,6 +140,6 @@ To run examples:
 
 ## Plotting with myfigure
 
-Plots rely on the package ``myfigure``, a package to simplify 
-Check out the [documentation](https://myfigure.readthedocs.io/) and 
+Plots rely on the package ``myfigure``, a package to simplify scientific plotting in data analysis packages.
+Check out its [documentation](https://myfigure.readthedocs.io/) and 
 [GitHub](https://github.com/mpecchi/myfigure/).
