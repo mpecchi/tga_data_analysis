@@ -1035,6 +1035,19 @@ class Sample:
         self.ave_dev_tga_perc = np.average(self.mp_db_dtg.std())
         print(f"Average TG [%] St. Dev. for replicates: {self.ave_dev_tga_perc:0.2f} %")
         self.dtg_computed = True
+    def ddtg_analysis(self): 
+        """
+        Compute second derivative of TG  with the hope of pulling out 
+        peak locations for hemicellulose and cellulose 
+        - Charlotte 
+        
+        """
+        if not self.dtg_computed:
+            self.dtg_analysis()
+        time_ddtg = self.time_dtg
+        for f in range(self.n_repl):
+            ddtg_db = np.gradient(self.dtg_db.stk(f), self,time_dtg.stk(f))
+        
 
     def oxidation_analysis(self):
         """
