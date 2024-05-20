@@ -301,7 +301,7 @@ class Project:
             bar_ytaxis = vars_bar[-1]
             twinx = True
             y_lab = f"T [{self.temp_symbol}]"
-            yt_lab = "S (comb. index)"
+            yt_lab = "S (oxidation index)"
 
         elif report_type == "soliddist":
             if bar_labels is None:
@@ -784,7 +784,7 @@ class Sample:
         self.temp_b: Measure = Measure(name="temp_b_" + self.temp_unit)
         self.dwdtemp_max: Measure = Measure(name="dwdtemp_max")
         self.dwdtemp_mean: Measure = Measure(name="dwdtemp_mean")
-        self.s_combustion_index: Measure = Measure(name="s_combustion_index")
+        self.s_oxidation_index: Measure = Measure(name="s_oxidation_index")
         # soliddist
         self.temp_soliddist: Measure = Measure(name="temp_dist_" + self.temp_unit)
         self.time_soliddist: Measure = Measure(name="time_dist")
@@ -1065,8 +1065,8 @@ class Sample:
 
             self.dwdtemp_max.add(f, np.max(np.abs(self.dtg_db.stk(f))))
             self.dwdtemp_mean.add(f, np.average(np.abs(self.dtg_db.stk(f))))
-            # combustion index
-            self.s_combustion_index.add(
+            # oxidation index
+            self.s_oxidation_index.add(
                 f,
                 (
                     self.dwdtemp_max.stk(f)
@@ -1225,7 +1225,7 @@ class Sample:
         elif report_type == "oxidation" or report_type == "oxidation_extended":
             if not self.oxidation_computed:
                 self.oxidation_analysis()
-            variables = [self.temp_i, self.temp_p, self.temp_b, self.s_combustion_index]
+            variables = [self.temp_i, self.temp_p, self.temp_b, self.s_oxidation_index]
             if report_type == "oxidation_extended":
                 variables += [self.dwdtemp_max, self.dwdtemp_mean]
 
