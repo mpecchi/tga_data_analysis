@@ -56,5 +56,9 @@ cell = Sample(
 )
 # plot the tg_dtg plot for the cell sample (show all replicates to allow checks)
 mf = cell.plot_tg_dtg()
-
+test= cell.ddtg_analysis()
+# %%
+import matplotlib.pyplot as plt
+plt.plot(cell.temp_ddtg(), abs(cell.ddtg_db()))
+plt.plot(cell.temp_dtg(),abs(cell.dtg_db()))
 # %%

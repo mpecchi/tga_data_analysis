@@ -3,7 +3,7 @@ from typing import Literal, Any
 import pathlib as plib
 import numpy as np
 import pandas as pd
-from scipy.signal import savgol_filter
+from scipy.signal import savgol_filter, find_peaks_cwt
 from lmfit.models import GaussianModel, LinearModel
 from tga_data_analysis.measure import Measure
 from myfigure.myfigure import MyFigure, colors, linestyles
@@ -505,6 +505,76 @@ class Project:
         myfig.save_figure()
         return myfig
 
+    def plot_ddtg(
+            self,
+            filename: str = "plot",
+            samples: list[Sample] | None = None,
+            labels: list[str] | None = None,
+            **kwargs,
+        ) -> MyFigure:
+            """
+            Plot multiple derivative thermogravimetric (DTG) curves for the given samples.
+
+            :param filename: The name of the file to save the plot. Defaults to "plot".
+            :type filename: str
+            :param samples: A list of Sample objects to be plotted. If None, plots all samples in the project.
+            :type samples: list[Sample], optional
+            :param labels: Labels for each sample in the plot. If None, sample names are used.
+            :type labels: list[str], optional
+            :param kwargs: Additional keyword arguments for plotting customization.
+            :type kwargs: dict
+            :return: A MyFigure instance containing the plot.
+            :rtype: MyFigure
+            """
+            if samples is None:
+                samples = list(self.samples.values())
+
+            samplenames = [sample.name for sample in samples]
+            if labels is None:
+                labels = samplenames
+            for sample in samples:
+                if not sample.dtg_computed:
+                    sample.dtg_analysis()
+
+            out_path = plib.Path(self.out_path, "multisample_plots")
+            out_path.mkdir(parents=True, exist_ok=True)
+            default_kwargs = {
+                "filename": filename + "_dtg",
+                "out_path": out_path,
+                "height": 3.2,
+                "width": 3.2,
+                "grid": self.plot_grid,
+                "text_font": self.plot_font,
+                "x_lab": f"T [{self.temp_symbol}]",
+                "y_lab": self.ddtg_label,
+                "x_lim": self.temp_lim_dtg,
+            }
+            # Update kwargs with the default key-value pairs if the key is not present in kwargs
+            kwargs = {**default_kwargs, **kwargs}
+
+            myfig = MyFigure(
+                rows=1,
+                cols=1,
+                **kwargs,
+            )
+            for i, sample in enumerate(samples):
+                myfig.axs[0].plot(
+                    sample.temp_ddtg.ave(),
+                    sample.ddtg_db.ave(),
+                    color=colors[i],
+                    linestyle=linestyles[i],
+                    label=labels[i],
+                )
+                myfig.axs[0].fill_between(
+                    sample.temp_ddtg.ave(),
+                    sample.ddtg_db.ave() - sample.ddtg_db.std(),
+                    sample.ddtg_db.ave() + sample.ddtg_db.std(),
+                    color=colors[i],
+                    alpha=0.3,
+                )
+            myfig.save_figure()
+            return myfig
+
     def plot_multi_soliddist(
         self,
         filename: str = "plot",
@@ -771,10 +841,14 @@ class Sample:
         self.fc_daf: Measure = Measure(name="fc_daf")
         self.vm_daf: Measure = Measure(name="vm_daf")
         self.temp_dtg: Measure = Measure(name="temp_dtg" + self.temp_unit)
+        self.temp_ddtg: Measure = Measure(name="temp_ddtg" + self.temp_unit)
         self.time_dtg: Measure = Measure(name="time_dtg")
+        self.time_ddtg: Measure = Measure(name="time_ddtg")
         self.mp_db_dtg: Measure = Measure(name="mp_db_dtg")
         self.dtg_db: Measure = Measure(name="dtg_db")
+        self.ddtg_db: Measure = Measure(name="ddtg_db")
         self.ave_dev_tga_perc: float | None = None
+        self.min_peakind: Measure = Measure(name="min_peakind")
         # oxidation
         self.temp_i_idx: Measure = Measure(name="temp_i_idx")
         self.temp_i: Measure = Measure(name="temp_i_" + self.temp_unit)
@@ -797,6 +871,7 @@ class Sample:
         # Flag to track if data is loaded
         self.proximate_computed = False
         self.dtg_computed = False
+        self.ddtg_computed = False
         self.files_loaded = False
         self.oxidation_computed = False
         self.soliddist_computed = False
@@ -1044,10 +1119,30 @@ class Sample:
         """
         if not self.dtg_computed:
             self.dtg_analysis()
-        time_ddtg = self.time_dtg
+
+        idxs_in_ddtg = []
+        idxs_fin_ddtg = []
+        vector_len_ddtg = []
         for f in range(self.n_repl):
-            ddtg_db = np.gradient(self.dtg_db.stk(f), self,time_dtg.stk(f))
+            idxs_in_ddtg.append(np.argmax(self.temp.stk(f) > self.temp_lim_dtg[0]))
+            idxs_fin_ddtg.append(np.argmax(self.temp.stk(f) > self.temp_lim_dtg[1]))
+            vector_len_ddtg.append(idxs_fin_ddtg[f] - idxs_in_ddtg[f])
+        min_vector_len_ddtg = min(vector_len_ddtg)
+        idxs_fin_ddtg = [initial + min_vector_len_ddtg for initial in idxs_in_ddtg]
+
+        for f in range(self.n_repl):
+            time_ddtg = self.time.stk(f)[idxs_in_ddtg[f] : idxs_fin_ddtg[f]]
+            self.time_ddtg.add(f, time_ddtg - np.min(time_ddtg))  # starts from 0
+            self.temp_ddtg.add(f, self.temp.stk(f)[idxs_in_ddtg[f] : idxs_fin_ddtg[f]])
+            self.mp_db_dtg.add(f, self.mp_db.stk(f)[idxs_in_ddtg[f] : idxs_fin_ddtg[f]])
+            ddtg_db=np.gradient(self.dtg_db.stk(f),self.time_ddtg.stk(f))
+            if self.dtg_window_filter is not None:
+                self.ddtg_db.add(f, savgol_filter(abs(ddtg_db), self.dtg_window_filter, 1))
+            else:
+                self.ddtg_db.add(f, abs(ddtg_db))
+
         
+        self.ddtg_computed = True
 
     def oxidation_analysis(self):
         """
