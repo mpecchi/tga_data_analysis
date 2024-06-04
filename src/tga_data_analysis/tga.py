@@ -96,6 +96,7 @@ class Project:
 
         self.tg_label = "TG [wt%]"
         self.dtg_label = "DTG [wt%/min]"
+        self.ddtg_label = "DDTG [wt%/min$^2$]"  # !!!!!!
 
         if temp_lim_dtg_celsius is None:
             self.temp_lim_dtg_celsius = (120, 880)
@@ -505,6 +506,76 @@ class Project:
         myfig.save_figure()
         return myfig
 
+    def plot_multi_ddtg(
+        self,
+        filename: str = "plot",
+        samples: list[Sample] | None = None,
+        labels: list[str] | None = None,
+        **kwargs,
+    ) -> MyFigure:
+        """
+        Plot multiple second derivative thermogravimetric (DDTG) curves for the given samples.
+
+        :param filename: The name of the file to save the plot. Defaults to "plot".
+        :type filename: str
+        :param samples: A list of Sample objects to be plotted. If None, plots all samples in the project.
+        :type samples: list[Sample], optional
+        :param labels: Labels for each sample in the plot. If None, sample names are used.
+        :type labels: list[str], optional
+        :param kwargs: Additional keyword arguments for plotting customization.
+        :type kwargs: dict
+        :return: A MyFigure instance containing the plot.
+        :rtype: MyFigure
+        """
+        if samples is None:
+            samples = list(self.samples.values())
+
+        samplenames = [sample.name for sample in samples]
+        if labels is None:
+            labels = samplenames
+        for sample in samples:
+            if not sample.ddtg_computed:
+                sample.ddtg_analysis()
+
+        out_path = plib.Path(self.out_path, "multisample_plots")
+        out_path.mkdir(parents=True, exist_ok=True)
+        default_kwargs = {
+            "filename": filename + "_ddtg",
+            "out_path": out_path,
+            "height": 3.2,
+            "width": 3.2,
+            "grid": self.plot_grid,
+            "text_font": self.plot_font,
+            "x_lab": f"T [{self.temp_symbol}]",
+            "y_lab": self.ddtg_label,
+            "x_lim": self.temp_lim_dtg,
+        }
+        # Update kwargs with the default key-value pairs if the key is not present in kwargs
+        kwargs = {**default_kwargs, **kwargs}
+
+        myfig = MyFigure(
+            rows=1,
+            cols=1,
+            **kwargs,
+        )
+        for i, sample in enumerate(samples):
+            myfig.axs[0].plot(
+                sample.temp_dtg.ave(),
+                sample.ddtg_db.ave(),
+                color=colors[i],
+                linestyle=linestyles[i],
+                label=labels[i],
+            )
+            myfig.axs[0].fill_between(
+                sample.temp_dtg.ave(),
+                sample.ddtg_db.ave() - sample.ddtg_db.std(),
+                sample.ddtg_db.ave() + sample.ddtg_db.std(),
+                color=colors[i],
+                alpha=0.3,
+            )
+        myfig.save_figure()
+        return myfig
+
     def plot_multi_soliddist(
         self,
         filename: str = "plot",
@@ -590,6 +661,96 @@ class Project:
                 alpha=0.3,
             )
         myfig.save_figure()
+        return myfig
+
+    def plot_multi_deconv(
+        self,
+        filename: str = "plot",
+        samples: list[Sample] | None = None,
+        labels: list[str] | None = None,
+        plot_type: Literal["samples_in_subplots", "peaks_in_subplots"] = "samples_in_subplots",
+        **kwargs,
+    ) -> MyFigure:
+        # raise NotImplementedError("plot_multi_deconv not implemented yet")
+        if samples is None:
+            samples = list(self.samples.values())
+
+        samplenames = [sample.name for sample in samples]
+        if labels is None:
+            labels = samplenames
+        for sample in samples:
+            if not sample.deconv_computed:
+                raise ValueError("Deconvolution analysis not computed")
+
+        out_path = plib.Path(self.out_path, "multisample_plots")
+        out_path.mkdir(parents=True, exist_ok=True)
+        default_kwargs = {
+            "filename": filename + "_deconv",
+            "out_path": out_path,
+            "cols": 1,
+            "height": 3.2,
+            "width": 3.2,
+            "grid": self.plot_grid,
+            "text_font": self.plot_font,
+            "x_lab": f"T [{self.temp_symbol}]",
+            "y_lab": self.dtg_label,
+            "x_lim": self.temp_lim_dtg,
+        }
+        # Update kwargs with the default key-value pairs if the key is not present in kwargs
+        kwargs = {**default_kwargs, **kwargs}
+        if plot_type == "samples_in_subplots":
+            kwargs["rows"] = len(samples) // kwargs["cols"]
+            myfig = MyFigure(
+                **kwargs,
+            )
+
+            for s, sample in enumerate(samples):
+                myfig.axs[s].plot(
+                    sample.temp_dtg.ave(),
+                    sample.dtg_db.ave(),
+                    color="black",
+                    label="DTG",
+                    linestyle=linestyles[0],
+                )
+                myfig.axs[s].fill_between(
+                    sample.temp_dtg.ave(),
+                    sample.dtg_db.ave() - sample.dtg_db.std(),
+                    sample.dtg_db.ave() + sample.dtg_db.std(),
+                    color="black",
+                    alpha=0.3,
+                )
+                myfig.axs[s].plot(
+                    sample.temp_dtg.ave(),
+                    sample.dcv_best_fit.ave(),
+                    color=colors[3],
+                    label="best fit",
+                    linestyle="--",
+                )
+                myfig.axs[s].fill_between(
+                    sample.temp_dtg.ave(),
+                    sample.dcv_best_fit.ave() - sample.dcv_best_fit.std(),
+                    sample.dcv_best_fit.ave() + sample.dcv_best_fit.std(),
+                    color=colors[3],
+                    alpha=0.3,
+                )
+
+                colors_p = colors[:3] + colors[5:]  # avoid using red
+                for p, peak in enumerate(sample.dcv_peaks):
+                    if peak.stk(0) is not None:
+                        myfig.axs[s].plot(
+                            sample.temp_dtg.ave(),
+                            peak.ave(),
+                            label=peak.name,
+                            color=colors_p[p],
+                            linestyle=linestyles[p],
+                        )
+                myfig.axs[s].annotate(
+                    f"r$^2$={sample.dcv_r2.ave():.2f}",
+                    xycoords="axes fraction",
+                    xy=(0.85, 0.96),
+                    size="x-small",
+                )
+            myfig.save_figure()
         return myfig
 
     def _reformat_ave_std_columns(self, reports):
@@ -698,6 +859,7 @@ class Sample:
         self.temp_symbol = project.temp_symbol
         self.tg_label = project.tg_label
         self.dtg_label = project.dtg_label
+        self.ddtg_label = project.ddtg_label
         self.plot_font = project.plot_font
         self.plot_grid = project.plot_grid
         self.temp_lim_dtg = project.temp_lim_dtg
@@ -774,6 +936,7 @@ class Sample:
         self.time_dtg: Measure = Measure(name="time_dtg")
         self.mp_db_dtg: Measure = Measure(name="mp_db_dtg")
         self.dtg_db: Measure = Measure(name="dtg_db")
+        self.ddtg_db: Measure = Measure(name="dtg_db")
         self.ave_dev_tga_perc: float | None = None
         # oxidation
         self.temp_i_idx: Measure = Measure(name="temp_i_idx")
@@ -797,6 +960,7 @@ class Sample:
         # Flag to track if data is loaded
         self.proximate_computed = False
         self.dtg_computed = False
+        self.ddtg_computed = False
         self.files_loaded = False
         self.oxidation_computed = False
         self.soliddist_computed = False
@@ -1035,6 +1199,32 @@ class Sample:
         self.ave_dev_tga_perc = np.average(self.mp_db_dtg.std())
         print(f"Average TG [%] St. Dev. for replicates: {self.ave_dev_tga_perc:0.2f} %")
         self.dtg_computed = True
+
+    def ddtg_analysis(
+        self,
+        dtg_smooth_window: int | None = 101,
+        ddtg_smooth_window: int | None = 101,
+    ):
+        """
+        Compute the derivative thermogravimetric (DTG) data for the sample.
+
+        This method calculates the DTG data based on the thermogravimetric data and stores the results
+        in the instance's attributes for later use.
+        """
+        if not self.dtg_computed:
+            self.dtg_analysis()
+
+        for f in range(self.n_repl):
+            dtg = self.dtg_db.stk(f)
+            if dtg_smooth_window is not None:
+                dtg = savgol_filter(dtg, dtg_smooth_window, 1)
+            ddtg = np.diff(dtg, prepend=dtg[0])
+            if ddtg_smooth_window is not None:
+                ddtg = savgol_filter(ddtg, ddtg_smooth_window, 1)
+            self.ddtg_db.add(f, ddtg)
+
+        # averaged
+        self.ddtg_computed = True
 
     def oxidation_analysis(self):
         """
@@ -1429,6 +1619,73 @@ class Sample:
                     mf.axs[5].plot(
                         [], [], marker="1", linestyle="None", color="grey", label="Tb_loc"
                     )
+        mf.save_figure()
+        return mf
+
+    def plot_ddtg(self, **kwargs: dict[str, Any]) -> MyFigure:
+        """
+        Generate a plot combining thermogravimetric (TG) and derivative thermogravimetric (DTG) data.
+
+        This method creates a figure showing the TG and DTG curves, providing a visual representation
+        of the sample's thermal decomposition behavior.
+
+        :param kwargs: Additional keyword arguments for plot customization.
+        :type kwargs: dict
+        :return: A MyFigure instance containing the generated plot.
+        :rtype: MyFigure
+        """
+        if not self.ddtg_computed:
+            self.ddtg_analysis()
+        out_path = plib.Path(self.out_path, "single_sample_plots")
+        out_path.mkdir(parents=True, exist_ok=True)
+
+        default_kwargs = {
+            "filename": self.name + "_ddtg",
+            "out_path": out_path,
+            "height": 8,
+            "width": 4,
+            "x_lab": "time [min]",
+            "y_lab": [
+                f"T [{self.temp_symbol}]",
+                f"{self.dtg_label} (db)",
+                f"{self.ddtg_label} (db)",
+            ],
+            "grid": self.plot_grid,
+            "text_font": self.plot_font,
+        }
+        # Update kwargs with the default key-value pairs if the key is not present in kwargs
+        kwargs = {**default_kwargs, **kwargs}
+
+        mf = MyFigure(
+            rows=3,
+            cols=1,
+            **kwargs,
+        )
+        # tg plot 0, 2, 4 on the left
+        for f in range(self.n_repl):
+            mf.axs[0].plot(
+                self.time_dtg.stk(f),
+                self.temp_dtg.stk(f),
+                color=colors[f],
+                linestyle=linestyles[f],
+                label=self.filenames[f],
+            )
+            mf.axs[1].plot(
+                self.time_dtg.stk(f),
+                self.dtg_db.stk(f),
+                color=colors[f],
+                linestyle=linestyles[f],
+                label=self.filenames[f],
+            )
+            mf.axs[2].plot(
+                self.time_dtg.stk(f),
+                self.ddtg_db.stk(f),
+                color=colors[f],
+                linestyle=linestyles[f],
+                label=self.filenames[f],
+            )
+            #
+
         mf.save_figure()
         return mf
 
