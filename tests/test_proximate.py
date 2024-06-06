@@ -8,9 +8,15 @@ from tga_data_analysis.tga import Sample, Project
 @pytest.mark.parametrize("temp_symbol", ["C", "K"])
 def test_proximate_with_temperature(test_dir, temp_symbol):
 
-    proj = Project(test_dir, name="test", temp_unit=temp_symbol)
+    proj = Project(test_dir, name="test", temp_unit=temp_symbol, dtg_window_filter=101)
     sru = Sample(
-        project=proj, name="sru", filenames=["SRU_1", "SRU_2", "SRU_3"], time_moist=38, time_vm=167
+        project=proj,
+        name="sru",
+        filenames=["SRU_1", "SRU_2", "SRU_3"],
+        load_file_format=".csv",
+        load_separator=",",
+        time_moist=38,
+        time_vm=167,
     )
     misc = Sample(
         project=proj, name="misc", filenames=["MIS_1", "MIS_2", "MIS_3"], time_moist=38, time_vm=147

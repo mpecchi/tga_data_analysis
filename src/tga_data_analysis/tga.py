@@ -22,6 +22,8 @@ class Project:
         name: str | None = None,
         column_name_mapping: dict[str, str] | None = None,
         load_skiprows: int = 0,
+        load_file_format: Literal[".txt", ".csv"] = ".txt",
+        load_separator: Literal["\t", ","] = "\t",
         time_moist: float = 38.0,
         time_vm: float = 147.0,
         temp_initial_celsius: float = 40,
@@ -84,6 +86,8 @@ class Project:
         self.resolution_sec_deg_dtg = resolution_sec_deg_dtg
         self.dtg_window_filter = dtg_window_filter
         self.load_skiprows = load_skiprows
+        self.load_file_format = load_file_format
+        self.load_separator = load_separator
         self.time_moist = time_moist
         self.time_vm = time_vm
         self.temp_initial_celsius = temp_initial_celsius
@@ -671,7 +675,7 @@ class Project:
         plot_type: Literal["samples_in_subplots", "peaks_in_subplots"] = "samples_in_subplots",
         **kwargs,
     ) -> MyFigure:
-        # raise NotImplementedError("plot_multi_deconv not implemented yet")
+
         if samples is None:
             samples = list(self.samples.values())
 
@@ -699,7 +703,8 @@ class Project:
         # Update kwargs with the default key-value pairs if the key is not present in kwargs
         kwargs = {**default_kwargs, **kwargs}
         if plot_type == "samples_in_subplots":
-            kwargs["rows"] = len(samples) // kwargs["cols"]
+
+            kwargs["rows"] = (len(samples) + kwargs["cols"] - 1) // kwargs["cols"]
             myfig = MyFigure(
                 **kwargs,
             )
@@ -709,7 +714,7 @@ class Project:
                     sample.temp_dtg.ave(),
                     sample.dtg_db.ave(),
                     color="black",
-                    label="DTG",
+                    label="data",
                     linestyle=linestyles[0],
                 )
                 myfig.axs[s].fill_between(
@@ -740,9 +745,16 @@ class Project:
                         myfig.axs[s].plot(
                             sample.temp_dtg.ave(),
                             peak.ave(),
-                            label=peak.name,
+                            label=f"peak {p+1}",
                             color=colors_p[p],
                             linestyle=linestyles[p],
+                        )
+                        myfig.axs[s].fill_between(
+                            sample.temp_dtg.ave(),
+                            peak.ave() - peak.std(),
+                            peak.ave() + peak.std(),
+                            color=colors_p[p],
+                            alpha=0.3,
                         )
                 myfig.axs[s].annotate(
                     f"r$^2$={sample.dcv_r2.ave():.2f}",
@@ -751,7 +763,60 @@ class Project:
                     size="x-small",
                 )
             myfig.save_figure()
-        return myfig
+            return myfig
+        elif plot_type == "peaks_in_subplots":
+            kwargs["rows"] = (len(samples[0].dcv_peaks) - 1 + kwargs["cols"] - 1) // kwargs["cols"]
+            leg_titles = (
+                ["data", "best fit"]
+                + [f"peak {n+1}" for n in range(len(samples[0].dcv_peaks) - 3)]
+                + [None] * (kwargs["rows"] * kwargs["cols"] - len(samples[0].dcv_peaks) + 3 - 2)
+            )
+            myfig = MyFigure(
+                legend_title=leg_titles,
+                **kwargs,
+            )
+
+            for s, sample in enumerate(samples):
+                myfig.axs[0].plot(
+                    sample.temp_dtg.ave(),
+                    sample.dtg_db.ave(),
+                    color=colors[s],
+                    label=sample.name,
+                    linestyle=linestyles[s],
+                )
+                myfig.axs[0].fill_between(
+                    sample.temp_dtg.ave(),
+                    sample.dtg_db.ave() - sample.dtg_db.std(),
+                    sample.dtg_db.ave() + sample.dtg_db.std(),
+                    color=colors[s],
+                    alpha=0.3,
+                )
+                myfig.axs[1].plot(
+                    sample.temp_dtg.ave(),
+                    sample.dcv_best_fit.ave(),
+                    color=colors[s],
+                    label=sample.name,
+                    linestyle=linestyles[s],
+                )
+                myfig.axs[1].fill_between(
+                    sample.temp_dtg.ave(),
+                    sample.dcv_best_fit.ave() - sample.dcv_best_fit.std(),
+                    sample.dcv_best_fit.ave() + sample.dcv_best_fit.std(),
+                    color=colors[s],
+                    alpha=0.3,
+                )
+
+                for p, peak in enumerate(sample.dcv_peaks):
+                    if peak.stk(0) is not None:
+                        myfig.axs[2 + p].plot(
+                            sample.temp_dtg.ave(),
+                            peak.ave(),
+                            label=sample.name,
+                            color=colors[s],
+                            linestyle=linestyles[s],
+                        )
+            myfig.save_figure()
+            return myfig
 
     def _reformat_ave_std_columns(self, reports):
         """
@@ -804,13 +869,15 @@ class Sample:
         self,
         project: Project,
         name: str,
-        filenames: list[str],
+        filenames: list[str] | None = None,
         folder_path: plib.Path | None = None,
         label: str | None = None,
         correct_ash_mg: list[float] | None = None,
         correct_ash_fr: list[float] | None = None,
         column_name_mapping: dict[str:str] | None = None,
         load_skiprows: int | None = None,
+        load_file_format: Literal[".txt", ".csv", None] = None,
+        load_separator: Literal["\t", ",", None] = None,
         time_moist: float | None = None,
         time_vm: float | None = None,
         heating_rate_deg_min: float | None = None,
@@ -881,6 +948,14 @@ class Sample:
             self.load_skiprows = project.load_skiprows
         else:
             self.load_skiprows = load_skiprows
+        if load_file_format is None:
+            self.load_file_format = project.load_file_format
+        else:
+            self.load_file_format = load_file_format
+        if load_separator is None:
+            self.load_separator = project.load_separator
+        else:
+            self.load_separator = load_separator
         if time_moist is None:
             self.time_moist = project.time_moist
         else:
@@ -899,7 +974,17 @@ class Sample:
             self.soliddist_steps_min = soliddist_steps_min
         # sample default
         self.name = name
-        self.filenames = filenames
+        # if filenames is None, get the list of files in the folder that have the sample name
+        # as the first part of the filename after splitting with an underscore
+        if filenames is None:
+            self.filenames = [
+                file.name.split(".")[0]
+                for file in list(self.folder_path.glob("**/*.txt"))
+                if file.name.split("_")[0] == self.name
+            ]
+        else:
+            self.filenames = filenames
+
         self.n_repl = len(self.filenames)
         self.heating_rate_deg_min = heating_rate_deg_min
         self.correct_ash_mg = self._broadcast_value_prop(correct_ash_mg)
@@ -1002,6 +1087,8 @@ class Sample:
         filename: str,
         folder_path: plib.Path | None = None,
         load_skiprows: int | None = None,
+        load_file_format: Literal[".txt", ".csv", None] = None,
+        load_separator: Literal["\t", ",", None] = None,
         column_name_mapping: dict | None = None,
     ) -> pd.DataFrame:
         """
@@ -1024,12 +1111,16 @@ class Sample:
             folder_path = self.folder_path
         if load_skiprows is None:
             load_skiprows = self.load_skiprows
-        file_path = plib.Path(folder_path, filename + ".txt")
-        if not file_path.is_file():
-            file_path = plib.Path(folder_path, filename + ".csv")
-        file = pd.read_csv(file_path, sep="\t", skiprows=load_skiprows)
-        if file.shape[1] < 3:
-            file = pd.read_csv(file_path, sep=",", skiprows=load_skiprows)
+        if load_file_format is None:
+            load_file_format = self.load_file_format
+        if load_separator is None:
+            load_separator = self.load_separator
+        file_path = plib.Path(folder_path, filename + load_file_format)
+        # if not file_path.is_file():
+        #     file_path = plib.Path(folder_path, filename + ".csv")
+        file = pd.read_csv(file_path, sep=load_separator, skiprows=load_skiprows)
+        # if file.shape[1] < 3:
+        #     file = pd.read_csv(file_path, sep=",", skiprows=load_skiprows)
         file = file.rename(columns={col: column_name_mapping.get(col, col) for col in file.columns})
         for column in file.columns:
             file[column] = pd.to_numeric(file[column], errors="coerce")
