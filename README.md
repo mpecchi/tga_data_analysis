@@ -61,6 +61,8 @@ The ``Project`` can generate reports and plots using the following methods:
 
 * ``plot_multi_dtg``: Plot multiple derivative thermogravimetric (DTG) curves for the given samples.
 
+* ``plot_multi_ddtg``: Plot multiple second derivative thermogravimetric (DDTG) curves for the given samples.
+
 * ``plot_multi_soliddist``: Plot multiple solid distribution curves for the given samples.
 
 * ``plot_multireport``: Plot the results for the multi-sample report
@@ -78,6 +80,10 @@ The available ones are
 If specified at the ``Project`` level become the default for all ``Samples`` and therefore ``Files``. They can be overwritten for each single ``Sample`` instance. The most important are described here, see the docs for the rest.
 
 * ``load_skiprows`` an int that indicates the number of rows that must be skipped in the file at loading. The first valid row should be the one that contains the name of the columns ("time", "temperature", "tg"; these are just examples).
+
+* ``load_file_format`` a str that indicates the format of the files to load. Defaults to ".txt", ".csv is also supported.
+
+* ``load_separator`` a str that indicates the column separator in the files. Defaults to "\t" (tab)./
 
 * ``column_name_mapping`` a dictionary used to specify how to rename the columns in the ``File`` to the standard names that the software can reliably use. These names are ``t_min``, ``T_C``, ``m_p``, and ``m_mg`` for time, temperature, mass percentage, and mass in mg, respectively. At least the first three must be present (if m_mg is missing, it is assumed to be equal to m_p).
 
@@ -100,11 +106,13 @@ carbon segments.
 
 **Example**
 
-If files start with 10 method rows before the real data and the columns are names "time/minutes", "temp/C", and "m/%",
+If files are ``.txt`` that use commas (",") to separate values and start with 10 rows of method before the real data and the columns are names "time/minutes", "temp/C", and "m/%",
 then the ``Project-Parameters`` should be:
 ```bash
-load_skiprows=10
-column_name_mapping={"time/minutes": "t_min", "temp/C": "T_C", "m/%": "m_p"}
+load_file_format = ".txt"
+load_separator = ","
+load_skiprows = 10
+column_name_mapping = {"time/minutes": "t_min", "temp/C": "T_C", "m/%": "m_p"}
 ```
 
 
@@ -137,6 +145,9 @@ To run examples:
 * daf: dry, ash-free
 * vm: volatile matter
 * fc: fixed carbon
+* tg: thermogravimetric signal (mass/time)
+* dtg: derivative of TG
+* ddtg: second derivative of TG
 
 ## Plotting with myfigure
 
