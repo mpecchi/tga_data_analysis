@@ -1,5 +1,9 @@
 # Thermogravimetric Analysis in Python
 
+<div style="text-align: center;">
+<img src="docs/source/_static/logo.png" alt="Logo" style="width: 50%;"/>
+</div>
+
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 ![Python 3.10](https://img.shields.io/badge/python-3.10%2B-blue)
@@ -7,6 +11,8 @@
 [![Testing (CI)](https://github.com/mpecchi/tga_data_analysis/actions/workflows/continuous_integration.yaml/badge.svg)](https://github.com/mpecchi/tga_data_analysis/actions/workflows/continuous_integration.yaml)
 
 [![Publishing (CI)](https://github.com/mpecchi/tga_data_analysis/actions/workflows/python-publish.yaml/badge.svg)](https://github.com/mpecchi/tga_data_analysis/actions/workflows/python-publish.yaml)
+
+
 
 
 The `tga_data_analysis` tool automates the typical analysis of thermogravimetric analysis (TGA) data, saving time, avoiding human error, and increasing comparability of results from different groups. 
