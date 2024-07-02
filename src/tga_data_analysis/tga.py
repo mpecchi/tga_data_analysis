@@ -30,12 +30,13 @@ class Project:
         temp_lim_dtg_celsius: tuple[float] | None = None,
         temp_unit: Literal["C", "K"] = "C",
         plot_font: Literal["Dejavu Sans", "Times New Roman"] = "Dejavu Sans",
-        temp_i_temp_b_threshold: float = 0.01,  # % of the peak that is used for Ti and Tb
+        temp_i_temp_b_threshold: float = 0.1,  # % of the peak that is used for Ti and Tb
         soliddist_steps_min: list[int] | None = None,
         resolution_sec_deg_dtg: int = 5,
         dtg_window_filter: int | None = 51,
         plot_grid: bool = False,
         auto_save_reports: bool = True,
+        output_folder_name: str = "output",
     ):
         """
         Initialize a new Project instance with various parameters for analysis.
@@ -74,7 +75,7 @@ class Project:
         :type auto_save_reports: bool
         """
         self.folder_path = plib.Path(folder_path)
-        self.out_path = plib.Path(self.folder_path, "output")
+        self.out_path = plib.Path(self.folder_path, output_folder_name)
         if name is None:
             self.name = self.folder_path.parts[-1]
         else:
@@ -297,7 +298,7 @@ class Project:
 
         elif report_type == "oxidation":
             if bar_labels is None:
-                vars_bar = ["T$_i$", "T$_p$", "T$_b$", "S"]
+                vars_bar = ["T$_{i-TGA}$", "T$_{p-TGA}$", "T$_{b-TGA}$", "S$_{TGA}$"]
             else:
                 vars_bar = bar_labels
             df_ave.columns = vars_bar
