@@ -527,7 +527,6 @@ def plot_multi_rate_at_conditions(
     steps: int = 10000,
     time_units: Literal["ms", "s"] = "ms",
     add_tig_to_legend: bool = False,
-    std_factor: Literal[-1, 0, 1] = 0,
     **kwargs,
 ):
     """
@@ -561,7 +560,6 @@ def plot_multi_rate_at_conditions(
             temp_ramp_end_kelvin,
             temp_sigmoid_steepness,
             steps,
-            std_factor=std_factor,
         )
 
     out_path = plib.Path(kassamples[0].out_path, "multisample_plots")
