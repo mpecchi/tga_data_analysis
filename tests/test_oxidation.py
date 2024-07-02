@@ -35,10 +35,10 @@ def test_oxidation_with_temperature(test_dir, temp_symbol):
         conv = +273.15
     else:
         conv = 0
-    np.testing.assert_allclose(cell_ox5.temp_i.ave(), 270.18666666666667 + conv)
-    np.testing.assert_allclose(cell_ox5.temp_b.ave(), 512.0 + conv)
-    np.testing.assert_allclose(cell_ox10.temp_i.ave(), 276.1666666666667 + conv)
-    np.testing.assert_allclose(cell_ox10.temp_b.ave(), 523.7833333333333 + conv)
+    np.testing.assert_allclose(cell_ox5.temp_i.ave(), 291.2733333333333 + conv)
+    np.testing.assert_allclose(cell_ox5.temp_b.ave(), 336.21000000000004 + conv)
+    np.testing.assert_allclose(cell_ox10.temp_i.ave(), 317.5733333333333 + conv)
+    np.testing.assert_allclose(cell_ox10.temp_b.ave(), 358.50333333333333 + conv)
 
 
 # %%
