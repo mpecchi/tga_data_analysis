@@ -128,6 +128,7 @@ class KasSample:
         temp_sigmoid_steepness: float | None = None,
         steps: int = 10000,
         reaction_mechanism: Literal["first_order"] = "first_order",
+        include_std_of_activation_energy: bool = False,
     ):
         """
         Compute the reaction rate at given conditions.
@@ -191,7 +192,10 @@ class KasSample:
         reaction_rates = Measure()
         masses = Measure()
         alphas = Measure()
-        std_factors = [-1, 0, 1]
+        if include_std_of_activation_energy:
+            std_factors = [-1, 0, 1]  # -1, 0, 1 std deviations
+        else:
+            std_factors = [0]  # only the nominal value
         kas_alpha = self.alpha
         kas_pre_exp_factor = self.pre_exponential_factor
         for s, std_factor in enumerate(std_factors):
@@ -210,10 +214,10 @@ class KasSample:
                     -pre_exp_factor
                     * np.exp(-act_energy / (8.314 * temp))
                     * mechanism(alphas.stk(s)[t])
-                ) * dt
+                )
                 if reaction_rates.stk(s)[t + 1] > 0:
                     reaction_rates.stk(s)[t + 1] = 0
-                masses.stk(s)[t + 1] = masses.stk(s)[t] + reaction_rates.stk(s)[t + 1]
+                masses.stk(s)[t + 1] = masses.stk(s)[t] + reaction_rates.stk(s)[t + 1] * dt
                 alphas.stk(s)[t + 1] = (initial_mass - masses.stk(s)[t + 1]) / (
                     initial_mass - final_mass
                 )
@@ -227,7 +231,6 @@ class KasSample:
         self.reaction_time = time
         self.reaction_temp = temps
         self.reaction_rates = reaction_rates
-
         self.reaction_alphas = alphas
 
     def plot_isolines(
@@ -526,7 +529,6 @@ def plot_multi_rate_at_conditions(
     temp_sigmoid_steepness: float = 0.005,
     steps: int = 10000,
     time_units: Literal["ms", "s"] = "ms",
-    add_tig_to_legend: bool = False,
     **kwargs,
 ):
     """
@@ -554,12 +556,12 @@ def plot_multi_rate_at_conditions(
         if not sample.kas_analysis_computed:
             sample.kas_analysis()
         sample.compute_rate_at_conditions(
-            time_ramp_end_s,
-            time_plateaux_end_s,
-            temp_ramp_start_kelvin,
-            temp_ramp_end_kelvin,
-            temp_sigmoid_steepness,
-            steps,
+            time_ramp_end_s=time_ramp_end_s,
+            time_plateaux_end_s=time_plateaux_end_s,
+            temp_ramp_start_kelvin=temp_ramp_start_kelvin,
+            temp_ramp_end_kelvin=temp_ramp_end_kelvin,
+            temp_sigmoid_steepness=temp_sigmoid_steepness,
+            steps=steps,
         )
 
     out_path = plib.Path(kassamples[0].out_path, "multisample_plots")
@@ -596,21 +598,17 @@ def plot_multi_rate_at_conditions(
     for k, sample in enumerate(kassamples):
         myfig.axs[0].plot(
             time_plot,
-            sample.reaction_alphas,
+            sample.reaction_alphas.ave(),
             color=colors[k],
             linestyle=linestyles[k],
             label=sample.name,
         )
         myfig.axs[1].plot(
             time_plot,
-            sample.reaction_rates,
+            sample.reaction_rates.ave(),
             color=colors[k],
             linestyle=linestyles[k],
-            label=(
-                sample.name + f" ({sample.reaction_time_of_max_rate*1000:.1f} ms)"
-                if add_tig_to_legend
-                else sample.name
-            ),
+            label=sample.name,
         )
     myfig.axts[1].set_visible(False)
     # print the time and temperature of the maximum reaction rate
@@ -618,8 +616,8 @@ def plot_multi_rate_at_conditions(
     for k, sample in enumerate(kassamples):
         print(
             f"{sample.name}\t{sample.reaction_average_heating_rate/1000:.0f}"
-            + f"\t{sample.reaction_temp_of_max_rate:.0f}"
-            + f"\t{sample.reaction_time_of_max_rate*1000:.1f}"
+            + f"\t{sample.reaction_temp_of_max_rate.ave():.0f}"
+            + f"\t{sample.reaction_time_of_max_rate.ave()*1000:.1f}"
         )
 
     myfig.save_figure()
