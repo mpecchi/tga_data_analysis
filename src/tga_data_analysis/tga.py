@@ -4,7 +4,8 @@ import pathlib as plib
 import numpy as np
 import pandas as pd
 from scipy.signal import savgol_filter
-from lmfit.models import GaussianModel, LinearModel
+from lmfit.models import lmfit_models
+
 from tga_data_analysis.measure import Measure
 from myfigure.myfigure import MyFigure, colors, linestyles
 
@@ -307,7 +308,7 @@ class Project:
             bar_ytaxis = vars_bar[-1]
             twinx = True
             y_lab = f"T [{self.temp_symbol}]"
-            yt_lab = "S (oxidation index)"
+            yt_lab = "S$_{TGA}$ (oxidation index)"
 
         elif report_type == "soliddist":
             if bar_labels is None:
@@ -399,8 +400,8 @@ class Project:
         if labels is None:
             labels = samplenames
         for sample in samples:
-            if not sample.proximate_computed:
-                sample.proximate_analysis()
+            if not sample.dtg_computed:
+                sample.dtg_analysis()
 
         out_path = plib.Path(self.out_path, "multisample_plots")
         out_path.mkdir(parents=True, exist_ok=True)
@@ -425,16 +426,16 @@ class Project:
         )
         for i, sample in enumerate(samples):
             myfig.axs[0].plot(
-                sample.temp.ave(),
-                sample.mp_db.ave(),
+                sample.temp_dtg.ave(),
+                sample.tg_dtg.ave(),
                 color=colors[i],
                 linestyle=linestyles[i],
                 label=labels[i],
             )
             myfig.axs[0].fill_between(
-                sample.temp.ave(),
-                sample.mp_db.ave() - sample.mp_db.std(),
-                sample.mp_db.ave() + sample.mp_db.std(),
+                sample.temp_dtg.ave(),
+                sample.tg_dtg.ave() - sample.tg_dtg.std(),
+                sample.tg_dtg.ave() + sample.tg_dtg.std(),
                 color=colors[i],
                 alpha=0.3,
             )
@@ -674,6 +675,9 @@ class Project:
         samples: list[Sample] | None = None,
         labels: list[str] | None = None,
         plot_type: Literal["samples_in_subplots", "peaks_in_subplots"] = "samples_in_subplots",
+        r2_font_size: int = 8,
+        r2_loc_xy: tuple[float] | None = None,
+        samplename_in_legend: bool = True,
         **kwargs,
     ) -> MyFigure:
 
@@ -715,7 +719,7 @@ class Project:
                     sample.temp_dtg.ave(),
                     sample.dtg_db.ave(),
                     color="black",
-                    label="data",
+                    label=labels[s] if samplename_in_legend else "data",
                     linestyle=linestyles[0],
                 )
                 myfig.axs[s].fill_between(
@@ -760,8 +764,8 @@ class Project:
                 myfig.axs[s].annotate(
                     f"r$^2$={sample.dcv_r2.ave():.2f}",
                     xycoords="axes fraction",
-                    xy=(0.85, 0.96),
-                    size="x-small",
+                    xy=(0.85, 0.96) if r2_loc_xy is None else r2_loc_xy,
+                    size=r2_font_size,
                 )
             myfig.save_figure()
             return myfig
@@ -1020,9 +1024,9 @@ class Sample:
         self.vm_daf: Measure = Measure(name="vm_daf")
         self.temp_dtg: Measure = Measure(name="temp_dtg" + self.temp_unit)
         self.time_dtg: Measure = Measure(name="time_dtg")
-        self.mp_db_dtg: Measure = Measure(name="mp_db_dtg")
+        self.tg_dtg: Measure = Measure(name="tg_dtg")
         self.dtg_db: Measure = Measure(name="dtg_db")
-        self.ddtg_db: Measure = Measure(name="dtg_db")
+        self.ddtg_db: Measure = Measure(name="ddtg_db")
         self.ave_dev_tga_perc: float | None = None
         # oxidation
         self.temp_i_idx: Measure = Measure(name="temp_i_idx")
@@ -1043,6 +1047,7 @@ class Sample:
         self.dcv_best_fit: Measure = Measure(name="dcv_best_fit")
         self.dcv_r2: Measure = Measure(name="dcv_r2")
         self.dcv_peaks: list[Measure] = []
+        self.dcv_results: list = []
         # Flag to track if data is loaded
         self.proximate_computed = False
         self.dtg_computed = False
@@ -1281,14 +1286,14 @@ class Sample:
             time_dtg = self.time.stk(f)[idxs_in_dtg[f] : idxs_fin_dtg[f]]
             self.time_dtg.add(f, time_dtg - np.min(time_dtg))  # starts from 0
             self.temp_dtg.add(f, self.temp.stk(f)[idxs_in_dtg[f] : idxs_fin_dtg[f]])
-            self.mp_db_dtg.add(f, self.mp_db.stk(f)[idxs_in_dtg[f] : idxs_fin_dtg[f]])
-            dtg_db = np.gradient(self.mp_db_dtg.stk(f), self.time_dtg.stk(f))
+            self.tg_dtg.add(f, self.mp_db.stk(f)[idxs_in_dtg[f] : idxs_fin_dtg[f]])
+            dtg_db = np.gradient(self.tg_dtg.stk(f), self.time_dtg.stk(f))
             if self.dtg_window_filter is not None:
                 self.dtg_db.add(f, savgol_filter(dtg_db, self.dtg_window_filter, 1))
             else:
                 self.dtg_db.add(f, dtg_db)
         # average
-        self.ave_dev_tga_perc = np.average(self.mp_db_dtg.std())
+        self.ave_dev_tga_perc = np.average(self.tg_dtg.std())
         print(f"Average TG [%] St. Dev. for replicates: {self.ave_dev_tga_perc:0.2f} %")
         self.dtg_computed = True
 
@@ -1389,15 +1394,29 @@ class Sample:
 
     def deconv_analysis(
         self,
-        centers: list[float],
-        sigmas: list[float] | None = None,
-        amplitudes: list[float] | None = None,
+        centers: list[float] | None = None,
         center_mins: list[float] | None = None,
         center_maxs: list[float] | None = None,
+        sigmas: list[float] | None = None,
         sigma_mins: list[float] | None = None,
         sigma_maxs: list[float] | None = None,
+        amplitudes: list[float] | None = None,
         amplitude_mins: list[float] | None = None,
         amplitude_maxs: list[float] | None = None,
+        gammas: list[float] | None = None,
+        gamma_mins: list[float] | None = None,
+        gamma_maxs: list[float] | None = None,
+        locs: list[float] | None = None,
+        loc_mins: list[float] | None = None,
+        loc_maxs: list[float] | None = None,
+        skews: list[float] | None = None,
+        skew_mins: list[float] | None = None,
+        skew_maxs: list[float] | None = None,
+        expons: list[float] | None = None,
+        expon_mins: list[float] | None = None,
+        expon_maxs: list[float] | None = None,
+        model_function: str = "Gaussian",
+        minimization_method: str = "leastsq",
     ):
         """
         Perform deconvolution analysis on the sample's DTG data.
@@ -1427,36 +1446,64 @@ class Sample:
         if not self.proximate_computed:
             self.dtg_analysis()
         n_peaks = len(centers)
-        # self.dcv_best_fit_stk = np.zeros((self.len_dtg_db, self.n_repl))
-        # self.dcv_r2_stk = np.zeros(self.n_repl)
-
-        # self.dcv_peaks_stk = np.zeros((self.len_dtg_db, self.n_repl, n_peaks))
-        if sigmas is None:
-            sigmas = [1] * n_peaks
-        if amplitudes is None:
-            amplitudes = [10] * n_peaks
+        self.dcv_peaks: list[Measure] = []  # re initialize in case of multiple calls
+        self.dcv_results: list = []  # re initialize in case of multiple calls
+        self.peak_fits: dict = {}  # re initialize in case of multiple calls
+        if centers is None:
+            if locs is None:
+                raise ValueError("At least one of centers or locs must be provided.")
+            else:
+                centers = [None] * n_peaks
         if center_mins is None:
             center_mins = [None] * n_peaks
         if center_maxs is None:
             center_maxs = [None] * n_peaks
+        if sigmas is None:
+            sigmas = [1] * n_peaks
         if sigma_mins is None:
             sigma_mins = [None] * n_peaks
         if sigma_maxs is None:
             sigma_maxs = [None] * n_peaks
+        if amplitudes is None:
+            amplitudes = [10] * n_peaks
         if amplitude_mins is None:
             amplitude_mins = [0] * n_peaks
         if amplitude_maxs is None:
             amplitude_maxs = [None] * n_peaks
+        if gammas is None:
+            gammas = [None] * n_peaks
+        if gamma_mins is None:
+            gamma_mins = [None] * n_peaks
+        if gamma_maxs is None:
+            gamma_maxs = [None] * n_peaks
+        if locs is None:
+            locs = [None] * n_peaks
+        if loc_mins is None:
+            loc_mins = [None] * n_peaks
+        if loc_maxs is None:
+            loc_maxs = [None] * n_peaks
+        if skews is None:
+            skews = [None] * n_peaks
+        if skew_mins is None:
+            skew_mins = [None] * n_peaks
+        if skew_maxs is None:
+            skew_maxs = [None] * n_peaks
+        if expons is None:
+            expons = [None] * n_peaks
+        if expon_mins is None:
+            expon_mins = [None] * n_peaks
+        if expon_maxs is None:
+            expon_maxs = [None] * n_peaks
 
         for f in range(self.n_repl):
             y = np.abs(self.dtg_db.stk(f))
-            model = LinearModel(prefix="bkg_")
-            params = model.make_params(intercept=0, slope=0, vary=False)
+            model = None
+            params = None
 
             for p in range(n_peaks):
                 prefix = f"peak_{p}"
                 self.dcv_peaks.append(Measure(name=prefix))
-                peak_model = GaussianModel(prefix=prefix)
+                peak_model = lmfit_models[model_function](prefix=prefix)
                 pars = peak_model.make_params()
                 pars[prefix + "center"].set(
                     value=centers[p], min=center_mins[p], max=center_maxs[p]
@@ -1465,20 +1512,70 @@ class Sample:
                 pars[prefix + "amplitude"].set(
                     value=amplitudes[p], min=amplitude_mins[p], max=amplitude_maxs[p]
                 )
-                model += peak_model
-                params.update(pars)
+                try:
+                    pars[prefix + "gamma"].set(
+                        value=gammas[p], min=gamma_mins[p], max=gamma_maxs[p]
+                    )
+                except KeyError:
+                    pass
+                try:
+                    pars[prefix + "position"].set(value=locs[p], min=loc_mins[p], max=loc_maxs[p])
+                except KeyError:
+                    pass
+                try:
+                    pars[prefix + "skew"].set(value=skews[p], min=skew_mins[p], max=skew_maxs[p])
+                except KeyError:
+                    pass
+                try:
+                    pars[prefix + "expon"].set(
+                        value=expons[p], min=expon_mins[p], max=expon_maxs[p]
+                    )
+                except KeyError:
+                    pass
+                if model is None:
+                    model = peak_model
+                    params = pars
+                else:
+                    model += peak_model
+                    params.update(pars)
 
-            result = model.fit(y, params=params, x=self.temp_dtg.stk(f))
+            result = model.fit(y, params=params, x=self.temp_dtg.stk(f), method=minimization_method)
+            self.dcv_results.append(result)
             self.dcv_best_fit.add(f, -result.best_fit)
             self.dcv_r2.add(f, 1 - result.residual.var() / np.var(y))
             components = result.eval_components(x=self.temp_dtg.stk(f))
-
             for p in range(n_peaks):
                 prefix = f"peak_{p}"
                 if prefix in components:
                     self.dcv_peaks[p].add(f, -components[prefix])
                 else:
                     self.dcv_peaks[p].add(f, 0)
+                # Store the best fit parameters in the dictionary
+                self.peak_fits[prefix] = {
+                    "center": result.params[prefix + "center"].value,
+                    "sigma": result.params[prefix + "sigma"].value,
+                    "amplitude": result.params[prefix + "amplitude"].value,
+                    "gamma": (
+                        result.params[prefix + "gamma"].value
+                        if prefix + "gamma" in result.params
+                        else None
+                    ),
+                    "position": (
+                        result.params[prefix + "position"].value
+                        if prefix + "position" in result.params
+                        else None
+                    ),
+                    "skew": (
+                        result.params[prefix + "skew"].value
+                        if prefix + "skew" in result.params
+                        else None
+                    ),
+                    "expon": (
+                        result.params[prefix + "expon"].value
+                        if prefix + "expon" in result.params
+                        else None
+                    ),
+                }
 
         self.deconv_computed = True
 
@@ -1666,7 +1763,7 @@ class Sample:
             )
             mf.axs[3].plot(
                 self.time_dtg.stk(f),
-                self.mp_db_dtg.stk(f),
+                self.tg_dtg.stk(f),
                 color=colors[f],
                 linestyle=linestyles[f],
                 label=self.filenames[f],
@@ -1860,7 +1957,7 @@ class Sample:
         default_kwargs = {
             "filename": self.name + "_deconv",
             "out_path": out_path,
-            "height": 8.53,
+            "height": 8.53 / 3 * self.n_repl,
             "width": 3.2,
             "x_lab": f"T [{self.temp_symbol}]",
             "y_lab": f"{self.dtg_label} (db)",

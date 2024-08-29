@@ -97,8 +97,8 @@ class KasSample:
             if not sample.dtg_computed:
                 sample.dtg_analysis()
             temp = sample.temp_dtg() + c_to_k if sample.temp_unit == "C" else sample.temp_dtg()
-            alpha_mass = 1 - (sample.mp_db_dtg() - np.min(sample.mp_db_dtg())) / (
-                np.max(sample.mp_db_dtg()) - np.min(sample.mp_db_dtg())
+            alpha_mass = 1 - (sample.tg_dtg() - np.min(sample.tg_dtg())) / (
+                np.max(sample.tg_dtg()) - np.min(sample.tg_dtg())
             )
             for alpha_idx, alpha_val in enumerate(self.alpha):
                 conversion_index = np.argmax(alpha_mass > alpha_val)
@@ -127,11 +127,12 @@ class KasSample:
         temp_ramp_end_kelvin: float = 1645,
         temp_sigmoid_steepness: float | None = None,
         steps: int = 10000,
-        reaction_mechanism: Literal["first_order"] = "first_order",
+        reaction_mechanism: Literal["first-order", "3D-diffusion"] = "first-order",
         include_std_of_activation_energy: bool = False,
     ):
         """
         Compute the reaction rate at given conditions.
+        reaction mechanisms taken from doi:10.1016/j.tca.2011.03.034
 
         :param time_ramp_end_s: The end time of the ramp in seconds.
         :type time_ramp_end_s: float
@@ -155,10 +156,29 @@ class KasSample:
         self.reaction_time_of_max_rate = Measure()
         self.reaction_temp_of_max_rate = Measure()
 
-        if reaction_mechanism == "first_order":
+        if reaction_mechanism == "first-order":
 
             def mechanism(alpha):
+                alpha = min(alpha, 1)
                 return 1 - alpha
+
+        elif reaction_mechanism == "3D-diffusion":
+
+            def mechanism(alpha):
+                alpha = min(alpha, 1)
+                return 3 / 2 * (1 - alpha) ** (2 / 3) / (1 - (1 - alpha) ** (1 / 3))
+
+        elif reaction_mechanism == "contracting-sphere":
+
+            def mechanism(alpha):
+                alpha = min(alpha, 1)
+                return 3 * (1 - alpha) ** (2 / 3)
+
+        elif reaction_mechanism == "contracting-cylinder":
+
+            def mechanism(alpha):
+                alpha = min(alpha, 1)
+                return 2 * np.sqrt(1 - alpha)
 
         if temp_sigmoid_steepness is None:
             temps = np.linspace(temp_ramp_start_kelvin, temp_ramp_end_kelvin, steps)
@@ -523,12 +543,13 @@ def plot_multi_rate_at_conditions(
     labels: list[str] | None = None,
     filename: str = "plot",
     time_ramp_end_s: float = 1,
-    time_plateaux_end_s: float = 0,
+    time_plateaux_end_s: float | None = 0,
     temp_ramp_start_kelvin: float = 298.15,
     temp_ramp_end_kelvin: float = 1645,
-    temp_sigmoid_steepness: float = 0.005,
+    temp_sigmoid_steepness: float | None = None,
     steps: int = 10000,
     time_units: Literal["ms", "s"] = "ms",
+    reaction_mechanism: Literal["first-order", "3D-diffusion"] = "first-order",
     **kwargs,
 ):
     """
@@ -561,6 +582,7 @@ def plot_multi_rate_at_conditions(
             temp_ramp_start_kelvin=temp_ramp_start_kelvin,
             temp_ramp_end_kelvin=temp_ramp_end_kelvin,
             temp_sigmoid_steepness=temp_sigmoid_steepness,
+            reaction_mechanism=reaction_mechanism,
             steps=steps,
         )
 
