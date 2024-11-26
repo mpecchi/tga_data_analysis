@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Literal
 import pathlib as plib
 import numpy as np
+from scipy.stats import linregress
 from tga_data_analysis.tga import Project, Sample, Measure
 from myfigure.myfigure import MyFigure, colors, linestyles, markers
 
@@ -66,6 +67,8 @@ class KasSample:
 
         self.activation_energy = np.zeros(len(self.alpha))
         self.activation_energy_std = np.zeros(len(self.alpha))
+        self.pre_exponential_factor_kas = np.zeros(len(self.alpha))
+        # corrected using the energy compensation effect
         self.pre_exponential_factor = np.zeros(len(self.alpha))
         self.x_matrix = np.zeros((len(self.alpha), len(self.ramps)))
         self.y_matrix = np.zeros((len(self.alpha), len(self.ramps)))
@@ -79,6 +82,9 @@ class KasSample:
         self.reaction_alphas: np.array | None = None
         self.reaction_time_of_max_rate: float | None = None
         self.reaction_temp_of_max_rate: float | None = None
+        self.compensation_slope: float | None = None
+        self.compensation_intercept: float | None = None
+        self.compensation_r2: float | None = None
 
     def kas_analysis(
         self,
@@ -112,9 +118,21 @@ class KasSample:
             self.activation_energy[a] = -p[0] * r_gas_constant
             self.activation_energy_std[a] = np.sqrt(cov[0][0]) * r_gas_constant
             # Calculate pre-exponential factor A
-            self.pre_exponential_factor[a] = np.exp(p[1]) * (
+            self.pre_exponential_factor_kas[a] = np.exp(p[1]) * (
                 self.activation_energy[a] / (r_gas_constant * alpha)
             )
+        # Fit ln(A) vs E_a to find the compensation effect parameters
+        slope, intercept, r_value, _, _ = linregress(
+            self.activation_energy, np.log(self.pre_exponential_factor_kas)
+        )
+
+        # Store the compensation effect parameters
+        self.compensation_slope = slope
+        self.compensation_intercept = intercept
+        self.compensation_r2 = r_value**2
+
+        # Evaluate pre-exponential factor for each E_a using the compensation effect
+        self.pre_exponential_factor = np.exp(slope * self.activation_energy + intercept)
 
         self.kas_analysis_computed = True
         return None
