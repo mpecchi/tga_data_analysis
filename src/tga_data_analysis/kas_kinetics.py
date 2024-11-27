@@ -122,9 +122,12 @@ class KasSample:
                 self.activation_energy[a] / (r_gas_constant * alpha)
             )
         # Fit ln(A) vs E_a to find the compensation effect parameters
-        slope, intercept, r_value, _, _ = linregress(
-            self.activation_energy, np.log(self.pre_exponential_factor_kas)
-        )
+        valid_indices = ~np.isnan(self.activation_energy) & ~np.isnan(
+            np.log(self.pre_exponential_factor_kas)
+        )  # Mask where both are not NaN
+        E_a_clean = self.activation_energy[valid_indices]
+        ln_A_clean = np.log(self.pre_exponential_factor_kas)[valid_indices]
+        slope, intercept, r_value, _, _ = linregress(E_a_clean, ln_A_clean)
 
         # Store the compensation effect parameters
         self.compensation_slope = slope
