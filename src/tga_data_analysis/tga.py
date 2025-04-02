@@ -25,6 +25,8 @@ class Project:
         load_skiprows: int = 0,
         load_file_format: Literal[".txt", ".csv"] = ".txt",
         load_separator: Literal["\t", ","] = "\t",
+        load_encoding: str | None = "utf-8",
+        load_decimal_separator: Literal[".", ","] = ".",
         time_moist: float = 38.0,
         time_vm: float = 147.0,
         temp_initial_celsius: float = 40,
@@ -88,6 +90,8 @@ class Project:
         self.resolution_sec_deg_dtg = resolution_sec_deg_dtg
         self.dtg_window_filter = dtg_window_filter
         self.load_skiprows = load_skiprows
+        self.load_encoding = load_encoding
+        self.load_decimal_separator = load_decimal_separator
         self.load_file_format = load_file_format
         self.load_separator = load_separator
         self.time_moist = time_moist
@@ -883,6 +887,8 @@ class Sample:
         load_skiprows: int | None = None,
         load_file_format: Literal[".txt", ".csv", None] = None,
         load_separator: Literal["\t", ",", None] = None,
+        load_encoding: str | None = None,
+        load_decimal_separator: str | None = None,
         time_moist: float | None = None,
         time_vm: float | None = None,
         heating_rate_deg_min: float | None = None,
@@ -961,6 +967,14 @@ class Sample:
             self.load_separator = project.load_separator
         else:
             self.load_separator = load_separator
+        if load_encoding is None:
+            self.load_encoding = project.load_encoding
+        else:
+            self.load_encoding = load_encoding
+        if load_decimal_separator is None:
+            self.load_decimal_separator = project.load_decimal_separator
+        else:
+            self.load_decimal_separator = load_decimal_separator
         if time_moist is None:
             self.time_moist = project.time_moist
         else:
@@ -984,7 +998,7 @@ class Sample:
         if filenames is None:
             self.filenames = [
                 file.name.split(".")[0]
-                for file in list(self.folder_path.glob("**/*.txt"))
+                for file in list(self.folder_path.glob(f"**/*{self.load_file_format}"))
                 if file.name.split("_")[0] == self.name
             ]
         else:
@@ -1095,6 +1109,8 @@ class Sample:
         load_skiprows: int | None = None,
         load_file_format: Literal[".txt", ".csv", None] = None,
         load_separator: Literal["\t", ",", None] = None,
+        load_encoding: str | None = None,
+        load_decimal_separator: str | None = None,
         column_name_mapping: dict | None = None,
     ) -> pd.DataFrame:
         """
@@ -1121,10 +1137,20 @@ class Sample:
             load_file_format = self.load_file_format
         if load_separator is None:
             load_separator = self.load_separator
+        if load_encoding is None:
+            load_encoding = self.load_encoding
+        if load_decimal_separator is None:
+            load_decimal_separator = self.load_decimal_separator
         file_path = plib.Path(folder_path, filename + load_file_format)
         # if not file_path.is_file():
         #     file_path = plib.Path(folder_path, filename + ".csv")
-        file = pd.read_csv(file_path, sep=load_separator, skiprows=load_skiprows)
+        file = pd.read_csv(
+            file_path,
+            sep=load_separator,
+            skiprows=load_skiprows,
+            encoding=load_encoding,
+            decimal=load_decimal_separator,
+        )
         # if file.shape[1] < 3:
         #     file = pd.read_csv(file_path, sep=",", skiprows=load_skiprows)
         file = file.rename(columns={col: column_name_mapping.get(col, col) for col in file.columns})

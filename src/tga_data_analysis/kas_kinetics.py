@@ -118,8 +118,11 @@ class KasSample:
             self.activation_energy[a] = -p[0] * r_gas_constant
             self.activation_energy_std[a] = np.sqrt(cov[0][0]) * r_gas_constant
             # Calculate pre-exponential factor A
+            # self.pre_exponential_factor_kas[a] = np.exp(p[1]) * (
+            #     self.activation_energy[a] / (r_gas_constant * alpha)
+            # )
             self.pre_exponential_factor_kas[a] = np.exp(p[1]) * (
-                self.activation_energy[a] / (r_gas_constant * alpha)
+                self.activation_energy[a] / (r_gas_constant * 3 * (1 - alpha) ** (2 / 3))
             )
         # Fit ln(A) vs E_a to find the compensation effect parameters
         valid_indices = ~np.isnan(self.activation_energy) & ~np.isnan(
