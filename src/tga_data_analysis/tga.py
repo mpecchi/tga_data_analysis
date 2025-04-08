@@ -191,10 +191,10 @@ class Project:
         if samples is None:
             samples = list(self.samples.values())
 
-        samplenames = [sample.name for sample in samples]
+        samplelabels = [sample.name for sample in samples]
 
         if labels is None:
-            labels = samplenames
+            labels = samplelabels
         for sample in samples:
             if report_type not in sample.report_types_computed:
                 sample.report(report_type)
@@ -277,9 +277,9 @@ class Project:
         if samples is None:
             samples = list(self.samples.values())
 
-        samplenames = [sample.name for sample in samples]
+        samplelabels = [sample.label for sample in samples]
         if labels is None:
-            labels = samplenames
+            labels = samplelabels
 
         df = self.multireport(samples, labels, report_type, report_style="ave_std")
         df_ave = df.xs("ave", level=1, drop_level=False)
@@ -400,9 +400,9 @@ class Project:
         if samples is None:
             samples = list(self.samples.values())
 
-        samplenames = [sample.name for sample in samples]
+        samplelabels = [sample.label for sample in samples]
         if labels is None:
-            labels = samplenames
+            labels = samplelabels
         for sample in samples:
             if not sample.dtg_computed:
                 sample.dtg_analysis()
@@ -470,9 +470,9 @@ class Project:
         if samples is None:
             samples = list(self.samples.values())
 
-        samplenames = [sample.name for sample in samples]
+        samplelabels = [sample.label for sample in samples]
         if labels is None:
-            labels = samplenames
+            labels = samplelabels
         for sample in samples:
             if not sample.dtg_computed:
                 sample.dtg_analysis()
@@ -540,9 +540,9 @@ class Project:
         if samples is None:
             samples = list(self.samples.values())
 
-        samplenames = [sample.name for sample in samples]
+        samplelabels = [sample.name for sample in samples]
         if labels is None:
-            labels = samplenames
+            labels = samplelabels
         for sample in samples:
             if not sample.ddtg_computed:
                 sample.ddtg_analysis()
@@ -613,9 +613,9 @@ class Project:
         if samples is None:
             samples = list(self.samples.values())
 
-        samplenames = [sample.name for sample in samples]
+        samplelabels = [sample.label for sample in samples]
         if labels is None:
-            labels = samplenames
+            labels = samplelabels
         for sample in samples:
             if not sample.dtg_computed:
                 sample.dtg_analysis()
@@ -688,9 +688,9 @@ class Project:
         if samples is None:
             samples = list(self.samples.values())
 
-        samplenames = [sample.name for sample in samples]
+        samplelabels = [sample.label for sample in samples]
         if labels is None:
-            labels = samplenames
+            labels = samplelabels
         for sample in samples:
             if not sample.deconv_computed:
                 raise ValueError("Deconvolution analysis not computed")
